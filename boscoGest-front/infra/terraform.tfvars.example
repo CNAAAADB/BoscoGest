@@ -1,0 +1,6 @@
+# Copy this file to terraform.tfvars and fill in the values
+# DO NOT commit terraform.tfvars to version control
+
+aws_region   = "eu-west-1"
+project_name = "boscogest"
+bucket_name  = "boscogest-frontend" # Must be globally unique in AWS

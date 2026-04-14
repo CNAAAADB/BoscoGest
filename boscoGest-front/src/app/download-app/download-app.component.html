@@ -1,0 +1,68 @@
+<div class="download-container">
+  <h1 class="page-title">Descargar App</h1>
+
+  <div class="cards-grid">
+    <!-- Android Card -->
+    <mat-card class="download-card android-card">
+      <mat-card-content>
+        <div class="platform-header">
+          <mat-icon class="platform-icon android-icon">android</mat-icon>
+          <div class="platform-info">
+            <h2>Android</h2>
+            <p class="app-version">BoscoGest v1.0</p>
+          </div>
+        </div>
+        <p class="platform-description">
+          Descarga la aplicacion para dispositivos Android (version 7.0 o superior).
+        </p>
+        <button mat-raised-button color="primary" class="download-button" (click)="downloadApk()" [disabled]="downloading()">
+          @if (downloading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+            Obteniendo enlace...
+          } @else {
+            <ng-container>
+              <mat-icon>download</mat-icon>
+              Descargar APK
+            </ng-container>
+          }
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- iOS Card -->
+    <mat-card class="download-card ios-card disabled-card">
+      <mat-card-content>
+        <div class="platform-header">
+          <mat-icon class="platform-icon ios-icon">phone_iphone</mat-icon>
+          <div class="platform-info">
+            <h2>iOS</h2>
+            <p class="app-version">Proximamente</p>
+          </div>
+        </div>
+        <p class="platform-description">
+          La version para iPhone y iPad estara disponible proximamente.
+        </p>
+        <button mat-raised-button disabled class="download-button">
+          <mat-icon>hourglass_empty</mat-icon>
+          No disponible
+        </button>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Installation Instructions -->
+  <mat-card class="instructions-card">
+    <mat-card-content>
+      <h3>
+        <mat-icon class="instructions-icon">info</mat-icon>
+        Instrucciones de instalacion
+      </h3>
+      <ol>
+        <li>Descarga el archivo APK pulsando el boton de arriba.</li>
+        <li>En tu dispositivo Android, ve a <strong>Ajustes &gt; Seguridad</strong> y habilita <strong>Origenes desconocidos</strong> (o permite la instalacion desde el navegador cuando se te solicite).</li>
+        <li>Abre el archivo APK descargado desde la carpeta de descargas de tu dispositivo.</li>
+        <li>Sigue las instrucciones en pantalla para completar la instalacion.</li>
+      </ol>
+    </mat-card-content>
+  </mat-card>
+</div>

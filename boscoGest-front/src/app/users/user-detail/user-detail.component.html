@@ -1,0 +1,201 @@
+<div class="user-detail-container">
+  <h1 class="page-title">Detalle del Usuario</h1>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else if (user()) {
+    <!-- User Details Section -->
+    <mat-card class="user-card">
+      <mat-card-header>
+        <div class="header-content">
+          <div class="avatar-large">
+            {{ user()!.name.charAt(0).toUpperCase() }}{{ user()!.surname.charAt(0).toUpperCase() }}
+          </div>
+          <div class="header-text">
+            <mat-card-title class="user-title">
+              {{ user()!.name }} {{ user()!.surname }}
+            </mat-card-title>
+            <mat-card-subtitle class="user-subtitle">
+              {{ user()!.email }}
+            </mat-card-subtitle>
+          </div>
+          <div class="header-actions">
+            <button mat-raised-button color="primary" (click)="editUser()">
+              <mat-icon>edit</mat-icon>
+              Editar
+            </button>
+            <button mat-raised-button color="warn" (click)="deleteUser()">
+              <mat-icon>delete</mat-icon>
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </mat-card-header>
+      <mat-card-content class="card-content">
+        <div class="info-grid">
+          <div class="info-item">
+            <mat-icon class="info-icon">fingerprint</mat-icon>
+            <div class="info-details">
+              <span class="info-label">ID</span>
+              <span class="info-value">{{ user()!.id }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">badge</mat-icon>
+            <div class="info-details">
+              <span class="info-label">DNI</span>
+              <span class="info-value">{{ user()!.dni }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">email</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Email</span>
+              <span class="info-value">{{ user()!.email }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">phone</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Teléfono</span>
+              <span class="info-value">{{ user()!.phone }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">home</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Dirección</span>
+              <span class="info-value">{{ user()!.address || 'No especificada' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">cake</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Fecha de Nacimiento</span>
+              <span class="info-value">{{ user()!.birthdate }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">account_balance</mat-icon>
+            <div class="info-details">
+              <span class="info-label">IBAN</span>
+              <span class="info-value">{{ user()!.iban || 'No especificado' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">straighten</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Talla</span>
+              <span class="info-value">{{ user()!.size || 'No especificada' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">interests</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Hobbies</span>
+              <span class="info-value">{{ user()!.hobbies || 'No especificados' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">work</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Puesto de Trabajo</span>
+              <span class="info-value">{{ user()!.job_position || 'No especificado' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">toggle_on</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Estado</span>
+              @if (user()!.is_active) {
+                <mat-chip class="status-chip active">Activo</mat-chip>
+              } @else {
+                <mat-chip class="status-chip inactive">Inactivo</mat-chip>
+              }
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon class="info-icon">calendar_today</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Fecha de Creación</span>
+              <span class="info-value">{{ user()!.created_at | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Memberships Section -->
+    <mat-card class="user-card">
+      <mat-card-header>
+        <mat-card-title class="section-title">
+          <mat-icon class="title-icon">business</mat-icon>
+          Asociaciones del Usuario
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="card-content">
+        @if (entityMemberships().length > 0) {
+          <div class="table-container">
+            <table mat-table [dataSource]="entityMemberships()" class="memberships-table">
+              <!-- Entity ID Column -->
+              <ng-container matColumnDef="entityId">
+                <th mat-header-cell *matHeaderCellDef class="table-header">ID</th>
+                <td mat-cell *matCellDef="let element" class="table-cell">{{ element.entityId }}</td>
+              </ng-container>
+
+              <!-- Entity Name Column -->
+              <ng-container matColumnDef="entityName">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Asociación</th>
+                <td mat-cell *matCellDef="let element" class="table-cell name-cell">{{ element.entityName }}</td>
+              </ng-container>
+
+              <!-- Role Name Column -->
+              <ng-container matColumnDef="roleName">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Rol</th>
+                <td mat-cell *matCellDef="let element" class="table-cell">{{ element.roleName }}</td>
+              </ng-container>
+
+              <!-- Is Active Column -->
+              <ng-container matColumnDef="isActive">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Estado</th>
+                <td mat-cell *matCellDef="let element" class="table-cell">
+                  @if (element.isActive) {
+                    <mat-chip class="status-chip active">Activo</mat-chip>
+                  } @else {
+                    <mat-chip class="status-chip inactive">Inactivo</mat-chip>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-state">Este usuario no pertenece a ninguna asociación</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button mat-button (click)="goBack()" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        Volver
+      </button>
+    </div>
+  }
+</div>

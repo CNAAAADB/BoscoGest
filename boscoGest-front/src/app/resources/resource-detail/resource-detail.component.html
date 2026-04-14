@@ -1,0 +1,123 @@
+<div class="detail-container">
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else if (resource()) {
+    <mat-card class="detail-card">
+      <mat-card-header>
+        <div class="header-content">
+          <button mat-icon-button (click)="goBack()" class="back-button">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <div class="header-info">
+            <mat-card-title>{{ resource()!.title }}</mat-card-title>
+            <div class="resource-type-label" [class]="'type-' + resource()!.resource_type">
+              <mat-icon>{{ getTypeIcon(resource()!.resource_type) }}</mat-icon>
+              {{ getTypeLabel(resource()!.resource_type) }}
+            </div>
+          </div>
+          <div class="header-actions">
+            @if (canEdit()) {
+              <button mat-icon-button color="primary" (click)="editResource()" title="Editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+            @if (canDelete()) {
+              <button mat-icon-button color="warn" (click)="deleteResource()" title="Eliminar">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content class="detail-content">
+        <!-- Link/Video: Show URL -->
+        @if (resource()!.url) {
+          <div class="url-section">
+            <button mat-raised-button color="primary" (click)="openUrl()">
+              <mat-icon>open_in_new</mat-icon>
+              Abrir enlace
+            </button>
+            <span class="url-text">{{ resource()!.url }}</span>
+          </div>
+        }
+
+        <!-- Image: Inline preview -->
+        @if (resource()!.resource_type === 'image' && fileUrl()) {
+          <div class="image-preview">
+            <img [src]="fileUrl()" [alt]="resource()!.title" class="preview-image">
+          </div>
+        }
+
+        <!-- Document: PDF preview + download -->
+        @if (resource()!.resource_type === 'document') {
+          <div class="document-section">
+            <button mat-raised-button color="primary" (click)="downloadFile()">
+              <mat-icon>download</mat-icon>
+              Descargar {{ resource()!.original_filename || 'archivo' }}
+            </button>
+            @if (fileUrl() && resource()!.original_filename?.endsWith('.pdf')) {
+              <div class="pdf-preview-container">
+                <iframe [src]="fileUrl()" class="pdf-preview"></iframe>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Metadata -->
+        <div class="metadata-section">
+          @if (resource()!.description) {
+            <div class="metadata-item">
+              <h3>Descripción</h3>
+              <p>{{ resource()!.description }}</p>
+            </div>
+          }
+
+          @if (resource()!.category) {
+            <div class="metadata-item">
+              <mat-icon class="meta-icon">folder</mat-icon>
+              <span class="meta-label">Categoría:</span>
+              <span>{{ resource()!.category!.name }}</span>
+            </div>
+          }
+
+          @if (resource()!.entity) {
+            <div class="metadata-item">
+              <mat-icon class="meta-icon">business</mat-icon>
+              <span class="meta-label">Entidad:</span>
+              <span>{{ resource()!.entity!.name }}</span>
+            </div>
+          }
+
+          @if (resource()!.creator) {
+            <div class="metadata-item">
+              <mat-icon class="meta-icon">person</mat-icon>
+              <span class="meta-label">Creado por:</span>
+              <span>{{ resource()!.creator!.name }} {{ resource()!.creator!.surname }}</span>
+            </div>
+          }
+
+          <div class="metadata-item">
+            <mat-icon class="meta-icon">calendar_today</mat-icon>
+            <span class="meta-label">Fecha:</span>
+            <span>{{ resource()!.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          @if (getTagsList(resource()!.tags).length > 0) {
+            <div class="tags-section">
+              <mat-icon class="meta-icon">label</mat-icon>
+              <span class="meta-label">Etiquetas:</span>
+              <div class="tags-list">
+                @for (tag of getTagsList(resource()!.tags); track tag) {
+                  <span class="tag-chip">{{ tag }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

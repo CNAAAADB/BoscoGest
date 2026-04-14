@@ -1,0 +1,77 @@
+<div class="viewer-container">
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else if (magazine()) {
+    <div class="viewer-header">
+      <button mat-icon-button (click)="goBack()" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="magazine-info">
+        <h1 class="magazine-title">{{ magazine()!.title }}</h1>
+        <p class="magazine-meta">
+          @if (magazine()!.collection || magazine()!.issue_number) {
+            @if (magazine()!.collection) {
+              {{ magazine()!.collection }}
+            }
+            @if (magazine()!.issue_number) {
+              #{{ magazine()!.issue_number }}
+            }
+          }
+          @if (magazine()!.entity) {
+            @if (magazine()!.collection || magazine()!.issue_number) {
+              <span class="separator">•</span>
+            }
+            <span class="entity-name">{{ magazine()!.entity!.name }}</span>
+          }
+        </p>
+      </div>
+      <div class="header-actions">
+        <button mat-raised-button color="primary" (click)="downloadMagazine()">
+          <mat-icon>download</mat-icon>
+          Descargar
+        </button>
+        @if (canEditMagazine()) {
+          <button mat-raised-button color="accent" (click)="editMagazine()">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </button>
+        }
+        @if (canDeleteMagazine()) {
+          <button mat-raised-button color="warn" (click)="deleteMagazine()">
+            <mat-icon>delete</mat-icon>
+            Eliminar
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (magazine()!.description) {
+      <mat-card class="description-card">
+        <mat-card-content>
+          <p>{{ magazine()!.description }}</p>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <div class="pdf-container">
+      @if (isNative) {
+        <div class="native-pdf-placeholder">
+          <mat-icon class="pdf-icon">picture_as_pdf</mat-icon>
+          <p>La previsualización de PDF no está disponible en la app.</p>
+          <button mat-raised-button color="primary" (click)="downloadMagazine()">
+            <mat-icon>download</mat-icon>
+            Descargar PDF
+          </button>
+        </div>
+      } @else if (pdfUrl()) {
+        <iframe
+          [src]="pdfUrl()"
+          class="pdf-viewer"
+          title="Visualizador de PDF">
+        </iframe>
+      }
+    </div>
+  }
+</div>

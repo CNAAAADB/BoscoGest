@@ -1,0 +1,243 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Local fonts — bundled for offline support in native apps */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('/assets/fonts/roboto-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('/assets/fonts/roboto-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/assets/fonts/material-icons.woff2') format('woff2');
+}
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Safe area insets for native apps (notch, gesture bar) — resolves to 0px on web */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, #F5EFE6 0%, #E8DCC8 100%);
+}
+
+/* Global button styles */
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-flat-button.mat-primary {
+  --mdc-protected-button-container-color: #3D4E7C !important;
+  --mdc-protected-button-label-text-color: #F5EFE6 !important;
+  --mat-protected-button-state-layer-color: #F5EFE6 !important;
+  background-color: #3D4E7C !important;
+  color: #F5EFE6 !important;
+  font-weight: 600 !important;
+  transition: background-color 0.3s ease !important;
+}
+
+.mat-mdc-raised-button.mat-primary:hover,
+.mat-mdc-unelevated-button.mat-primary:hover,
+.mat-mdc-flat-button.mat-primary:hover {
+  --mdc-protected-button-container-color: #2C3E5A !important;
+  background-color: #2C3E5A !important;
+}
+
+.mat-mdc-raised-button.mat-primary:not(:disabled),
+.mat-mdc-unelevated-button.mat-primary:not(:disabled),
+.mat-mdc-flat-button.mat-primary:not(:disabled) {
+  background-color: #3D4E7C !important;
+  color: #F5EFE6 !important;
+}
+
+.mat-mdc-raised-button.mat-primary:disabled,
+.mat-mdc-unelevated-button.mat-primary:disabled,
+.mat-mdc-flat-button.mat-primary:disabled {
+  background-color: rgba(61, 78, 124, 0.5) !important;
+  color: rgba(245, 239, 230, 0.7) !important;
+}
+
+/* Outlined/Stroked buttons */
+.mat-mdc-outlined-button.mat-primary {
+  --mdc-outlined-button-label-text-color: #3D4E7C !important;
+  --mdc-outlined-button-outline-color: #3D4E7C !important;
+  color: #3D4E7C !important;
+  border-color: #3D4E7C !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.mat-mdc-outlined-button.mat-primary:hover {
+  background-color: rgba(61, 78, 124, 0.1) !important;
+  border-color: #2C3E5A !important;
+}
+
+/* Icon buttons */
+.mat-mdc-icon-button.mat-primary {
+  --mat-icon-button-state-layer-color: #3D4E7C !important;
+  color: #3D4E7C !important;
+}
+
+.mat-mdc-icon-button.mat-primary:hover {
+  background-color: rgba(61, 78, 124, 0.1) !important;
+}
+
+/* Dropdown panels */
+.mat-mdc-select-panel,
+.mat-mdc-autocomplete-panel,
+.mat-mdc-menu-panel {
+  background-color: white !important;
+}
+
+.mat-mdc-option {
+  background-color: white !important;
+}
+
+.mat-mdc-option:hover {
+  background-color: #f8f9fa !important;
+}
+
+.mat-mdc-option.mat-mdc-option-active {
+  background-color: #f8f9fa !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected:not(.mat-mdc-option-multiple) {
+  background-color: rgba(61, 78, 124, 0.1) !important;
+}
+
+/* Cards — ensure white background across all mat-card instances */
+.mat-mdc-card {
+  background-color: white !important;
+}
+
+/* Dialog / Modal backgrounds */
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  background-color: white !important;
+}
+
+/* User menu positioning */
+.cdk-overlay-pane .user-menu {
+  margin-left: 1rem !important;
+}
+
+/* Snackbar (Alert) styles */
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: #323232 !important;
+  --mdc-snackbar-supporting-text-color: #ffffff !important;
+  --mat-snack-bar-button-color: #4CAF50 !important;
+}
+
+.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+  background-color: #323232 !important;
+}
+
+.mat-mdc-snack-bar-container .mdc-snackbar__label {
+  color: #ffffff !important;
+}
+
+.mat-mdc-snack-bar-container .mat-mdc-button {
+  color: #4CAF50 !important;
+  font-weight: 600 !important;
+}
+
+.mat-mdc-snack-bar-container .mat-mdc-button:hover {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+/* Success snackbar */
+.success-snackbar {
+  --mdc-snackbar-container-color: #4CAF50 !important;
+}
+
+.success-snackbar .mdc-snackbar__surface {
+  background-color: #4CAF50 !important;
+}
+
+.success-snackbar .mdc-snackbar__label {
+  color: #ffffff !important;
+}
+
+.success-snackbar .mat-mdc-button {
+  color: #ffffff !important;
+}
+
+/* Error snackbar */
+.error-snackbar {
+  --mdc-snackbar-container-color: #f44336 !important;
+}
+
+.error-snackbar .mdc-snackbar__surface {
+  background-color: #f44336 !important;
+}
+
+.error-snackbar .mdc-snackbar__label {
+  color: #ffffff !important;
+}
+
+.error-snackbar .mat-mdc-button {
+  color: #ffffff !important;
+}
+
+/* Warning snackbar */
+.warning-snackbar {
+  --mdc-snackbar-container-color: #ff9800 !important;
+}
+
+.warning-snackbar .mdc-snackbar__surface {
+  background-color: #ff9800 !important;
+}
+
+.warning-snackbar .mdc-snackbar__label {
+  color: #ffffff !important;
+}
+
+.warning-snackbar .mat-mdc-button {
+  color: #ffffff !important;
+}

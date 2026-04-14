@@ -1,0 +1,34 @@
+.body {
+  margin-left: 5rem;
+  width: calc(100vw - 5rem);
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  box-sizing: border-box;
+  transition: all 0.5s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.body-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 0;
+}
+
+.body-trimmed {
+  margin-left: 16.5625rem;
+  width: calc(100vw - 16.5625rem);
+}
+
+.body-md-screen {
+  margin-left: 5rem;
+  width: calc(100vw - 5rem);
+}
+
+.body-mobile {
+  margin-left: 0;
+  width: 100vw;
+  padding-top: calc(3.5rem + var(--sat, 0px));
+}

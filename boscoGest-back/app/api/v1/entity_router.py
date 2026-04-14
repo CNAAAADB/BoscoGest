@@ -1,0 +1,104 @@
+from fastapi import APIRouter, Depends, Request, status
+from typing import List
+from app.models.user_model import User
+from app.schemas.entity import EntityCreate, EntityUpdate, EntityResponse
+from app.utils.auth import get_current_active_user, require_permission
+from app.services.entity_service import EntityService, get_entity_service
+
+entity_router = APIRouter(prefix="/entities", tags=["Entity Management"])
+
+
+@entity_router.get("/membership-manageable", response_model=List[EntityResponse])
+def get_membership_manageable_entities(
+    skip: int = 0,
+    limit: int = 100,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(require_permission("memberships", "manage")),
+):
+    return service.get_membership_manageable_entities(
+        current_user, skip=skip, limit=limit
+    )
+
+
+@entity_router.get("/admin", response_model=List[EntityResponse])
+def get_admin_entities(
+    skip: int = 0,
+    limit: int = 100,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(require_permission("entities", "list")),
+):
+    return service.get_admin_entities(current_user, skip=skip, limit=limit)
+
+
+@entity_router.get("", response_model=List[EntityResponse])
+def get_entities(
+    skip: int = 0,
+    limit: int = 100,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(require_permission("entities", "list")),
+):
+    return service.get_entities(current_user, skip=skip, limit=limit)
+
+
+@entity_router.get("/{entity_id}/roles", response_model=List)
+def get_entity_roles(
+    entity_id: int,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.get_entity_roles(entity_id, current_user)
+
+
+@entity_router.get("/{entity_id}", response_model=EntityResponse)
+def get_entity(
+    entity_id: int,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.get_entity(entity_id, current_user)
+
+
+@entity_router.post(
+    "", response_model=EntityResponse, status_code=status.HTTP_201_CREATED
+)
+def create_entity(
+    entity_in: EntityCreate,
+    request: Request = None,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.create_entity(
+        entity_in,
+        current_user,
+        ip_address=request.client.host if request else None,
+    )
+
+
+@entity_router.put("/{entity_id}", response_model=EntityResponse)
+def update_entity(
+    entity_id: int,
+    entity_in: EntityUpdate,
+    request: Request = None,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.update_entity(
+        entity_id,
+        entity_in,
+        current_user,
+        ip_address=request.client.host if request else None,
+    )
+
+
+@entity_router.delete("/{entity_id}", status_code=status.HTTP_200_OK)
+def delete_entity(
+    entity_id: int,
+    request: Request = None,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.delete_entity(
+        entity_id,
+        current_user,
+        ip_address=request.client.host if request else None,
+    )

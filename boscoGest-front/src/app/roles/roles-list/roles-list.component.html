@@ -1,0 +1,72 @@
+<div class="roles-container">
+  <h1 class="page-title">Gestión de Roles</h1>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else {
+    <mat-card class="roles-card">
+      <mat-card-header>
+        <mat-card-title class="section-title">
+          <mat-icon class="title-icon">admin_panel_settings</mat-icon>
+          Listado de Roles
+        </mat-card-title>
+        <div class="header-actions">
+          <button mat-raised-button color="primary" (click)="createRole()" class="create-button">
+            <mat-icon>add</mat-icon>
+            Crear Rol
+          </button>
+        </div>
+      </mat-card-header>
+      <mat-card-content class="card-content">
+        @if (roles().length > 0) {
+          <div class="table-container">
+            <table mat-table [dataSource]="roles()" class="roles-table">
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef class="table-header">ID</th>
+                <td mat-cell *matCellDef="let role" class="table-cell">{{ role.id }}</td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Nombre</th>
+                <td mat-cell *matCellDef="let role" class="table-cell name-cell">{{ role.name }}</td>
+              </ng-container>
+
+              <!-- Description Column -->
+              <ng-container matColumnDef="description">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Descripción</th>
+                <td mat-cell *matCellDef="let role" class="table-cell description-cell">
+                  {{ role.description || 'Sin descripción' }}
+                </td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Acciones</th>
+                <td mat-cell *matCellDef="let role" class="table-cell actions-cell">
+                  <button mat-icon-button (click)="viewRole(role)" matTooltip="Ver detalles" class="action-button view-button">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="editRole(role)" matTooltip="Editar" class="action-button edit-button">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="deleteRole(role)" matTooltip="Eliminar" class="action-button delete-button">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-state">No hay roles disponibles</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

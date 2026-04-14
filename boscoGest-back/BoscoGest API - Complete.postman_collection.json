@@ -1,0 +1,1182 @@
+{
+	"info": {
+		"_postman_id": "ae1a4b4f-1a43-41fd-8509-371450b33f72",
+		"name": "BoscoGest API - Complete",
+		"description": "Colección completa para probar todos los endpoints de BoscoGest",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "48075397"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"auth_token\", jsonData.access_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "{{superadmin_email}}",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "{{superadmin_password}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "token"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Permission",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/check-permission?resource=users&action=create",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "check-permission"],
+							"query": [
+								{
+									"key": "resource",
+									"value": "users"
+								},
+								{
+									"key": "action",
+									"value": "create"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Switch Membership",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"auth_token\", jsonData.access_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/switch-membership/1",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "switch-membership", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_user_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test1234\",\n  \"name\": \"Test\",\n  \"surname\": \"User\",\n  \"phone\": \"123456789\",\n  \"birthdate\": \"1990-01-01\",\n  \"dni\": \"12345678X\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"987654321\",\n  \"address\": \"Calle Falsa 123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"description": "Role management endpoints. IMPORTANT: Roles are global entities with unique names that can be associated with multiple entities. The system automatically creates 'admin' and 'socio' roles when the first entity is created.",
+			"item": [
+				{
+					"name": "Create Role",
+					"description": "Create a new global role. Role names must be unique across the entire application.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_role_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"test_role\",\n  \"description\": \"Role de prueba\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Roles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"test_role_updated\",\n  \"description\": \"Role actualizado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Permissions",
+			"item": [
+				{
+					"name": "Create Permission",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_permission_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"test_permission\",\n  \"resource\": \"users\",\n  \"action\": \"read\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["permissions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["permissions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/permissions/{{test_permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["permissions", "{{test_permission_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Permission",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"test_permission_updated\",\n  \"resource\": \"users\",\n  \"action\": \"update\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/permissions/{{test_permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["permissions", "{{test_permission_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Permission",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/permissions/{{test_permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["permissions", "{{test_permission_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Permission to Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/permissions/{{test_permission_id}}/assign-to-role/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["permissions", "{{test_permission_id}}", "assign-to-role", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Groups",
+			"item": [
+				{
+					"name": "Create Group",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_group_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Group\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/groups",
+							"host": ["{{base_url}}"],
+							"path": ["groups"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Groups",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups",
+							"host": ["{{base_url}}"],
+							"path": ["groups"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Group",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Group Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Group",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add User to Group",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}/add-user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}", "add-user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User from Group",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}/remove-user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}", "remove-user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to Group",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}/assign-role/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}", "assign-role", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Role from Group",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/groups/{{test_group_id}}/remove-role/{{test_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["groups", "{{test_group_id}}", "remove-role", "{{test_role_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Entities",
+			"description": "Entity management endpoints. When creating an entity, the system automatically associates global 'admin' and 'socio' roles to it. If these roles don't exist, they are created with appropriate permissions.",
+			"item": [
+				{
+					"name": "Get Entities",
+					"description": "List all entities where the current user has a membership. Only returns entities the user is a member of, regardless of role.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/entities",
+							"host": ["{{base_url}}"],
+							"path": ["entities"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Entity by ID",
+					"description": "Get a specific entity by ID. Only returns the entity if the user is a member of it.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/entities/{{test_entity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["entities", "{{test_entity_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Entity",
+					"description": "Create a child entity under the user's current active membership entity. The level and parent_id are automatically assigned based on the user's current membership. Only the name is required.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_entity_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Child Entity Name\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/entities",
+							"host": ["{{base_url}}"],
+							"path": ["entities"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Entity",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"SuperEntity Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/entities/{{test_entity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["entities", "{{test_entity_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Entity",
+					"description": "Delete an entity by ID. This will cascade delete all related memberships and child entities.",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/entities/{{test_entity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["entities", "{{test_entity_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Memberships",
+			"item": [
+				{
+					"name": "Create Membership",
+					"description": "Create a new membership for a user with a specific role. The entity is automatically assigned from the creator's current active membership. If this is the user's first membership, it will automatically be set as is_current=true regardless of the value sent in the request.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_membership_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{test_user_id}},\n  \"role_id\": {{test_role_id}},\n  \"is_active\": true,\n  \"is_current\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships",
+							"host": ["{{base_url}}"],
+							"path": ["memberships"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Memberships",
+					"description": "List all memberships associated with the current authenticated user. Only returns memberships where the user is the member.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships",
+							"host": ["{{base_url}}"],
+							"path": ["memberships"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Membership by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships/{{test_membership_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["memberships", "{{test_membership_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Membership",
+					"description": "Update a membership's role. Only the role can be updated. Use /auth/switch-membership to change the active membership (is_current).",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role_id\": {{test_role_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/memberships/{{test_membership_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["memberships", "{{test_membership_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Membership",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/memberships/{{test_membership_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["memberships", "{{test_membership_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Activities",
+			"item": [
+				{
+					"name": "Create Activity",
+					"description": "Create a new activity. The entity_id is automatically assigned from the user's current active membership. Do not include entity_id in the request body.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"test_activity_id\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Concierto de Navidad\",\n  \"description\": \"Concierto con coro y orquesta\",\n  \"date\": \"2025-12-20T20:00:00\",\n  \"capacity\": 2,\n  \"price\": 15.0,\n  \"allow_waitlist\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/activities",
+							"host": ["{{base_url}}"],
+							"path": ["activities"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Activities",
+					"description": "List all activities from entities where the current user has a membership. Returns activities from all user's entities, regardless of which membership is currently active.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities",
+							"host": ["{{base_url}}"],
+							"path": ["activities"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Activity by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Activity",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 20.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Activity",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Activity Image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}/upload-image",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}", "upload-image"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register to Activity",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Activity Registrations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}/registrations",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}", "registrations"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Registration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}/registrations/{{test_user_id}}/accept",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}", "registrations", "{{test_user_id}}", "accept"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Registration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/activities/{{test_activity_id}}/registrations/{{test_user_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["activities", "{{test_activity_id}}", "registrations", "{{test_user_id}}", "reject"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,20 @@
+@if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="32"></mat-spinner>
+  </div>
+} @else {
+  <div class="preferences-list">
+    @for (pref of preferences(); track pref.event_type) {
+      <div class="preference-row">
+        <span class="preference-label">{{ pref.label }}</span>
+        <mat-slide-toggle
+          [checked]="pref.in_app_enabled"
+          (change)="togglePreference(pref.event_type, $event.checked)"
+        ></mat-slide-toggle>
+      </div>
+    }
+    @if (preferences().length === 0) {
+      <div class="empty-state">No hay tipos de notificación configurables</div>
+    }
+  </div>
+}

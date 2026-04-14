@@ -1,0 +1,152 @@
+<div class="form-container">
+  <mat-card class="form-card">
+    <mat-card-header>
+      <div class="header-content">
+        <button mat-icon-button (click)="goBack()" class="back-button">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-card-title>{{ isEditMode() ? 'Editar Recurso' : 'Nuevo Recurso' }}</mat-card-title>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="resourceForm" (ngSubmit)="onSubmit()" class="resource-form">
+
+        <!-- Resource Type -->
+        @if (!isEditMode()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Tipo de recurso</mat-label>
+            <mat-select formControlName="resource_type" required>
+              @for (type of resourceTypes; track type.value) {
+                <mat-option [value]="type.value">
+                  <mat-icon>{{ type.icon }}</mat-icon>
+                  {{ type.label }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+        <!-- Title -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Título</mat-label>
+          <input matInput formControlName="title" placeholder="Título del recurso" required>
+          @if (resourceForm.get('title')?.hasError('required') && resourceForm.get('title')?.touched) {
+            <mat-error>El título es requerido</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- URL (for link/video) -->
+        @if (isUrlType) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>URL</mat-label>
+            <input matInput formControlName="url" placeholder="https://..." type="url">
+            <mat-icon matPrefix>link</mat-icon>
+          </mat-form-field>
+        }
+
+        <!-- File Upload (for document/image) -->
+        @if (isFileType && !isEditMode()) {
+          <div class="file-upload-section">
+            <input
+              type="file"
+              [accept]="acceptedExtensions"
+              (change)="onFileSelected($event)"
+              #fileInput
+              class="file-input">
+
+            <button
+              type="button"
+              mat-raised-button
+              color="accent"
+              (click)="fileInput.click()"
+              class="file-button">
+              <mat-icon>attach_file</mat-icon>
+              Seleccionar Archivo
+            </button>
+
+            @if (selectedFile) {
+              <div class="file-info">
+                <mat-icon class="file-icon">insert_drive_file</mat-icon>
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-size">({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Entity -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Entidad</mat-label>
+          <mat-select formControlName="entity_id" required>
+            @if (loadingEntities()) {
+              <mat-option disabled>Cargando entidades...</mat-option>
+            } @else {
+              @for (entity of entities(); track entity.id) {
+                <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+              }
+            }
+          </mat-select>
+          @if (resourceForm.get('entity_id')?.hasError('required') && resourceForm.get('entity_id')?.touched) {
+            <mat-error>La entidad es requerida</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Category -->
+        <div class="category-row">
+          <mat-form-field appearance="outline" class="category-field">
+            <mat-label>Categoría (opcional)</mat-label>
+            <mat-select formControlName="category_id">
+              <mat-option [value]="null">Sin categoría</mat-option>
+              @for (cat of categories(); track cat.id) {
+                <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <button type="button" mat-icon-button color="primary" (click)="openCategoryDialog()" title="Nueva categoría">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+        </div>
+
+        <!-- Tags -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Etiquetas (opcional)</mat-label>
+          <input matInput formControlName="tags" placeholder="angular, frontend, tutorial (separadas por comas)">
+          <mat-icon matPrefix>label</mat-icon>
+          <mat-hint>Separa las etiquetas con comas</mat-hint>
+        </mat-form-field>
+
+        <!-- Description -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Descripción (opcional)</mat-label>
+          <textarea
+            matInput
+            formControlName="description"
+            placeholder="Descripción del recurso"
+            rows="4">
+          </textarea>
+        </mat-form-field>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" mat-button (click)="goBack()" [disabled]="submitting()">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            mat-raised-button
+            color="primary"
+            [disabled]="submitting() || !resourceForm.valid || (isFileType && !isEditMode() && !selectedFile)">
+            @if (submitting()) {
+              <mat-spinner diameter="20" class="spinner"></mat-spinner>
+              <span>{{ isEditMode() ? 'Guardando...' : 'Creando...' }}</span>
+            } @else {
+              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              <span>{{ isEditMode() ? 'Guardar Cambios' : 'Crear Recurso' }}</span>
+            }
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

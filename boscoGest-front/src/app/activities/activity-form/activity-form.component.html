@@ -1,0 +1,98 @@
+<div class="form-container">
+  <h1 class="page-title">{{ isEditMode ? 'Editar Actividad' : 'Nueva Actividad' }}</h1>
+
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form [formGroup]="activityForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Título</mat-label>
+          <input matInput formControlName="title" required>
+          <mat-icon matSuffix>title</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Descripción</mat-label>
+          <textarea matInput formControlName="description" rows="4" required></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Entidad</mat-label>
+          <mat-select formControlName="entity_id" required>
+            @for (entity of availableEntities(); track entity.id) {
+              <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matSuffix>business</mat-icon>
+        </mat-form-field>
+
+        <!-- Image Upload Section -->
+        <div class="image-upload-section">
+          <h3>Imagen de la actividad</h3>
+
+          @if (imagePreview || currentImageUrl) {
+            <div class="image-preview">
+              <img [src]="imagePreview || getImageUrl(currentImageUrl!)" alt="Vista previa">
+              <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+
+          <input #fileInput type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+          <button mat-raised-button type="button" (click)="fileInput.click()" color="accent">
+            <mat-icon>photo_camera</mat-icon>
+            {{ (imagePreview || currentImageUrl) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+          </button>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="picker" [formControl]="dateControl" required>
+            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hora</mat-label>
+            <input matInput type="time" [formControl]="timeControl" required>
+            <mat-icon matSuffix>schedule</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Aforo</mat-label>
+            <input matInput type="number" formControlName="capacity" required>
+            <mat-icon matSuffix>people</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Precio (€)</mat-label>
+            <input matInput type="number" formControlName="price" step="0.01" required>
+            <mat-icon matSuffix>euro</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <mat-checkbox formControlName="allow_waitlist" class="checkbox">
+          Permitir lista de espera
+        </mat-checkbox>
+
+        <div class="button-row">
+          <button mat-raised-button type="button" (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+            Cancelar
+          </button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="activityForm.invalid || loading()">
+            @if (loading()) {
+              <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+            } @else {
+              <mat-icon>save</mat-icon>
+            }
+            {{ isEditMode ? 'Actualizar' : 'Crear' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

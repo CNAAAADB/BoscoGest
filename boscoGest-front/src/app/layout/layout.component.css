@@ -1,0 +1,20 @@
+.main {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    padding-top: var(--sat, 0px);
+    background: #f4f7fa;
+}
+
+.content {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background: #f4f7fa;
+}

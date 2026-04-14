@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and fill in the values
+# DO NOT commit terraform.tfvars to version control
+
+aws_region    = "eu-west-1"
+project_name  = "boscogest"
+environment   = "prod"
+
+# EC2
+key_name         = "boscogest-key"       # Must exist in your AWS account
+instance_type    = "t3.micro"
+allowed_ssh_cidrs = ["YOUR_IP/32"]       # Restrict SSH to your IP
+
+# RDS
+db_name     = "boscogest"
+db_username = "admin"
+db_password = "CHANGE-ME-strong-password-here"
+
+# App
+secret_key   = "CHANGE-ME-minimum-32-characters-long-secret-key"
+cors_origins = "http://your-frontend-s3-url.s3-website.eu-west-1.amazonaws.com"
+
+# Docker image — use ECR URL from `terraform output ecr_repository_url`
+# After first `terraform apply`, run `terraform output ecr_push_commands` to see push instructions
+docker_image = "<ACCOUNT_ID>.dkr.ecr.eu-west-1.amazonaws.com/boscogest-back:latest"
+frontend_url = "http://your-frontend-s3-url.s3-website.eu-west-1.amazonaws.com"

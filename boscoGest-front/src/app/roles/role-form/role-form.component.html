@@ -1,0 +1,132 @@
+<div class="role-form-container">
+  <h1 class="page-title">{{ isEditMode() ? 'Editar Rol' : 'Crear Rol' }}</h1>
+
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title class="section-title">
+        <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
+        {{ isEditMode() ? 'Información del Rol' : 'Nuevo Rol' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        </div>
+      } @else {
+        <form [formGroup]="roleForm" (ngSubmit)="onSubmit()">
+          <div class="form-basic-info">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre</mat-label>
+              <input matInput formControlName="name" placeholder="Nombre del rol" required>
+              @if (roleForm.get('name')?.hasError('required')) {
+                <mat-error>El nombre es obligatorio</mat-error>
+              }
+              @if (roleForm.get('name')?.hasError('minlength')) {
+                <mat-error>El nombre debe tener al menos 2 caracteres</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Descripción</mat-label>
+              <textarea
+                matInput
+                formControlName="description"
+                placeholder="Descripción del rol"
+                rows="4"
+              ></textarea>
+            </mat-form-field>
+          </div>
+
+          <div class="permissions-section">
+            <h3 class="subsection-title">
+              <mat-icon class="subsection-icon">security</mat-icon>
+              Permisos
+              @if (isSuperadmin()) {
+                <span class="superadmin-notice">(Superadmin tiene todos los permisos - no modificable)</span>
+              }
+            </h3>
+              <div class="permissions-container" [class.disabled]="isSuperadmin()">
+                <!-- Available Permissions -->
+                <div class="permissions-box">
+                  <h4>Disponibles</h4>
+                  <mat-list class="permissions-list">
+                    @for (permission of availablePermissions(); track permission.id) {
+                      <mat-list-item (click)="!isSuperadmin() && moveToSelected(permission)"
+                                     class="permission-item"
+                                     [class.disabled]="isSuperadmin()">
+                        <span class="permission-label">{{ getPermissionLabel(permission) }}</span>
+                        @if (permission.description) {
+                          <span class="permission-description">{{ permission.description }}</span>
+                        }
+                      </mat-list-item>
+                    }
+                    @if (availablePermissions().length === 0) {
+                      <div class="empty-message">
+                        @if (isSuperadmin()) {
+                          Todos los permisos están asignados
+                        } @else {
+                          No hay permisos disponibles
+                        }
+                      </div>
+                    }
+                  </mat-list>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="permissions-controls">
+                  <button mat-icon-button type="button" (click)="moveAllToSelected()"
+                          [disabled]="isSuperadmin() || availablePermissions().length === 0"
+                          matTooltip="Mover todos a la derecha">
+                    <mat-icon>keyboard_double_arrow_right</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" (click)="moveAllToAvailable()"
+                          [disabled]="isSuperadmin() || selectedPermissions().length === 0"
+                          matTooltip="Mover todos a la izquierda">
+                    <mat-icon>keyboard_double_arrow_left</mat-icon>
+                  </button>
+                </div>
+
+                <!-- Selected Permissions -->
+                <div class="permissions-box">
+                  <h4>Asignados</h4>
+                  <mat-list class="permissions-list">
+                    @for (permission of selectedPermissions(); track permission.id) {
+                      <mat-list-item (click)="!isSuperadmin() && moveToAvailable(permission)"
+                                     class="permission-item selected"
+                                     [class.disabled]="isSuperadmin()">
+                        <span class="permission-label">{{ getPermissionLabel(permission) }}</span>
+                        @if (permission.description) {
+                          <span class="permission-description">{{ permission.description }}</span>
+                        }
+                      </mat-list-item>
+                    }
+                    @if (selectedPermissions().length === 0) {
+                      <div class="empty-message">No hay permisos asignados</div>
+                    }
+                  </mat-list>
+                </div>
+              </div>
+          </div>
+
+          <div class="form-actions">
+            <button mat-button type="button" (click)="onCancel()" class="cancel-action-button">
+              <mat-icon>arrow_back</mat-icon>
+              Cancelar
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="roleForm.invalid || loading() || isSuperadmin()"
+              class="submit-action-button"
+            >
+              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              {{ isEditMode() ? 'Actualizar' : 'Crear' }}
+            </button>
+          </div>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

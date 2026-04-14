@@ -1,0 +1,104 @@
+<div class="form-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        @if (isEditMode()) {
+          <span>Editar Comunicación</span>
+        } @else {
+          <span>Nueva Comunicación</span>
+        }
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        </div>
+      } @else {
+        <form [formGroup]="newsForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Entidad</mat-label>
+            <mat-select formControlName="entity_id" required>
+              @for (entity of availableEntities(); track entity.id) {
+                <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>business</mat-icon>
+            @if (newsForm.get('entity_id')?.hasError('required') && newsForm.get('entity_id')?.touched) {
+              <mat-error>La entidad es obligatoria</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Título</mat-label>
+            <input matInput formControlName="title" placeholder="Título de la comunicación" required>
+            @if (newsForm.get('title')?.hasError('required') && newsForm.get('title')?.touched) {
+              <mat-error>El título es obligatorio</mat-error>
+            }
+            @if (newsForm.get('title')?.hasError('maxlength')) {
+              <mat-error>El título no puede exceder 255 caracteres</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Contenido</mat-label>
+            <textarea
+              matInput
+              formControlName="content"
+              placeholder="Contenido de la comunicación"
+              rows="10"
+              required>
+            </textarea>
+            @if (newsForm.get('content')?.hasError('required') && newsForm.get('content')?.touched) {
+              <mat-error>El contenido es obligatorio</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="image-upload-section">
+            <h3>Imagen de la comunicación</h3>
+
+            @if (imagePreview || currentImageUrl) {
+              <div class="image-preview">
+                <img [src]="imagePreview || getImageUrl(currentImageUrl!)" alt="Vista previa">
+                <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+
+            <input #fileInput type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+            <button mat-raised-button type="button" (click)="fileInput.click()" color="accent">
+              <mat-icon>photo_camera</mat-icon>
+              {{ (imagePreview || currentImageUrl) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+            </button>
+          </div>
+
+          <div class="form-actions">
+            <button mat-raised-button type="button" (click)="cancel()">
+              <mat-icon>close</mat-icon>
+              Cancelar
+            </button>
+            <button mat-raised-button type="button" (click)="saveDraft()"
+                    [disabled]="newsForm.invalid || loading()">
+              <mat-icon>save</mat-icon>
+              Guardar borrador
+            </button>
+            <button mat-raised-button color="accent" type="button" (click)="sendToReview()"
+                    [disabled]="newsForm.invalid || loading()">
+              <mat-icon>send</mat-icon>
+              Enviar a revisión
+            </button>
+            @if (canPublish()) {
+              <button mat-raised-button color="primary" type="button" (click)="publishDirectly()"
+                      [disabled]="newsForm.invalid || loading()">
+                <mat-icon>publish</mat-icon>
+                Publicar
+              </button>
+            }
+          </div>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

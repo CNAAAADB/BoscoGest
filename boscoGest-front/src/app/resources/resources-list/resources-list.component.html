@@ -1,0 +1,137 @@
+<div class="resources-container">
+  <div class="header">
+    <h1 class="page-title">Recursos</h1>
+    @if (canCreate()) {
+      <button mat-raised-button color="primary" (click)="createResource()">
+        <mat-icon>add</mat-icon>
+        Nuevo Recurso
+      </button>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="filter-field search-field">
+      <mat-label>Buscar</mat-label>
+      <input matInput [ngModel]="searchQuery()" (ngModelChange)="onSearchChange($event)" placeholder="Buscar por título, descripción o etiquetas...">
+      <mat-icon matPrefix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Tipo</mat-label>
+      <mat-select [ngModel]="selectedType()" (ngModelChange)="onTypeChange($event)">
+        <mat-option value="">Todos</mat-option>
+        <mat-option value="link">Enlace</mat-option>
+        <mat-option value="document">Documento</mat-option>
+        <mat-option value="image">Imagen</mat-option>
+        <mat-option value="video">Video</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (categories().length > 0) {
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Categoría</mat-label>
+        <mat-select [ngModel]="selectedCategoryId()" (ngModelChange)="onCategoryChange($event)">
+          <mat-option [value]="null">Todas</mat-option>
+          @for (cat of categories(); track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
+    @if (searchQuery() || selectedType() || selectedCategoryId()) {
+      <button mat-button color="primary" (click)="clearFilters()">
+        <mat-icon>clear</mat-icon>
+        Limpiar
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else if (filteredResources().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">school</mat-icon>
+      @if (resources().length === 0) {
+        <h2>No hay recursos disponibles</h2>
+        <p>Crea el primer recurso para comenzar</p>
+        @if (canCreate()) {
+          <button mat-raised-button color="primary" (click)="createResource()">
+            <mat-icon>add</mat-icon>
+            Nuevo Recurso
+          </button>
+        }
+      } @else {
+        <h2>No se encontraron resultados</h2>
+        <p>Prueba con otros filtros de búsqueda</p>
+        <button mat-button color="primary" (click)="clearFilters()">
+          <mat-icon>clear</mat-icon>
+          Limpiar filtros
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="resources-grid">
+      @for (resource of filteredResources(); track resource.id) {
+        <mat-card class="resource-card" (click)="viewResource(resource.id)">
+          <div class="resource-type-badge" [class]="'type-' + resource.resource_type">
+            <mat-icon>{{ getTypeIcon(resource.resource_type) }}</mat-icon>
+            <span>{{ getTypeLabel(resource.resource_type) }}</span>
+          </div>
+          <mat-card-content class="resource-info">
+            <h3 class="resource-title">{{ resource.title }}</h3>
+            @if (resource.category) {
+              <div class="resource-category">
+                <mat-icon class="meta-icon">folder</mat-icon>
+                {{ resource.category.name }}
+              </div>
+            }
+            @if (resource.entity) {
+              <p class="resource-entity">
+                <mat-icon class="meta-icon">business</mat-icon>
+                {{ resource.entity.name }}
+              </p>
+            }
+            @if (resource.creator) {
+              <p class="resource-creator">
+                <mat-icon class="meta-icon">person</mat-icon>
+                {{ resource.creator.name }} {{ resource.creator.surname }}
+              </p>
+            }
+            <p class="resource-date">
+              <mat-icon class="meta-icon">calendar_today</mat-icon>
+              {{ resource.created_at | date:'dd/MM/yyyy' }}
+            </p>
+            @if (resource.description) {
+              <p class="resource-description">{{ resource.description }}</p>
+            }
+            @if (getTagsList(resource.tags).length > 0) {
+              <div class="resource-tags">
+                @for (tag of getTagsList(resource.tags); track tag) {
+                  <span class="tag-chip">{{ tag }}</span>
+                }
+              </div>
+            }
+          </mat-card-content>
+          @if (canEdit() || canDelete()) {
+            <div class="card-actions">
+              @if (canEdit()) {
+                <button mat-icon-button color="primary" (click)="editResource($event, resource.id)" title="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (canDelete()) {
+                <button mat-icon-button color="warn" (click)="deleteResource($event, resource)" title="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </mat-card>
+      }
+    </div>
+  }
+</div>

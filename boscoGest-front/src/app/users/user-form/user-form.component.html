@@ -1,0 +1,226 @@
+<div class="user-form-container">
+  <h1 class="page-title">{{ isEditMode() ? 'Editar Usuario' : 'Crear Usuario' }}</h1>
+
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title class="section-title">
+        <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'person_add' }}</mat-icon>
+        {{ isEditMode() ? 'Información del Usuario' : 'Nuevo Usuario' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        </div>
+      } @else {
+        <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+          <div class="form-fields">
+            <!-- Personal Information Section -->
+            <h3 class="subsection-title">Información Personal</h3>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Nombre</mat-label>
+                <input matInput formControlName="name" placeholder="Nombre" required>
+                <mat-icon matPrefix>person</mat-icon>
+                @if (userForm.get('name')?.hasError('required')) {
+                  <mat-error>El nombre es obligatorio</mat-error>
+                }
+                @if (userForm.get('name')?.hasError('minlength')) {
+                  <mat-error>El nombre debe tener al menos 2 caracteres</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Apellidos</mat-label>
+                <input matInput formControlName="surname" placeholder="Apellidos" required>
+                <mat-icon matPrefix>person</mat-icon>
+                @if (userForm.get('surname')?.hasError('required')) {
+                  <mat-error>Los apellidos son obligatorios</mat-error>
+                }
+                @if (userForm.get('surname')?.hasError('minlength')) {
+                  <mat-error>Los apellidos deben tener al menos 2 caracteres</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>DNI</mat-label>
+                <input matInput formControlName="dni" placeholder="12345678A" required>
+                <mat-icon matPrefix>badge</mat-icon>
+                @if (userForm.get('dni')?.hasError('required')) {
+                  <mat-error>El DNI es obligatorio</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Fecha de Nacimiento</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="birthdate" placeholder="DD/MM/YYYY" required>
+                <mat-datepicker-toggle matIconPrefix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+                @if (userForm.get('birthdate')?.hasError('required')) {
+                  <mat-error>La fecha de nacimiento es obligatoria</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <!-- Contact Information Section -->
+            <h3 class="subsection-title">Información de Contacto</h3>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" formControlName="email" placeholder="email@ejemplo.com" required>
+                <mat-icon matPrefix>email</mat-icon>
+                @if (userForm.get('email')?.hasError('required')) {
+                  <mat-error>El email es obligatorio</mat-error>
+                }
+                @if (userForm.get('email')?.hasError('email')) {
+                  <mat-error>El email no es válido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="phone" placeholder="600123456" required>
+                <mat-icon matPrefix>phone</mat-icon>
+                @if (userForm.get('phone')?.hasError('required')) {
+                  <mat-error>El teléfono es obligatorio</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Dirección</mat-label>
+              <input matInput formControlName="address" placeholder="Calle, número, piso">
+              <mat-icon matPrefix>home</mat-icon>
+            </mat-form-field>
+
+            <!-- Additional Information Section -->
+            <h3 class="subsection-title">Información Adicional</h3>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>IBAN</mat-label>
+                <input matInput formControlName="iban" placeholder="ES9121000418450200051332">
+                <mat-icon matPrefix>account_balance</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Talla</mat-label>
+                <input matInput formControlName="size" placeholder="M, L, XL...">
+                <mat-icon matPrefix>straighten</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Hobbies</mat-label>
+                <input matInput formControlName="hobbies" placeholder="Deportes, lectura, música...">
+                <mat-icon matPrefix>interests</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Puesto de Trabajo</mat-label>
+                <input matInput formControlName="job_position" placeholder="Desarrollador, profesor...">
+                <mat-icon matPrefix>work</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>URL Foto</mat-label>
+              <input matInput formControlName="photo" placeholder="https://ejemplo.com/foto.jpg">
+              <mat-icon matPrefix>photo_camera</mat-icon>
+            </mat-form-field>
+
+            <!-- Security Section -->
+            @if (!isEditMode()) {
+              <h3 class="subsection-title">Seguridad</h3>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Contraseña</mat-label>
+                <input matInput type="password" formControlName="password" placeholder="Mínimo 8 caracteres" required>
+                <mat-icon matPrefix>lock</mat-icon>
+                @if (userForm.get('password')?.hasError('required')) {
+                  <mat-error>La contraseña es obligatoria</mat-error>
+                }
+                @if (userForm.get('password')?.hasError('minlength')) {
+                  <mat-error>La contraseña debe tener al menos 8 caracteres</mat-error>
+                }
+                @if (userForm.get('password')?.hasError('pattern')) {
+                  <mat-error>Debe contener al menos una mayúscula y un número</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Membership Section -->
+              <h3 class="subsection-title">Membresía (Opcional)</h3>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Entidad</mat-label>
+                  <mat-select formControlName="entity_id">
+                    <mat-option [value]="null">Sin asignar</mat-option>
+                    @for (entity of adminEntities(); track entity.id) {
+                      <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>business</mat-icon>
+                  <mat-hint>Selecciona una entidad para asignar un rol</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Rol</mat-label>
+                  <mat-select formControlName="role_id" [disabled]="!userForm.get('entity_id')?.value || loadingRoles()">
+                    <mat-option [value]="null">Sin asignar</mat-option>
+                    @if (loadingRoles()) {
+                      <mat-option disabled>Cargando roles...</mat-option>
+                    } @else {
+                      @for (role of availableRoles(); track role.id) {
+                        <mat-option [value]="role.id">{{ role.name }}</mat-option>
+                      }
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>assignment_ind</mat-icon>
+                  <mat-hint>Primero selecciona una entidad</mat-hint>
+                </mat-form-field>
+              </div>
+            }
+
+            <!-- Status Section (only in edit mode) -->
+            @if (isEditMode()) {
+              <h3 class="subsection-title">Estado</h3>
+
+              <mat-checkbox formControlName="is_active" class="status-checkbox">
+                Usuario activo
+              </mat-checkbox>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button
+              mat-raised-button
+              type="button"
+              (click)="onCancel()"
+              class="cancel-button"
+            >
+              <mat-icon>close</mat-icon>
+              Cancelar
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="userForm.invalid || loading()"
+              class="submit-button"
+            >
+              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              {{ isEditMode() ? 'Actualizar' : 'Crear' }}
+            </button>
+          </div>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

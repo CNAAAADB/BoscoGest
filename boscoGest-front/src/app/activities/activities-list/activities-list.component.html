@@ -1,0 +1,113 @@
+<div class="activities-container">
+  <h1 class="page-title">Actividades</h1>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else {
+    <div class="activities-header">
+      <div class="header-left">
+        <button mat-stroked-button (click)="togglePastActivities()" class="toggle-button">
+          <mat-icon>{{ showPastActivities() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          {{ showPastActivities() ? 'Ocultar finalizadas' : 'Mostrar finalizadas' }}
+        </button>
+      </div>
+      <div class="header-right">
+        @if (canCreateActivities()) {
+          <button mat-raised-button color="primary" (click)="createActivity()" class="create-button">
+            <mat-icon>add</mat-icon>
+            Crear Actividad
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (filteredActivities().length > 0) {
+      <div class="activities-grid">
+        @for (activity of filteredActivities(); track activity.id) {
+          <mat-card class="activity-card" (click)="viewActivity(activity)">
+            <div class="card-image-container" [class.no-image]="!activity.image_url">
+              @if (activity.image_url) {
+                <img [src]="getImageUrl(activity.image_url)" [alt]="activity.title" class="activity-image">
+              }
+              @if (isUserRegistered(activity.id)) {
+                <mat-chip class="status-chip registered-chip">
+                  <mat-icon>check_circle</mat-icon>
+                  Inscrito
+                </mat-chip>
+              } @else if (isPast(activity.date)) {
+                <mat-chip class="status-chip past-chip">Finalizada</mat-chip>
+              } @else if (isUpcoming(activity.date)) {
+                <mat-chip class="status-chip upcoming-chip">Próxima</mat-chip>
+              }
+            </div>
+            <mat-card-header>
+              <mat-card-title class="activity-title">{{ activity.title }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="card-content">
+              <p class="activity-description">{{ activity.description }}</p>
+              <div class="activity-info">
+                <div class="info-row">
+                  <mat-icon class="info-icon">event</mat-icon>
+                  <span>{{ formatDate(activity.date) }}</span>
+                </div>
+                <div class="info-row">
+                  <mat-icon class="info-icon">people</mat-icon>
+                  <span>Aforo: {{ activity.capacity }} personas</span>
+                </div>
+                <div class="info-row">
+                  <mat-icon class="info-icon">euro</mat-icon>
+                  <span>{{ activity.price === 0 ? 'Gratis' : activity.price + '€' }}</span>
+                </div>
+                @if (activity.entity) {
+                  <div class="info-row">
+                    <mat-icon class="info-icon">business</mat-icon>
+                    <span>{{ activity.entity.name }}</span>
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+            <mat-card-actions class="card-actions">
+              @if (isUpcoming(activity.date) && !isUserRegistered(activity.id)) {
+                <button mat-button color="accent" (click)="registerToActivity(activity, $event)">
+                  <mat-icon>how_to_reg</mat-icon>
+                  Inscribirse
+                </button>
+              }
+              @if (isUserRegistered(activity.id)) {
+                <div class="registered-badge">
+                  <mat-icon>check_circle</mat-icon>
+                  <span>Inscrito</span>
+                </div>
+              }
+              <button mat-button color="primary">
+                <mat-icon>visibility</mat-icon>
+                Ver detalles
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <mat-card class="empty-state-card">
+        <mat-card-content>
+          <mat-icon class="empty-icon">event_busy</mat-icon>
+          @if (activities().length === 0) {
+            <h2>No hay actividades disponibles</h2>
+            <p>Aún no se han creado actividades para tu asociación.</p>
+            @if (canCreateActivities()) {
+              <button mat-raised-button color="primary" (click)="createActivity()">
+                <mat-icon>add</mat-icon>
+                Crear primera actividad
+              </button>
+            }
+          } @else {
+            <h2>No hay actividades próximas</h2>
+            <p>Todas las actividades han finalizado. Usa el botón "Mostrar finalizadas" para verlas.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

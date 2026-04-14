@@ -1,0 +1,90 @@
+<div class="entities-container">
+  <h1 class="page-title">Gestión de Asociaciones</h1>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else {
+    <mat-card class="entities-card">
+      <mat-card-header>
+        <mat-card-title class="section-title">
+          <mat-icon class="title-icon">corporate_fare</mat-icon>
+          Listado de Asociaciones
+        </mat-card-title>
+        @if (canCreateEntities()) {
+          <div class="header-actions">
+            <button mat-raised-button color="primary" (click)="createEntity()" class="create-button">
+              <mat-icon>add</mat-icon>
+              Crear Asociación
+            </button>
+          </div>
+        }
+      </mat-card-header>
+      <mat-card-content class="card-content">
+        @if (entities().length > 0) {
+          <div class="table-container">
+            <table mat-table [dataSource]="entities()" class="entities-table">
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef class="table-header">ID</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell">{{ entity.id }}</td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Nombre</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell name-cell">{{ entity.name }}</td>
+              </ng-container>
+
+              <!-- Role Column -->
+              <ng-container matColumnDef="role">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Rol</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell">{{ getUserRoleInEntity(entity.id) }}</td>
+              </ng-container>
+
+              <!-- Type Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Tipo</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell">{{ getLevelName(entity.level) }}</td>
+              </ng-container>
+
+              <!-- Parent Column -->
+              <ng-container matColumnDef="parent">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Asociación Padre</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell">
+                  {{ entity.parent?.name || 'Sin asociación padre' }}
+                </td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="table-header">Acciones</th>
+                <td mat-cell *matCellDef="let entity" class="table-cell actions-cell">
+                  <button mat-icon-button (click)="viewEntity(entity)" matTooltip="Ver detalles" class="action-button view-button">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  @if (canEditEntity(entity.id)) {
+                    <button mat-icon-button (click)="editEntity(entity)" matTooltip="Editar" class="action-button edit-button">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                  @if (canDeleteEntity(entity.id) && entity.level !== 1) {
+                    <button mat-icon-button (click)="deleteEntity(entity)" matTooltip="Eliminar" class="action-button delete-button">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-state">No hay asociaciones disponibles</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

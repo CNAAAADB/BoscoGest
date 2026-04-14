@@ -1,0 +1,151 @@
+@if (!isMobileView()) {
+<!-- DESKTOP: Sidebar -->
+<div
+  class="sidenav"
+  [ngClass]="isLeftSidebarCollapsed() ? 'sidenav-collapsed' : ''"
+>
+  <div class="logo-container">
+    @if (!isLeftSidebarCollapsed()) {
+      <img src="assets/images/LogoAAAA.png" alt="BoscoGest Logo" class="sidebar-logo">
+      <div class="logo-text">BoscoGest</div>
+    } @else {
+      <img src="assets/images/LogoAAAA.png" alt="BoscoGest Logo" class="sidebar-logo-collapsed">
+    }
+    <button class="menu-toggle" (click)="toggleCollapse()">
+      <mat-icon>menu</mat-icon>
+    </button>
+  </div>
+  <div class="sidenav-nav">
+    @for (item of visibleItems(); track $index) {
+      @if (item.separator) {
+        <li class="sidenav-nav-separator">
+          @if (item.separatorTitle && !isLeftSidebarCollapsed()) {
+            <span class="separator-title">{{ item.separatorTitle }}</span>
+          }
+          <hr class="separator-line" />
+        </li>
+      } @else {
+        <li class="sidenav-nav-item">
+          <a
+            class="sidenav-nav-link"
+            [routerLink]="item.routeLink"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.routeLink === 'dashboard' }"
+          >
+            <mat-icon class="sidenav-link-icon">{{ item.icon || 'article' }}</mat-icon>
+            @if (!isLeftSidebarCollapsed()) {
+              <span class="sidenav-link-text">{{ item.label }}</span>
+            }
+          </a>
+        </li>
+      }
+    }
+  </div>
+
+  <!-- User profile section -->
+  <div class="user-profile" [matMenuTriggerFor]="userMenu">
+    <div class="user-avatar">
+      <div class="avatar-circle">
+        {{ userInitial() }}
+        @if (unreadCount() > 0) {
+          <span class="avatar-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+        }
+      </div>
+    </div>
+    @if (!isLeftSidebarCollapsed()) {
+      <div class="user-info">
+        <div class="user-name">{{ fullName() }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- User menu -->
+  <mat-menu #userMenu="matMenu" class="user-menu" xPosition="after">
+    <button mat-menu-item (click)="navigateToProfile()" class="menu-item">
+      <mat-icon class="menu-icon">person</mat-icon>
+      <span class="menu-text">Mi Perfil</span>
+    </button>
+    <button mat-menu-item (click)="navigateToNotifications()" class="menu-item">
+      <mat-icon class="menu-icon">notifications</mat-icon>
+      <span class="menu-text">Notificaciones</span>
+      @if (unreadCount() > 0) {
+        <span class="menu-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+      }
+    </button>
+    <button mat-menu-item (click)="logout()" class="menu-item logout-item">
+      <mat-icon class="menu-icon">logout</mat-icon>
+      <span class="menu-text">Desconectar</span>
+    </button>
+  </mat-menu>
+</div>
+} @else {
+<!-- MOBILE: Top navbar + dropdown -->
+<nav class="mobile-navbar">
+  <div class="mobile-navbar-bar">
+    <div class="mobile-navbar-logo">
+      <img src="assets/images/LogoAAAA.png" alt="BoscoGest Logo" class="mobile-logo-img">
+      <span class="mobile-logo-text">BoscoGest</span>
+    </div>
+    <button class="mobile-hamburger" (click)="toggleMobileMenu()" [attr.aria-expanded]="isMobileMenuOpen()">
+      <mat-icon>{{ isMobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
+    </button>
+  </div>
+
+  @if (isMobileMenuOpen()) {
+    <div class="mobile-backdrop" (click)="closeMobileMenu()"></div>
+  }
+
+  <div class="mobile-dropdown" [class.mobile-dropdown-open]="isMobileMenuOpen()">
+    <ul class="mobile-menu-list">
+      @for (item of visibleItems(); track $index) {
+        @if (item.separator) {
+          <li class="mobile-menu-separator">
+            @if (item.separatorTitle) {
+              <span class="mobile-separator-title">{{ item.separatorTitle }}</span>
+            }
+            <hr class="mobile-separator-line" />
+          </li>
+        } @else {
+          <li class="mobile-menu-item">
+            <a class="mobile-menu-link"
+               [routerLink]="item.routeLink"
+               routerLinkActive="active"
+               [routerLinkActiveOptions]="{ exact: item.routeLink === 'dashboard' }"
+               (click)="closeMobileMenu()">
+              <mat-icon class="mobile-menu-icon">{{ item.icon || 'article' }}</mat-icon>
+              <span class="mobile-menu-text">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      }
+    </ul>
+
+    <div class="mobile-user-section">
+      <div class="mobile-user-info">
+        <div class="avatar-circle mobile-avatar">
+          {{ userInitial() }}
+          @if (unreadCount() > 0) {
+            <span class="avatar-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+          }
+        </div>
+        <span class="mobile-user-name">{{ fullName() }}</span>
+      </div>
+      <a class="mobile-menu-link" routerLink="my-profile" (click)="closeMobileMenu()">
+        <mat-icon class="mobile-menu-icon">person</mat-icon>
+        <span class="mobile-menu-text">Mi Perfil</span>
+      </a>
+      <a class="mobile-menu-link" routerLink="notifications" (click)="closeMobileMenu()">
+        <mat-icon class="mobile-menu-icon">notifications</mat-icon>
+        <span class="mobile-menu-text">Notificaciones</span>
+        @if (unreadCount() > 0) {
+          <span class="mobile-menu-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+        }
+      </a>
+      <button class="mobile-menu-link mobile-logout" (click)="logout()">
+        <mat-icon class="mobile-menu-icon">logout</mat-icon>
+        <span class="mobile-menu-text">Desconectar</span>
+      </button>
+    </div>
+  </div>
+</nav>
+}

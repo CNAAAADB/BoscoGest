@@ -1,0 +1,148 @@
+.entity-form-container {
+  padding: 2rem;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #1b1b1b;
+  margin-bottom: 2rem;
+}
+
+.form-card {
+  margin-bottom: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: white !important;
+}
+
+mat-card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.title-icon {
+  color: #667eea;
+  font-size: 1.75rem !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+}
+
+.card-content {
+  padding: 1.5rem !important;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-form-field {
+  font-size: 1.125rem !important;
+}
+
+mat-label {
+  font-size: 1.125rem !important;
+  font-weight: 500 !important;
+}
+
+input, textarea, mat-select {
+  font-size: 1.125rem !important;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 2rem;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.form-actions button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+}
+
+.form-actions button mat-icon {
+  font-size: 1.25rem !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+.cancel-button {
+  color: #6c757d !important;
+}
+
+.submit-button:disabled {
+  background-color: #e9ecef !important;
+  color: #6c757d !important;
+}
+
+/* Material Icons in form fields */
+mat-icon[matPrefix] {
+  color: #667eea;
+  margin-right: 0.75rem;
+}
+
+/* Hint text */
+mat-hint {
+  font-size: 1rem !important;
+  color: #6c757d !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .entity-form-container {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

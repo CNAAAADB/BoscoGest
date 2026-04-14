@@ -1,0 +1,52 @@
+# Dockerfile más robusto con manejo de problemas de red
+FROM python:3.11-slim
+
+# Configurar DNS dentro del contenedor (fallback)
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
+# Crear directorio de trabajo
+WORKDIR /app
+
+# Instalar dependencias del sistema con reintentos y mejor diagnóstico
+RUN set -ex; \
+    # Mostrar información de diagnóstico
+    cat /etc/resolv.conf; \
+    echo "Intentando actualizar repositorios..."; \
+    # Intentar apt-get con timeout y reintentos
+    for i in 1 2 3; do \
+        apt-get update \
+        -o Acquire::http::Timeout=30 \
+        -o Acquire::https::Timeout=30 \
+        -o Acquire::ftp::Timeout=30 \
+        -o Acquire::Retries=3 && break || \
+        { echo "Intento $i falló, reintentando..."; sleep 5; }; \
+    done; \
+    # Instalar paquetes necesarios
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        postgresql-client; \
+    # Limpiar caché
+    rm -rf /var/lib/apt/lists/*; \
+    echo "Instalación completada exitosamente"
+
+# Copiar dependencias
+COPY requirements.txt .
+
+# Instalar dependencias Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar todo el código
+COPY app/ ./app
+COPY alembic.ini .
+COPY alembic ./alembic
+
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Exponer puerto
+EXPOSE 8000
+
+# Usar el script de arranque
+CMD ["./start.sh"]

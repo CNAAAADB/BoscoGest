@@ -1,0 +1,276 @@
+<div class="import-container">
+  <h1 class="page-title">Importación Masiva de Usuarios</h1>
+
+  <div class="import-inner-container">
+    <!-- Acordeón de guía de uso -->
+    <mat-accordion>
+      <mat-expansion-panel class="info-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title class="section-title">
+            <mat-icon class="title-icon">info</mat-icon>
+            Guía de Uso
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-content">
+          <h3>¿Qué hace esta funcionalidad?</h3>
+          <p>
+            Esta herramienta permite crear múltiples usuarios simultáneamente mediante un archivo CSV.
+            Es ideal para dar de alta grupos grandes de usuarios de forma rápida y eficiente.
+          </p>
+  
+          <h3>Cómo usar:</h3>
+          <ol>
+            <li>Descarga la plantilla CSV haciendo clic en el botón "Descargar Plantilla"</li>
+            <li>Abre el archivo con Excel, Google Sheets u otro editor de hojas de cálculo</li>
+            <li>Rellena los datos de los usuarios siguiendo el formato de la plantilla</li>
+            <li>Guarda el archivo como CSV (delimitado por comas)</li>
+            <li>Sube el archivo usando el botón "Seleccionar Archivo"</li>
+            <li>Haz clic en "Importar Usuarios" para procesarlo</li>
+          </ol>
+  
+          <h3>Campos del CSV:</h3>
+          <div class="fields-table-container">
+            <table mat-table [dataSource]="csvFields" class="fields-table">
+              <ng-container matColumnDef="field">
+                <th mat-header-cell *matHeaderCellDef>Campo</th>
+                <td mat-cell *matCellDef="let field">
+                  <code>{{ field.name }}</code>
+                </td>
+              </ng-container>
+  
+              <ng-container matColumnDef="description">
+                <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                <td mat-cell *matCellDef="let field">{{ field.description }}</td>
+              </ng-container>
+  
+              <ng-container matColumnDef="required">
+                <th mat-header-cell *matHeaderCellDef>Obligatorio</th>
+                <td mat-cell *matCellDef="let field">
+                  <span [class.required-badge]="field.required" [class.optional-badge]="!field.required">
+                    {{ field.required ? 'Sí' : 'No' }}
+                  </span>
+                </td>
+              </ng-container>
+  
+              <ng-container matColumnDef="example">
+                <th mat-header-cell *matHeaderCellDef>Ejemplo</th>
+                <td mat-cell *matCellDef="let field">
+                  <code class="example-code">{{ field.example }}</code>
+                </td>
+              </ng-container>
+  
+              <tr mat-header-row *matHeaderRowDef="csvFieldColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: csvFieldColumns;"></tr>
+            </table>
+          </div>
+  
+          <div class="warning-box">
+            <mat-icon>warning</mat-icon>
+            <div>
+              <strong>Importante:</strong>
+              <ul>
+                <li>Todos los campos deben estar entre comillas dobles ("")</li>
+                <li>Los usuarios creados deberán cambiar su contraseña en el primer inicio de sesión</li>
+                <li>El email y DNI deben ser únicos en el sistema</li>
+                <li>Se crearán automáticamente membresías en todas las entidades padre</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  
+    <!-- Card de acciones -->
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-card-title class="section-title">
+          <mat-icon class="title-icon">upload_file</mat-icon>
+          Importar Archivo
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="action-buttons">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="downloadTemplate()"
+            [disabled]="isUploading()"
+          >
+            <mat-icon>download</mat-icon>
+            Descargar Plantilla
+          </button>
+  
+          <div class="file-upload-section">
+            <input
+              type="file"
+              #fileInput
+              accept=".csv"
+              (change)="onFileSelected($event)"
+              style="display: none"
+            />
+            <button
+              mat-raised-button
+              (click)="fileInput.click()"
+              [disabled]="isUploading()"
+            >
+              <mat-icon>folder_open</mat-icon>
+              Seleccionar Archivo
+            </button>
+  
+            @if (selectedFile()) {
+              <div class="file-info">
+                <mat-icon>description</mat-icon>
+                <span>{{ selectedFile()!.name }}</span>
+                <button
+                  mat-icon-button
+                  (click)="clearSelection()"
+                  [disabled]="isUploading()"
+                >
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+  
+          <button
+            mat-raised-button
+            color="accent"
+            (click)="uploadFile()"
+            [disabled]="!selectedFile() || isUploading()"
+          >
+            @if (isUploading()) {
+              <mat-spinner diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+              Importando...
+            } @else {
+              <mat-icon>cloud_upload</mat-icon>
+              Importar Usuarios
+            }
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  
+    <!-- Resultados de la importación -->
+    @if (uploadResult()) {
+      <mat-card class="results-card">
+        <mat-card-header>
+          <mat-card-title class="section-title">
+            <mat-icon class="title-icon">assessment</mat-icon>
+            Resultados de la Importación
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="results-summary">
+            <div class="summary-item success">
+              <mat-icon>check_circle</mat-icon>
+              <div>
+                <span class="summary-number">{{ uploadResult()!.successful }}</span>
+                <span class="summary-label">Usuarios Creados</span>
+              </div>
+            </div>
+            <div class="summary-item error">
+              <mat-icon>error</mat-icon>
+              <div>
+                <span class="summary-number">{{ uploadResult()!.failed }}</span>
+                <span class="summary-label">Errores</span>
+              </div>
+            </div>
+            <div class="summary-item total">
+              <mat-icon>description</mat-icon>
+              <div>
+                <span class="summary-number">{{ uploadResult()!.total_rows }}</span>
+                <span class="summary-label">Total Filas</span>
+              </div>
+            </div>
+          </div>
+  
+          <!-- Usuarios creados exitosamente -->
+          @if (uploadResult()!.created_users.length > 0) {
+            <div class="section">
+              <h3>Usuarios Creados Exitosamente</h3>
+              <table mat-table [dataSource]="uploadResult()!.created_users" class="results-table">
+                <ng-container matColumnDef="id">
+                  <th mat-header-cell *matHeaderCellDef>ID</th>
+                  <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+                </ng-container>
+  
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                  <td mat-cell *matCellDef="let user">{{ user.name }}</td>
+                </ng-container>
+  
+                <ng-container matColumnDef="email">
+                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+                </ng-container>
+  
+                <ng-container matColumnDef="entity_id">
+                  <th mat-header-cell *matHeaderCellDef>Asociación ID</th>
+                  <td mat-cell *matCellDef="let user">{{ user.entity_id }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Ver</th>
+                  <td mat-cell *matCellDef="let user">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="viewRowDetails(user, 'success')"
+                      matTooltip="Ver detalles completos"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedSuccessColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedSuccessColumns;"></tr>
+              </table>
+            </div>
+          }
+  
+          <!-- Errores -->
+          @if (uploadResult()!.errors.length > 0) {
+            <div class="section">
+              <h3>Errores Encontrados</h3>
+              <table mat-table [dataSource]="uploadResult()!.errors" class="results-table error-table">
+                <ng-container matColumnDef="row">
+                  <th mat-header-cell *matHeaderCellDef>Fila</th>
+                  <td mat-cell *matCellDef="let error">{{ error.row }}</td>
+                </ng-container>
+  
+                <ng-container matColumnDef="error">
+                  <th mat-header-cell *matHeaderCellDef>Error</th>
+                  <td mat-cell *matCellDef="let error">{{ error.error }}</td>
+                </ng-container>
+  
+                <ng-container matColumnDef="email">
+                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <td mat-cell *matCellDef="let error">{{ error.data.email || 'N/A' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Ver</th>
+                  <td mat-cell *matCellDef="let error">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="viewRowDetails(error, 'error')"
+                      matTooltip="Ver detalles completos"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+              </table>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+</div>

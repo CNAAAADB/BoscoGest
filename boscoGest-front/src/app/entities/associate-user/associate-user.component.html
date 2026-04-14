@@ -1,0 +1,163 @@
+<div class="associate-user-container">
+  <h1 class="page-title">Asociar Usuario a la Entidad</h1>
+
+  <!-- Search User Card -->
+  <mat-card class="search-card">
+    <mat-card-header>
+      <mat-card-title class="section-title">
+        <mat-icon class="title-icon">search</mat-icon>
+        Buscar Usuario
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      <div class="initial-action">
+        <button mat-raised-button color="accent" (click)="createNewUser()" class="create-user-button">
+          <mat-icon>person_add</mat-icon>
+          Crear Nuevo Usuario
+        </button>
+        <div class="divider">
+          <span>o buscar usuario existente</span>
+        </div>
+      </div>
+
+      <form [formGroup]="searchForm" (ngSubmit)="searchUser()">
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="search-type-field">
+            <mat-label>Buscar por</mat-label>
+            <mat-select formControlName="searchType">
+              <mat-option value="email">Email</mat-option>
+              <mat-option value="dni">DNI</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="search-value-field">
+            <mat-label>
+              {{ searchForm.value.searchType === 'email' ? 'Ingrese el email' : 'Ingrese el DNI' }}
+            </mat-label>
+            <input matInput formControlName="searchValue" [type]="searchForm.value.searchType === 'email' ? 'email' : 'text'">
+          </mat-form-field>
+        </div>
+
+        <div class="button-row">
+          <button mat-raised-button color="primary" type="submit" [disabled]="searchForm.invalid || searching()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          @if (foundUser() || userNotFound()) {
+            <button mat-button type="button" (click)="resetSearch()">
+              <mat-icon>refresh</mat-icon>
+              Nueva Búsqueda
+            </button>
+          }
+        </div>
+      </form>
+
+      @if (searching()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+          <p>Buscando usuario...</p>
+        </div>
+      }
+
+      <!-- User Not Found -->
+      @if (userNotFound()) {
+        <div class="not-found-container">
+          <mat-icon class="not-found-icon">person_off</mat-icon>
+          <h3>Usuario no encontrado</h3>
+          <p>No se encontró ningún usuario con el {{ searchForm.value.searchType === 'email' ? 'email' : 'DNI' }} especificado.</p>
+          <button mat-raised-button color="accent" (click)="createNewUser()">
+            <mat-icon>person_add</mat-icon>
+            Crear Nuevo Usuario
+          </button>
+        </div>
+      }
+
+      <!-- User Found -->
+      @if (foundUser()) {
+        <div class="user-found-container">
+          <mat-icon class="found-icon">check_circle</mat-icon>
+          <h3>Usuario encontrado</h3>
+          <div class="user-info">
+            <div class="info-row">
+              <span class="label">Nombre:</span>
+              <span class="value">{{ foundUser()!.name }} {{ foundUser()!.surname }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Email:</span>
+              <span class="value">{{ foundUser()!.email }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">DNI:</span>
+              <span class="value">{{ foundUser()!.dni }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Teléfono:</span>
+              <span class="value">{{ foundUser()!.phone }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Create Membership Card (only shown when user is found) -->
+  @if (foundUser()) {
+    <mat-card class="membership-card">
+      <mat-card-header>
+        <mat-card-title class="section-title">
+          <mat-icon class="title-icon">admin_panel_settings</mat-icon>
+          Asignar Rol
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="card-content">
+        <form [formGroup]="membershipForm" (ngSubmit)="createMembership()">
+          @if (loadingRoles()) {
+            <div class="loading-container">
+              <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+              <p>Cargando roles...</p>
+            </div>
+          } @else if (availableRoles().length > 0) {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Seleccione un rol</mat-label>
+              <mat-select formControlName="role_id">
+                @for (role of availableRoles(); track role.id) {
+                  <mat-option [value]="role.id">
+                    {{ role.name }}
+                    @if (role.description) {
+                      <span class="role-description"> - {{ role.description }}</span>
+                    }
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>Seleccione el rol que tendrá el usuario en esta entidad</mat-hint>
+            </mat-form-field>
+
+            <div class="button-row">
+              <button mat-raised-button color="primary" type="submit" [disabled]="membershipForm.invalid || loading()">
+                @if (loading()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>person_add</mat-icon>
+                }
+                Asociar Usuario
+              </button>
+            </div>
+          } @else {
+            <div class="no-roles-container">
+              <mat-icon class="warning-icon">warning</mat-icon>
+              <p>No hay roles disponibles para esta entidad.</p>
+            </div>
+          }
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    <button mat-button (click)="goBack()" class="back-button">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </button>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+<div class="notifications-container">
+  <div class="header">
+    <h1>Notificaciones</h1>
+    @if (unreadCount() > 0) {
+      <button mat-raised-button color="primary" (click)="markAllRead()">
+        <mat-icon>done_all</mat-icon>
+        Marcar todas como leidas
+      </button>
+    }
+  </div>
+
+  @if (notifications().length === 0) {
+    <mat-card class="empty-state">
+      <mat-icon>notifications_none</mat-icon>
+      <p>No tienes notificaciones</p>
+    </mat-card>
+  } @else {
+    <div class="notifications-list">
+      @for (notification of notifications(); track notification.id) {
+        <mat-card
+          class="notification-card"
+          [class.unread]="!notification.is_read"
+          (click)="onNotificationClick(notification)"
+        >
+          <div class="notification-row">
+            <div class="notification-icon">
+              <mat-icon>{{ getEventIcon(notification.event_type) }}</mat-icon>
+            </div>
+            <div class="notification-content">
+              <div class="notification-title">{{ notification.title }}</div>
+              @if (notification.body) {
+                <div class="notification-body">{{ notification.body }}</div>
+              }
+              <div class="notification-meta">
+                @if (notification.actor) {
+                  <span>{{ notification.actor.name }} {{ notification.actor.surname }}</span>
+                  &middot;
+                }
+                <span>{{ timeAgo(notification.created_at) }}</span>
+              </div>
+            </div>
+            <button mat-icon-button class="delete-btn" (click)="deleteNotification($event, notification.id)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

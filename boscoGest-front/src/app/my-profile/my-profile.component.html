@@ -1,0 +1,149 @@
+<div class="profile-container">
+  <h1 class="page-title">Mi Perfil</h1>
+
+  <!-- User Details Section -->
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <div class="header-content">
+        <div class="avatar-large">
+          {{ (currentUser()?.name?.charAt(0) || '?').toUpperCase() }}
+        </div>
+        <div class="header-text">
+          <mat-card-title class="user-title">
+            {{ currentUser()?.name }} {{ currentUser()?.surname }}
+          </mat-card-title>
+          <mat-card-subtitle class="user-subtitle">
+            {{ currentUser()?.email }}
+          </mat-card-subtitle>
+        </div>
+      </div>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      <div class="info-grid">
+        <div class="info-item">
+          <mat-icon class="info-icon">phone</mat-icon>
+          <div class="info-details">
+            <span class="info-label">Teléfono</span>
+            <span class="info-value">{{ currentUser()?.phone || 'No especificado' }}</span>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <mat-icon class="info-icon">badge</mat-icon>
+          <div class="info-details">
+            <span class="info-label">DNI</span>
+            <span class="info-value">{{ currentUser()?.dni }}</span>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <mat-icon class="info-icon">cake</mat-icon>
+          <div class="info-details">
+            <span class="info-label">Fecha de Nacimiento</span>
+            <span class="info-value">{{ formatDate(currentUser()?.birthdate || '') }}</span>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <mat-icon class="info-icon">home</mat-icon>
+          <div class="info-details">
+            <span class="info-label">Dirección</span>
+            <span class="info-value">{{ currentUser()?.address || 'No especificada' }}</span>
+          </div>
+        </div>
+
+        @if (currentUser()?.iban) {
+          <div class="info-item">
+            <mat-icon class="info-icon">account_balance</mat-icon>
+            <div class="info-details">
+              <span class="info-label">IBAN</span>
+              <span class="info-value">{{ currentUser()?.iban }}</span>
+            </div>
+          </div>
+        }
+
+        @if (currentUser()?.size) {
+          <div class="info-item">
+            <mat-icon class="info-icon">checkroom</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Talla</span>
+              <span class="info-value">{{ currentUser()?.size }}</span>
+            </div>
+          </div>
+        }
+
+        @if (currentUser()?.hobbies) {
+          <div class="info-item">
+            <mat-icon class="info-icon">interests</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Hobbies</span>
+              <span class="info-value">{{ currentUser()?.hobbies }}</span>
+            </div>
+          </div>
+        }
+
+        @if (currentUser()?.job_position) {
+          <div class="info-item">
+            <mat-icon class="info-icon">work</mat-icon>
+            <div class="info-details">
+              <span class="info-label">Puesto de Trabajo</span>
+              <span class="info-value">{{ currentUser()?.job_position }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary" (click)="openChangePasswordDialog()">
+        <mat-icon>lock</mat-icon>
+        Cambiar Contraseña
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- All Memberships Section -->
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <mat-card-title class="section-title">
+        <mat-icon class="title-icon">groups</mat-icon>
+        Mis Asociaciones
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      @if (allMemberships.length > 0) {
+        <mat-list class="memberships-list">
+          @for (membership of allMemberships; track membership.id) {
+            <mat-list-item class="membership-item">
+              <div class="membership-content">
+                <div class="membership-header">
+                  <div class="membership-title-section">
+                    <h4 class="membership-entity">{{ membership.entity?.name }}</h4>
+                    <mat-chip-set>
+                      <mat-chip class="role-chip-small">{{ membership.role?.name }}</mat-chip>
+                      @if (!membership.is_active) {
+                        <mat-chip class="inactive-chip">Inactiva</mat-chip>
+                      }
+                    </mat-chip-set>
+                  </div>
+                </div>
+                <div class="membership-info">
+                  <span class="membership-detail">
+                    <mat-icon class="small-icon">layers</mat-icon>
+                    {{ getLevelName(membership.entity?.level || 0) }}
+                  </span>
+                  <span class="membership-detail">
+                    <mat-icon class="small-icon">event</mat-icon>
+                    Desde {{ formatDate(membership.created_at) }}
+                  </span>
+                </div>
+              </div>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
+      } @else {
+        <p class="empty-state">No tienes asociaciones registradas</p>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

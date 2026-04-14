@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:15
+    container_name: boscoGest_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: boscogest
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - boscogest-network
+
+  back:
+    build: .
+    container_name: boscoGest_back
+    restart: always
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./uploads:/app/uploads  # Only needed when STORAGE_BACKEND=local
+    networks:
+      - boscogest-network
+
+  front:
+    build: ../boscoGest-front
+    container_name: boscoGest_front
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - back
+    networks:
+      - boscogest-network
+
+volumes:
+  postgres_data:
+
+networks:
+  boscogest-network:
+    driver: bridge

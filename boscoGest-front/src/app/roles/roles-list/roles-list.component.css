@@ -1,0 +1,205 @@
+.roles-container {
+  padding: 2rem;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #3D4E7C;
+  margin-bottom: 2rem;
+}
+
+.roles-card {
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid #e9ecef;
+  background-color: white !important;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 2rem;
+}
+
+/* Card Header */
+mat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.title-icon {
+  color: #D4A76A;
+  font-size: 1.75rem !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.create-button {
+  font-size: 1.125rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.create-button mat-icon {
+  font-size: 1.5rem !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+}
+
+/* Card Content */
+.card-content {
+  padding: 1.5rem !important;
+}
+
+/* Table */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.roles-table {
+  width: 100%;
+  background-color: white;
+}
+
+.table-header {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: #3D4E7C !important;
+  background-color: #f8f9fa;
+  padding: 1rem !important;
+}
+
+.table-row {
+  transition: background-color 0.2s;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-cell {
+  padding: 1rem !important;
+  font-size: 1.125rem;
+  color: #495057;
+}
+
+.name-cell {
+  font-weight: 600;
+  color: #1b1b1b;
+}
+
+.description-cell {
+  color: #6c757d;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.action-button {
+  width: 40px !important;
+  height: 40px !important;
+  transition: all 0.2s ease;
+}
+
+.action-button mat-icon {
+  font-size: 1.25rem !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+.view-button {
+  color: #667eea !important;
+}
+
+.view-button:hover {
+  background-color: rgba(102, 126, 234, 0.1) !important;
+  transform: scale(1.1);
+}
+
+.edit-button {
+  color: #fd7e14 !important;
+}
+
+.edit-button:hover {
+  background-color: rgba(253, 126, 20, 0.1) !important;
+  transform: scale(1.1);
+}
+
+.delete-button {
+  color: #dc3545 !important;
+}
+
+.delete-button:hover {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  transform: scale(1.1);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  color: #6c757d;
+  font-size: 1.25rem;
+  padding: 2rem;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .roles-container {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 2rem;
+  }
+
+  mat-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .create-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .table-container {
+    overflow-x: scroll;
+  }
+}

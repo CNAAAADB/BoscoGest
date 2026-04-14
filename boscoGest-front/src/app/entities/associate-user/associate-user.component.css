@@ -1,0 +1,254 @@
+.associate-user-container {
+  padding: 2rem;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #1b1b1b;
+  margin-bottom: 2rem;
+}
+
+.search-card,
+.membership-card {
+  margin-bottom: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: white !important;
+}
+
+mat-card.search-card,
+mat-card.membership-card {
+  background-color: white !important;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.title-icon {
+  margin-right: 0.5rem;
+}
+
+.card-content {
+  padding: 1.5rem !important;
+}
+
+.initial-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.create-user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+  font-weight: 500;
+  position: relative;
+  margin: 1rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+}
+
+.divider span {
+  padding: 0 1rem;
+  background-color: white;
+  z-index: 1;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-type-field {
+  flex: 0 0 150px;
+}
+
+.search-value-field {
+  flex: 1;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.loading-container p {
+  margin: 0;
+  color: #666;
+}
+
+.not-found-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background-color: #fff3e0;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.not-found-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #ff9800;
+  margin-bottom: 1rem;
+}
+
+.not-found-container h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.not-found-container p {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+}
+
+.user-found-container {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background-color: #e8f5e9;
+  border-radius: 8px;
+}
+
+.found-icon {
+  font-size: 36px;
+  width: 36px;
+  height: 36px;
+  color: #4caf50;
+  margin-bottom: 0.5rem;
+}
+
+.user-found-container h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: #666;
+  min-width: 80px;
+}
+
+.info-row .value {
+  color: #333;
+}
+
+.no-roles-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #fff3e0;
+  border-radius: 8px;
+}
+
+.warning-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #ff9800;
+}
+
+.no-roles-container p {
+  margin: 0;
+  color: #666;
+}
+
+.role-description {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.action-buttons {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .associate-user-container {
+    padding: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .search-type-field {
+    flex: 1;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+
+  .button-row button {
+    width: 100%;
+  }
+}

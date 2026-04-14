@@ -1,0 +1,75 @@
+<div class="entity-form-container">
+  <h1 class="page-title">{{ isEditMode() ? 'Editar Asociación' : 'Crear Asociación' }}</h1>
+
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title class="section-title">
+        <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
+        {{ isEditMode() ? 'Información de la Asociación' : 'Nueva Asociación' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="card-content">
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        </div>
+      } @else {
+        <form [formGroup]="entityForm" (ngSubmit)="onSubmit()">
+          <div class="form-fields">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre</mat-label>
+              <input matInput formControlName="name" placeholder="Nombre de la asociación" required>
+              <mat-icon matPrefix>business</mat-icon>
+              @if (entityForm.get('name')?.hasError('required')) {
+                <mat-error>El nombre es obligatorio</mat-error>
+              }
+              @if (entityForm.get('name')?.hasError('minlength')) {
+                <mat-error>El nombre debe tener al menos 2 caracteres</mat-error>
+              }
+            </mat-form-field>
+
+            @if (!isEditMode()) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Asociación Padre</mat-label>
+                <mat-select formControlName="parent_id" placeholder="Selecciona una asociación padre" required>
+                  @for (entity of availableEntities(); track entity.id) {
+                    <mat-option [value]="entity.id">
+                      {{ entity.name }} ({{ getLevelName(entity.level) }})
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-icon matPrefix>account_tree</mat-icon>
+                @if (entityForm.get('parent_id')?.hasError('required')) {
+                  <mat-error>La asociación padre es obligatoria</mat-error>
+                }
+                <mat-hint>Selecciona la asociación superior en la jerarquía</mat-hint>
+              </mat-form-field>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button
+              mat-raised-button
+              type="button"
+              (click)="onCancel()"
+              class="cancel-button"
+            >
+              <mat-icon>close</mat-icon>
+              Cancelar
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="entityForm.invalid || loading()"
+              class="submit-button"
+            >
+              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              {{ isEditMode() ? 'Actualizar' : 'Crear' }}
+            </button>
+          </div>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

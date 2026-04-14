@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:15
+    container_name: boscoGest_db
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: boscogest
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - boscogest-network
+
+  back:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boscoGest_back
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - boscogest-network
+
+  front:
+    build: ../boscoGest-front
+    container_name: boscoGest_front
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - "80:80"
+    depends_on:
+      - back
+    networks:
+      - boscogest-network
+
+volumes:
+  postgres_data:
+
+networks:
+  boscogest-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-boscogest
