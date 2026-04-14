@@ -1,11 +1,31 @@
 from fastapi import APIRouter, Depends, Request, status
 from typing import List
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+
+from app.models.entity_model import Entity
 from app.models.user_model import User
 from app.schemas.entity import EntityCreate, EntityUpdate, EntityResponse
-from app.utils.auth import get_current_active_user, require_permission
+from app.utils.auth import get_current_active_user, require_permission, get_sync_db
 from app.services.entity_service import EntityService, get_entity_service
 
 entity_router = APIRouter(prefix="/entities", tags=["Entity Management"])
+
+
+@entity_router.get("/public", response_model=List[EntityResponse])
+def get_public_entities(
+    db: Session = Depends(get_sync_db),
+):
+    """
+    Public endpoint: returns all active non-root entities for the registration form.
+    No authentication required.
+    """
+    stmt = (
+        select(Entity)
+        .where(Entity.is_active == True, Entity.level > 1)
+        .order_by(Entity.level.asc(), Entity.name.asc())
+    )
+    return list(db.execute(stmt).scalars().all())
 
 
 @entity_router.get("/membership-manageable", response_model=List[EntityResponse])

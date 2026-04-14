@@ -6,11 +6,13 @@ import os
 
 from app.api.v1 import routers
 from app.services.notification_manager import notification_manager
+from app.services.chat_manager import chat_manager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await notification_manager.start()
+    await chat_manager.start()
     yield
 
 

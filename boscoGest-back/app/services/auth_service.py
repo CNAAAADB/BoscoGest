@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from jose import jwt
 from sqlalchemy.orm import Session
-from app.models.membership_model import Membership
 from app.models.revoked_token_model import RevokedToken
 from app.models.user_model import User
 from app.utils.auth import (
@@ -33,15 +32,8 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        has_active_membership = (
-            self.db.query(Membership)
-            .filter(Membership.user_id == user.id, Membership.is_active == True)
-            .first()
-        )
-        if not has_active_membership:
-            raise HTTPException(
-                status_code=403, detail="User has no active memberships"
-            )
+        # Users without active memberships (e.g. pending approval) are allowed
+        # to log in — the frontend handles showing the appropriate state.
 
         access_token = create_access_token(
             data={"sub": user.email},

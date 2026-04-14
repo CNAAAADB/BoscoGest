@@ -16,4 +16,5 @@ from .entity_view_config_model import EntityViewConfig, DEFAULT_VIEWS
 from .resource_category_model import ResourceCategory
 from .resource_model import Resource, ResourceType
 from .notification_model import Notification, NotificationPreference
+from .chat_model import ChatConversation, ChatMember, ChatMessage, ChatJoinRequest
 from .relationships import user_groups, user_permissions, role_permissions, group_roles, entity_roles

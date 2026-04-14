@@ -24,6 +24,10 @@ class EventType(str, Enum):
     COMMENT_ADDED = "comment_added"
     RESOURCE_PUBLISHED = "resource_published"
     MEMBERSHIP_CREATED = "membership_created"
+    MEMBERSHIP_REQUEST_CREATED = "membership_request_created"
+    MEMBERSHIP_REQUEST_ACCEPTED = "membership_request_accepted"
+    MEMBERSHIP_REQUEST_REJECTED = "membership_request_rejected"
+    CHAT_MESSAGE_RECEIVED = "chat_message_received"
 
 
 # Human-readable descriptions for preference UI
@@ -37,6 +41,10 @@ EVENT_TYPE_LABELS: Dict[str, str] = {
     EventType.COMMENT_ADDED: "Nuevo comentario",
     EventType.RESOURCE_PUBLISHED: "Nuevo recurso publicado",
     EventType.MEMBERSHIP_CREATED: "Membresía creada",
+    EventType.MEMBERSHIP_REQUEST_CREATED: "Nueva solicitud de membresía",
+    EventType.MEMBERSHIP_REQUEST_ACCEPTED: "Solicitud de membresía aceptada",
+    EventType.MEMBERSHIP_REQUEST_REJECTED: "Solicitud de membresía rechazada",
+    EventType.CHAT_MESSAGE_RECEIVED: "Nuevo mensaje de chat",
 }
 
 
