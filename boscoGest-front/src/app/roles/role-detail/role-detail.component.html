@@ -23,11 +23,11 @@
           </div>
           <div class="header-actions">
             <button mat-raised-button color="primary" (click)="editRole()">
-              <mat-icon>edit</mat-icon>
+              <mat-icon aria-hidden="true">edit</mat-icon>
               Editar
             </button>
             <button mat-raised-button color="warn" (click)="deleteRole()">
-              <mat-icon>delete</mat-icon>
+              <mat-icon aria-hidden="true">delete</mat-icon>
               Eliminar
             </button>
           </div>
@@ -36,7 +36,7 @@
       <mat-card-content class="card-content">
         <div class="info-grid">
           <div class="info-item">
-            <mat-icon class="info-icon">fingerprint</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">fingerprint</mat-icon>
             <div class="info-details">
               <span class="info-label">ID</span>
               <span class="info-value">{{ role()!.id }}</span>
@@ -44,7 +44,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">badge</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">badge</mat-icon>
             <div class="info-details">
               <span class="info-label">Nombre</span>
               <span class="info-value">{{ role()!.name }}</span>
@@ -52,7 +52,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">description</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">description</mat-icon>
             <div class="info-details">
               <span class="info-label">Descripción</span>
               <span class="info-value">{{ role()!.description || 'Sin descripción' }}</span>
@@ -60,7 +60,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">security</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">security</mat-icon>
             <div class="info-details">
               <span class="info-label">Permisos</span>
               <span class="info-value">{{ role()!.permissions.length || 0 }} permisos</span>
@@ -74,7 +74,7 @@
     <mat-card class="role-card">
       <mat-card-header>
         <mat-card-title class="section-title">
-          <mat-icon class="title-icon">lock</mat-icon>
+          <mat-icon class="title-icon" aria-hidden="true">lock</mat-icon>
           Permisos Asociados
         </mat-card-title>
       </mat-card-header>
@@ -125,7 +125,7 @@
     <!-- Action Buttons -->
     <div class="action-buttons">
       <button mat-button (click)="goBack()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
         Volver
       </button>
     </div>

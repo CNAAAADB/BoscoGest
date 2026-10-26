@@ -7,7 +7,7 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Título</mat-label>
           <input matInput formControlName="title" required>
-          <mat-icon matSuffix>title</mat-icon>
+          <mat-icon matSuffix aria-hidden="true">title</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -22,55 +22,88 @@
               <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
             }
           </mat-select>
-          <mat-icon matSuffix>business</mat-icon>
+          <mat-icon matSuffix aria-hidden="true">business</mat-icon>
         </mat-form-field>
 
         <!-- Image Upload Section -->
         <div class="image-upload-section">
           <h3>Imagen de la actividad</h3>
 
-          @if (imagePreview || currentImageUrl) {
+          @if (imagePreview || currentImageUrl()) {
             <div class="image-preview">
-              <img [src]="imagePreview || getImageUrl(currentImageUrl!)" alt="Vista previa">
-              <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn">
-                <mat-icon>close</mat-icon>
+              <img [src]="imagePreview || getImageUrl(currentImageUrl()!)" alt="Vista previa">
+              <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn" aria-label="Quitar imagen">
+                <mat-icon aria-hidden="true">close</mat-icon>
               </button>
             </div>
           }
 
           <input #fileInput type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
           <button mat-raised-button type="button" (click)="fileInput.click()" color="accent">
-            <mat-icon>photo_camera</mat-icon>
-            {{ (imagePreview || currentImageUrl) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+            <mat-icon aria-hidden="true">photo_camera</mat-icon>
+            {{ (imagePreview || currentImageUrl()) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
           </button>
         </div>
 
+        <h3 class="dates-title">Cuándo empieza</h3>
         <div class="form-row">
           <mat-form-field appearance="outline">
-            <mat-label>Fecha</mat-label>
+            <mat-label>Fecha de inicio</mat-label>
             <input matInput [matDatepicker]="picker" [formControl]="dateControl" required>
             <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Hora</mat-label>
+            <mat-label>Hora de inicio</mat-label>
             <input matInput type="time" [formControl]="timeControl" required>
-            <mat-icon matSuffix>schedule</mat-icon>
+            <mat-icon matSuffix aria-hidden="true">schedule</mat-icon>
           </mat-form-field>
         </div>
+
+        <h3 class="dates-title">Cuándo termina <span class="optional">(opcional)</span></h3>
+        <p class="dates-hint">
+          Para actividades de varias horas o de varios días. Si termina el mismo día,
+          basta con la hora de fin.
+        </p>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de fin</mat-label>
+            <input matInput [matDatepicker]="endPicker" [formControl]="endDateControl" [min]="dateControl.value">
+            <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hora de fin</mat-label>
+            <input matInput type="time" [formControl]="endTimeControl">
+            <mat-icon matSuffix aria-hidden="true">schedule</mat-icon>
+          </mat-form-field>
+        </div>
+        @if (endError(); as error) {
+          <p class="dates-error" role="alert">
+            <mat-icon aria-hidden="true">error</mat-icon>
+            {{ error }}
+          </p>
+        }
+        @if (endDateControl.value || endTimeControl.value) {
+          <button mat-button type="button" class="clear-end" (click)="clearEnd()">
+            <mat-icon aria-hidden="true">backspace</mat-icon>
+            Quitar el fin
+          </button>
+        }
 
         <div class="form-row">
           <mat-form-field appearance="outline">
             <mat-label>Aforo</mat-label>
             <input matInput type="number" formControlName="capacity" required>
-            <mat-icon matSuffix>people</mat-icon>
+            <mat-icon matSuffix aria-hidden="true">people</mat-icon>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Precio (€)</mat-label>
             <input matInput type="number" formControlName="price" step="0.01" required>
-            <mat-icon matSuffix>euro</mat-icon>
+            <mat-icon matSuffix aria-hidden="true">euro</mat-icon>
           </mat-form-field>
         </div>
 
@@ -80,14 +113,14 @@
 
         <div class="button-row">
           <button mat-raised-button type="button" (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
+            <mat-icon aria-hidden="true">arrow_back</mat-icon>
             Cancelar
           </button>
           <button mat-raised-button color="primary" type="submit" [disabled]="activityForm.invalid || loading()">
             @if (loading()) {
               <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
             } @else {
-              <mat-icon>save</mat-icon>
+              <mat-icon aria-hidden="true">save</mat-icon>
             }
             {{ isEditMode ? 'Actualizar' : 'Crear' }}
           </button>

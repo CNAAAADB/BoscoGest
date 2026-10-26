@@ -9,12 +9,43 @@
   flex-direction: column;
 }
 
-.preference-row {
-  display: flex;
+/* Rejilla en vez de space-between: con dos interruptores hay que alinearlos
+   en columna con sus encabezados, y el espaciado libre no lo consigue. */
+.preference-row,
+.preferences-header {
+  display: grid;
+  grid-template-columns: 1fr 5.5rem 5.5rem;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.preference-row {
   padding: 0.875rem 0;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.preferences-header {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.toggle-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 480px) {
+  .preference-row,
+  .preferences-header {
+    grid-template-columns: 1fr 4rem 4rem;
+  }
+
+  .toggle-heading {
+    font-size: 0.6875rem;
+  }
 }
 
 .preference-row:last-child {

@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
+import { Subject } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { environment } from '../../environments/environment';
 import {
@@ -8,6 +9,7 @@ import {
   NotificationPreferenceResponse,
   NotificationPreferencesUpdate,
 } from '../models/user.model';
+import { BACKGROUND_REQUEST } from '../shared/loading/loading';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +20,7 @@ export class NotificationService {
 
   readonly notifications = signal<NotificationResponse[]>([]);
   readonly unreadCount = signal<number>(0);
+  readonly notificationReceived$ = new Subject<NotificationResponse>();
 
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
@@ -64,6 +67,7 @@ export class NotificationService {
         const notification: NotificationResponse = JSON.parse(event.data);
         this.notifications.update((list) => [notification, ...list]);
         this.unreadCount.update((c) => c + 1);
+        this.notificationReceived$.next(notification);
       } catch {
         // ignore non-JSON messages
       }
@@ -156,7 +160,8 @@ export class NotificationService {
   }
 
   markAsRead(id: number): void {
-    this.http.put<NotificationResponse>(`${this.apiUrl}/${id}/read`, {}).subscribe({
+    // Background: tapping a notification should open it, not freeze the screen.
+    this.http.put<NotificationResponse>(`${this.apiUrl}/${id}/read`, {}, { context: new HttpContext().set(BACKGROUND_REQUEST, true) }).subscribe({
       next: () => {
         this.notifications.update((list) =>
           list.map((n) => (n.id === id ? { ...n, is_read: true } : n))
@@ -167,7 +172,7 @@ export class NotificationService {
   }
 
   markAllAsRead(): void {
-    this.http.put<{ marked: number }>(`${this.apiUrl}/read-all`, {}).subscribe({
+    this.http.put<{ marked: number }>(`${this.apiUrl}/read-all`, {}, { context: new HttpContext().set(BACKGROUND_REQUEST, true) }).subscribe({
       next: () => {
         this.notifications.update((list) =>
           list.map((n) => ({ ...n, is_read: true }))
@@ -178,7 +183,7 @@ export class NotificationService {
   }
 
   deleteNotification(id: number): void {
-    this.http.delete(`${this.apiUrl}/${id}`).subscribe({
+    this.http.delete(`${this.apiUrl}/${id}`, { context: new HttpContext().set(BACKGROUND_REQUEST, true) }).subscribe({
       next: () => {
         const removed = this.notifications().find((n) => n.id === id);
         this.notifications.update((list) => list.filter((n) => n.id !== id));

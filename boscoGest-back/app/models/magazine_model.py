@@ -14,7 +14,7 @@ class Magazine(Base):
     issue_number: Mapped[Optional[int]] = mapped_column(Integer)
     description: Mapped[Optional[str]] = mapped_column(Text)
     file_path: Mapped[str] = mapped_column(String(500))  # Path to PDF file
-    entity_id: Mapped[int] = mapped_column(ForeignKey('entities.id', ondelete='CASCADE'))
+    entity_id: Mapped[int] = mapped_column(ForeignKey('entities.id', ondelete='CASCADE'), index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     # Relationships

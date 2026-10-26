@@ -1,0 +1,197 @@
+.pending-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 3rem 1rem;
+  background: linear-gradient(135deg, #C8B89F 0%, #B5A58C 100%);
+  box-sizing: border-box;
+}
+
+.pending-card {
+  background: #F5EFE6;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-container {
+  margin-bottom: 1rem;
+}
+
+.pending-logo {
+  max-width: 90px;
+  height: auto;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #3D4E7C;
+  margin: 0 0 0.25rem;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #646c74;
+  margin: 0 0 2rem;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 1.5rem;
+  color: #555;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  width: 3rem;
+  height: 3rem;
+  color: #aaa;
+  margin-bottom: 1rem;
+}
+
+.hint {
+  font-size: 0.875rem;
+  color: #646c74;
+}
+
+.requests-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.request-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border-left: 4px solid #9e9e9e;
+}
+
+.request-item.status-pending {
+  border-left-color: #ff9800;
+}
+
+.request-item.status-accepted {
+  border-left-color: #4caf50;
+}
+
+.request-item.status-rejected {
+  border-left-color: #f44336;
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.entity-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entity-icon {
+  color: #3D4E7C;
+  font-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.entity-name {
+  font-weight: 600;
+  color: #3D4E7C;
+  font-size: 1rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.status-pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.status-accepted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.status-rejected {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.request-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0.5rem 0;
+}
+
+.info-icon {
+  font-size: 1rem;
+  color: #ff9800;
+}
+
+.rejection-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: #c62828;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.rejection-reason {
+  color: #666;
+  font-size: 0.8rem;
+  margin: 0.25rem 0 0;
+}
+
+.accepted-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #2e7d32;
+  font-size: 0.875rem;
+}
+
+.request-meta {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-top: 0.75rem;
+}
+
+.cancel-btn {
+  margin-top: 0.75rem;
+}
+
+.page-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}

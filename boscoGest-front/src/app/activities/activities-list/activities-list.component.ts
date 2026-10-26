@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { ActivitiesService } from '../activities.service';
 import { ActivityResponse } from '../../models/user.model';
+import { activityNotFinished, activityStatus, formatActivityDates } from '../activity-dates';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -25,6 +26,8 @@ import { environment } from '../../../environments/environment';
   ],
   templateUrl: './activities-list.component.html',
   styleUrl: './activities-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ActivitiesListComponent implements OnInit {
   activities = signal<ActivityResponse[]>([]);
@@ -44,8 +47,9 @@ export class ActivitiesListComponent implements OnInit {
     if (this.showPastActivities()) {
       return allActivities;
     }
-    // Only show upcoming activities
-    return allActivities.filter(activity => this.isUpcoming(activity.date));
+    // Hide only those that are over: one that started yesterday and ends
+    // tomorrow is still on.
+    return allActivities.filter(activity => activityNotFinished(activity));
   });
 
   constructor(
@@ -140,15 +144,8 @@ export class ActivitiesListComponent implements OnInit {
     });
   }
 
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  formatDates(activity: ActivityResponse): string {
+    return formatActivityDates(activity);
   }
 
   getImageUrl(imageUrl: string | null): string {
@@ -159,12 +156,17 @@ export class ActivitiesListComponent implements OnInit {
     return `${this.apiUrl}${imageUrl}`;
   }
 
-  isUpcoming(dateString: string): boolean {
-    return new Date(dateString) > new Date();
+  /** Registration closes when it starts, even if it lasts several days. */
+  isUpcoming(activity: ActivityResponse): boolean {
+    return activityStatus(activity) === 'upcoming';
   }
 
-  isPast(dateString: string): boolean {
-    return new Date(dateString) < new Date();
+  isOngoing(activity: ActivityResponse): boolean {
+    return activityStatus(activity) === 'ongoing';
+  }
+
+  isPast(activity: ActivityResponse): boolean {
+    return activityStatus(activity) === 'past';
   }
 
   togglePastActivities(): void {

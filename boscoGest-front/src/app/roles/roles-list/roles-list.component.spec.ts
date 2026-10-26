@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { RolesListComponent } from './roles-list.component';
+import { provideAppTesting } from '../../testing/test-providers';
 
 describe('RolesListComponent', () => {
   let component: RolesListComponent;
@@ -8,7 +9,8 @@ describe('RolesListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RolesListComponent]
+      imports: [RolesListComponent],
+      providers: [provideAppTesting()]
     })
     .compileComponents();
 

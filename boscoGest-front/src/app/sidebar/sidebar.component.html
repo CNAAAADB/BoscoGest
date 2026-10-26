@@ -11,11 +11,16 @@
     } @else {
       <img src="assets/images/LogoAAAA.png" alt="BoscoGest Logo" class="sidebar-logo-collapsed">
     }
-    <button class="menu-toggle" (click)="toggleCollapse()">
-      <mat-icon>menu</mat-icon>
+    <button
+      class="menu-toggle"
+      type="button"
+      [attr.aria-label]="isLeftSidebarCollapsed() ? 'Expandir el menú' : 'Contraer el menú'"
+      [attr.aria-expanded]="!isLeftSidebarCollapsed()"
+      (click)="toggleCollapse()">
+      <mat-icon aria-hidden="true">menu</mat-icon>
     </button>
   </div>
-  <div class="sidenav-nav">
+  <ul class="sidenav-nav">
     @for (item of visibleItems(); track $index) {
       @if (item.separator) {
         <li class="sidenav-nav-separator">
@@ -32,18 +37,33 @@
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: item.routeLink === 'dashboard' }"
           >
-            <mat-icon class="sidenav-link-icon">{{ item.icon || 'article' }}</mat-icon>
+            <span class="sidenav-link-icon-wrap">
+              <mat-icon class="sidenav-link-icon" aria-hidden="true">{{ item.icon || 'article' }}</mat-icon>
+              @if (item.routeLink === 'chat' && chatUnreadCount() > 0) {
+                <span class="nav-badge">{{ chatUnreadCount() > 99 ? '99+' : chatUnreadCount() }}</span>
+              }
+            </span>
             @if (!isLeftSidebarCollapsed()) {
               <span class="sidenav-link-text">{{ item.label }}</span>
+              @if (item.routeLink === 'chat' && chatUnreadCount() > 0) {
+                <span class="nav-badge-inline">{{ chatUnreadCount() > 99 ? '99+' : chatUnreadCount() }}</span>
+              }
             }
           </a>
         </li>
       }
     }
-  </div>
+  </ul>
 
   <!-- User profile section -->
-  <div class="user-profile" [matMenuTriggerFor]="userMenu">
+  <!-- A div carrying aria-haspopup is not a valid combination: the attribute
+       is only allowed on elements with an interactive role. It also could not
+       be reached or activated from the keyboard. -->
+  <button
+    type="button"
+    class="user-profile"
+    [matMenuTriggerFor]="userMenu"
+    aria-label="Abrir el menú de usuario">
     <div class="user-avatar">
       <div class="avatar-circle">
         {{ userInitial() }}
@@ -57,23 +77,23 @@
         <div class="user-name">{{ fullName() }}</div>
       </div>
     }
-  </div>
+  </button>
 
   <!-- User menu -->
   <mat-menu #userMenu="matMenu" class="user-menu" xPosition="after">
     <button mat-menu-item (click)="navigateToProfile()" class="menu-item">
-      <mat-icon class="menu-icon">person</mat-icon>
+      <mat-icon class="menu-icon" aria-hidden="true">person</mat-icon>
       <span class="menu-text">Mi Perfil</span>
     </button>
     <button mat-menu-item (click)="navigateToNotifications()" class="menu-item">
-      <mat-icon class="menu-icon">notifications</mat-icon>
+      <mat-icon class="menu-icon" aria-hidden="true">notifications</mat-icon>
       <span class="menu-text">Notificaciones</span>
       @if (unreadCount() > 0) {
         <span class="menu-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
       }
     </button>
     <button mat-menu-item (click)="logout()" class="menu-item logout-item">
-      <mat-icon class="menu-icon">logout</mat-icon>
+      <mat-icon class="menu-icon" aria-hidden="true">logout</mat-icon>
       <span class="menu-text">Desconectar</span>
     </button>
   </mat-menu>
@@ -87,7 +107,7 @@
       <span class="mobile-logo-text">BoscoGest</span>
     </div>
     <button class="mobile-hamburger" (click)="toggleMobileMenu()" [attr.aria-expanded]="isMobileMenuOpen()">
-      <mat-icon>{{ isMobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
+      <mat-icon aria-hidden="true">{{ isMobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
     </button>
   </div>
 
@@ -112,8 +132,11 @@
                routerLinkActive="active"
                [routerLinkActiveOptions]="{ exact: item.routeLink === 'dashboard' }"
                (click)="closeMobileMenu()">
-              <mat-icon class="mobile-menu-icon">{{ item.icon || 'article' }}</mat-icon>
+              <mat-icon class="mobile-menu-icon" aria-hidden="true">{{ item.icon || 'article' }}</mat-icon>
               <span class="mobile-menu-text">{{ item.label }}</span>
+              @if (item.routeLink === 'chat' && chatUnreadCount() > 0) {
+                <span class="mobile-menu-badge">{{ chatUnreadCount() > 99 ? '99+' : chatUnreadCount() }}</span>
+              }
             </a>
           </li>
         }
@@ -131,18 +154,18 @@
         <span class="mobile-user-name">{{ fullName() }}</span>
       </div>
       <a class="mobile-menu-link" routerLink="my-profile" (click)="closeMobileMenu()">
-        <mat-icon class="mobile-menu-icon">person</mat-icon>
+        <mat-icon class="mobile-menu-icon" aria-hidden="true">person</mat-icon>
         <span class="mobile-menu-text">Mi Perfil</span>
       </a>
       <a class="mobile-menu-link" routerLink="notifications" (click)="closeMobileMenu()">
-        <mat-icon class="mobile-menu-icon">notifications</mat-icon>
+        <mat-icon class="mobile-menu-icon" aria-hidden="true">notifications</mat-icon>
         <span class="mobile-menu-text">Notificaciones</span>
         @if (unreadCount() > 0) {
           <span class="mobile-menu-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
         }
       </a>
       <button class="mobile-menu-link mobile-logout" (click)="logout()">
-        <mat-icon class="mobile-menu-icon">logout</mat-icon>
+        <mat-icon class="mobile-menu-icon" aria-hidden="true">logout</mat-icon>
         <span class="mobile-menu-text">Desconectar</span>
       </button>
     </div>

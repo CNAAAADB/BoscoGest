@@ -28,6 +28,15 @@ def get_public_entities(
     return list(db.execute(stmt).scalars().all())
 
 
+@entity_router.get("/accessible", response_model=List[EntityResponse])
+def get_accessible_entities(
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Entities the authenticated user can access (memberships + descendants)."""
+    return service.get_accessible_entities(current_user)
+
+
 @entity_router.get("/membership-manageable", response_model=List[EntityResponse])
 def get_membership_manageable_entities(
     skip: int = 0,
@@ -108,6 +117,17 @@ def update_entity(
         current_user,
         ip_address=request.client.host if request else None,
     )
+
+
+@entity_router.get("/{entity_id}/deletion-impact", status_code=status.HTTP_200_OK)
+def get_deletion_impact(
+    entity_id: int,
+    service: EntityService = Depends(get_entity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """What removing this association would affect, so the interface can warn
+    before the fact instead of reporting it afterwards."""
+    return service.get_deletion_impact(entity_id, current_user)
 
 
 @entity_router.delete("/{entity_id}", status_code=status.HTTP_200_OK)

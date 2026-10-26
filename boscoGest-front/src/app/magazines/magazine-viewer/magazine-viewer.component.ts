@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +28,8 @@ import { AuthService } from '../../auth/auth.service';
   ],
   templateUrl: './magazine-viewer.component.html',
   styleUrl: './magazine-viewer.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MagazineViewerComponent implements OnInit, OnDestroy {
   magazine = signal<MagazineDetails | null>(null);

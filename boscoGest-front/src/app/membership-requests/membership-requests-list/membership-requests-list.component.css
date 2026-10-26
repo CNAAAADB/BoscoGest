@@ -1,0 +1,173 @@
+.page-container {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary, #3D4E7C);
+  margin: 0 0 0.25rem;
+}
+
+.subtitle {
+  color: #646c74;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-field {
+  min-width: 180px;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 4rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #aaa;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+}
+
+.table-card {
+  border-radius: 12px;
+  /* overflow-x visible a propósito: 'overflow: hidden' recortaba la tabla y
+     dejaba los botones de acción inalcanzables en vertical. El redondeo de las
+     esquinas lo mantiene overflow-y. */
+  overflow-x: visible;
+  overflow-y: hidden;
+  padding: 0;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  /* Inercia al desplazar en iOS. */
+  -webkit-overflow-scrolling: touch;
+}
+
+.requests-table {
+  width: 100%;
+  /* Por debajo de esto las columnas se aplastan y el texto se parte letra a
+     letra; mejor desplazar. */
+  min-width: 560px;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #3D4E7C;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.user-email {
+  font-size: 0.8rem;
+  color: #646c74;
+}
+
+.entity-name {
+  font-weight: 500;
+  color: #3D4E7C;
+}
+
+.status-chip {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.status-pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-accepted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-rejected {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.message-text {
+  font-size: 0.875rem;
+  color: #555;
+  cursor: default;
+}
+
+.no-message {
+  color: #bbb;
+}
+
+.rejection-reason {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #c62828;
+  margin-top: 0.25rem;
+}
+
+.rejection-reason mat-icon {
+  font-size: 0.9rem;
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: scroll;
+  }
+}

@@ -1,0 +1,103 @@
+<h2 mat-dialog-title>Nueva conversación</h2>
+
+<mat-dialog-content>
+  <mat-tab-group>
+    <!-- Direct message tab -->
+    <mat-tab label="Mensaje directo">
+      <div class="tab-content">
+        @if (entities().length > 0) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Filtrar por asociación</mat-label>
+            <mat-select
+              [value]="selectedEntityId()"
+              (selectionChange)="onEntityFilterChange($event.value)"
+            >
+              <mat-option [value]="null">Todas las asociaciones</mat-option>
+              @for (entity of entities(); track entity.id) {
+                <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix aria-hidden="true">business</mat-icon>
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Buscar usuario</mat-label>
+          <input
+            matInput
+            placeholder="Nombre, apellido o email..."
+            [value]="searchQuery()"
+            (input)="onSearchInput($any($event.target).value)"
+          />
+          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        </mat-form-field>
+
+        @if (searchLoading()) {
+          <p class="hint">Buscando...</p>
+        } @else if (searchQuery().length >= 2 && searchResults().length === 0) {
+          <p class="hint">No se encontraron usuarios</p>
+        }
+
+        <div class="user-list">
+          @for (user of searchResults(); track user.id) {
+            <div class="user-item" (click)="startDirectChat(user)">
+              <div class="user-avatar">
+                {{ user.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="user-name">{{ user.name }} {{ user.surname }}</span>
+                <span class="user-email">{{ user.email }}</span>
+              </div>
+              <mat-icon class="user-arrow" aria-hidden="true">chevron_right</mat-icon>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Create group tab -->
+    <mat-tab label="Crear grupo">
+      <div class="tab-content">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nombre del grupo *</mat-label>
+          <input
+            matInput
+            placeholder="Nombre del grupo"
+            [value]="groupName()"
+            (input)="groupName.set($any($event.target).value)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Descripción (opcional)</mat-label>
+          <textarea
+            matInput
+            placeholder="Describe el propósito del grupo..."
+            rows="3"
+            [value]="groupDescription()"
+            (input)="groupDescription.set($any($event.target).value)"
+          ></textarea>
+        </mat-form-field>
+
+        <div class="group-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="createGroup()"
+            [disabled]="!groupName().trim() || creating()"
+          >
+            @if (creating()) {
+              Creando…
+            } @else {
+              Crear grupo
+            }
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+</mat-dialog-actions>

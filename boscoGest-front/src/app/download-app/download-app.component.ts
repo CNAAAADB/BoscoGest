@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,8 @@ import { environment } from '../../environments/environment';
   ],
   templateUrl: './download-app.component.html',
   styleUrl: './download-app.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DownloadAppComponent {
   downloading = signal(false);

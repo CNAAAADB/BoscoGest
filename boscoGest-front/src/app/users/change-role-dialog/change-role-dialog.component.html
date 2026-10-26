@@ -1,0 +1,40 @@
+<h2 mat-dialog-title>Cambiar rol</h2>
+
+<mat-dialog-content>
+  <p class="contexto">
+    <strong>{{ data.userName }}</strong> en <strong>{{ data.entityName }}</strong>
+  </p>
+
+  @if (loading()) {
+    <div class="cargando"><mat-spinner diameter="28"></mat-spinner></div>
+  } @else {
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Rol</mat-label>
+      <mat-select
+        [ngModel]="selectedRoleId()"
+        (ngModelChange)="selectedRoleId.set($event)"
+      >
+        @for (rol of roles(); track rol.id) {
+          <mat-option [value]="rol.id">{{ rol.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>Solo los roles de esta asociación</mat-hint>
+    </mat-form-field>
+  }
+
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="saving()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSave()"
+    [disabled]="loading() || saving() || selectedRoleId() === null || sinCambios"
+  >
+    {{ saving() ? 'Guardando...' : 'Guardar' }}
+  </button>
+</mat-dialog-actions>

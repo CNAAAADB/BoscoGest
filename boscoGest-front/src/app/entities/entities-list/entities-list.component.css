@@ -10,6 +10,10 @@
   font-weight: 600;
   color: #3D4E7C;
   margin-bottom: 2rem;
+  /* Sin esto hereda los 20px de interlineado del body, y un título de 40px
+     que parte en dos líneas se superpone consigo mismo. No se veía porque
+     "Gestión de Asociaciones" solo pasa a dos líneas en pantalla estrecha. */
+  line-height: 1.2;
 }
 
 .entities-card {
@@ -182,7 +186,7 @@ mat-card-header {
 /* Empty State */
 .empty-state {
   text-align: center;
-  color: #6c757d;
+  color: #646c74;
   font-size: 1.25rem;
   padding: 2rem;
   margin: 0;

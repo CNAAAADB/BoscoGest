@@ -126,3 +126,64 @@ variable "frontend_bucket_name" {
   type        = string
   default     = "boscogest-frontend"
 }
+
+variable "create_route53_zone" {
+  description = <<-DESC
+    Create a Route 53 hosted zone for domain_name and manage its records here.
+    The domain is registered outside AWS, so this only takes effect once the
+    registrar's nameservers are pointed at the four servers this zone reports
+    (see the `route53_nameservers` output). Set to false to keep DNS at the
+    registrar and add the ACM/DKIM records there by hand.
+  DESC
+  type        = bool
+  default     = false
+}
+
+variable "dmarc_report_email" {
+  description = "Address that receives aggregate DMARC reports."
+  type        = string
+  default     = ""
+}
+
+variable "db_storage_encrypted" {
+  description = <<-DESC
+    Encrypt the RDS volume at rest. Cannot be enabled on an existing instance:
+    turning this on forces Terraform to replace the database, which destroys
+    its data. Only flip it during a planned reset, with restore_from_snapshot
+    cleared.
+  DESC
+  type        = bool
+  default     = false
+}
+
+variable "db_backup_retention_days" {
+  description = "Days of automated backups / point-in-time recovery. 0 disables them."
+  type        = number
+  default     = 7
+}
+
+variable "db_deletion_protection" {
+  description = "Block terraform destroy and console deletion of the database."
+  type        = bool
+  default     = true
+}
+
+variable "restore_from_snapshot" {
+  description = <<-DESC
+    Snapshot to restore the instance from when it is created. Leave empty to
+    start with an empty database — required when resetting, otherwise a replace
+    brings the old data back.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "db_apply_immediately" {
+  description = <<-DESC
+    Apply RDS changes now instead of waiting for the maintenance window. Some
+    changes — notably turning automated backups on or off — reboot the
+    instance, so enabling this causes a short outage at apply time.
+  DESC
+  type        = bool
+  default     = false
+}

@@ -9,19 +9,52 @@
     <mat-card class="users-card">
       <mat-card-header>
         <mat-card-title class="section-title">
-          <mat-icon class="title-icon">people</mat-icon>
+          <mat-icon class="title-icon" aria-hidden="true">people</mat-icon>
           Listado de Usuarios
         </mat-card-title>
         @if (canCreateUsers()) {
           <div class="header-actions">
             <button mat-raised-button color="primary" (click)="createUser()" class="create-button">
-              <mat-icon>add</mat-icon>
+              <mat-icon aria-hidden="true">add</mat-icon>
               Crear Usuario
             </button>
           </div>
         }
       </mat-card-header>
       <mat-card-content class="card-content">
+        <div class="search-bar">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Buscar usuarios</mat-label>
+            <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+            <input
+              matInput
+              type="search"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="onSearchInput($event)"
+              placeholder="Nombre, apellidos, email, DNI o teléfono"
+              autocomplete="off">
+            @if (searchTerm()) {
+              <button
+                matSuffix
+                mat-icon-button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                (click)="clearSearch()">
+                <mat-icon aria-hidden="true">close</mat-icon>
+              </button>
+            }
+            <mat-hint>Se ignoran mayúsculas y tildes</mat-hint>
+          </mat-form-field>
+
+          <span class="result-count" aria-live="polite">
+            @if (searchTerm()) {
+              {{ total() }} {{ total() === 1 ? 'resultado' : 'resultados' }}
+            } @else {
+              {{ total() }} {{ total() === 1 ? 'usuario' : 'usuarios' }}
+            }
+          </span>
+        </div>
+
         @if (users().length > 0) {
           <div class="table-container">
             <table mat-table [dataSource]="users()" class="users-table">
@@ -42,13 +75,13 @@
               <!-- Email Column -->
               <ng-container matColumnDef="email">
                 <th mat-header-cell *matHeaderCellDef class="table-header">Email</th>
-                <td mat-cell *matCellDef="let user" class="table-cell">{{ user.email }}</td>
+                <td mat-cell *matCellDef="let user" class="table-cell">{{ user.email || '—' }}</td>
               </ng-container>
 
               <!-- DNI Column -->
               <ng-container matColumnDef="dni">
                 <th mat-header-cell *matHeaderCellDef class="table-header">DNI</th>
-                <td mat-cell *matCellDef="let user" class="table-cell">{{ user.dni }}</td>
+                <td mat-cell *matCellDef="let user" class="table-cell">{{ user.dni || '—' }}</td>
               </ng-container>
 
               <!-- Is Active Column -->
@@ -67,33 +100,51 @@
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="table-header">Acciones</th>
                 <td mat-cell *matCellDef="let user" class="table-cell actions-cell">
-                  <button mat-icon-button (click)="viewUser(user)" matTooltip="Ver detalles" class="action-button view-button">
-                    <mat-icon>visibility</mat-icon>
+                  <button mat-icon-button (click)="viewUser(user)" matTooltip="Ver detalles" class="action-button view-button" aria-label="Ver detalles">
+                    <mat-icon aria-hidden="true">visibility</mat-icon>
                   </button>
+                  @if (!isCurrentUser(user)) {
+                    <button mat-icon-button (click)="openChat(user)" matTooltip="Abrir chat" class="action-button chat-button" aria-label="Abrir chat">
+                      <mat-icon aria-hidden="true">chat</mat-icon>
+                    </button>
+                  }
                   @if (canEditUsers()) {
-                    <button mat-icon-button (click)="editUser(user)" matTooltip="Editar" class="action-button edit-button">
-                      <mat-icon>edit</mat-icon>
+                    <button mat-icon-button (click)="editUser(user)" matTooltip="Editar" class="action-button edit-button" aria-label="Editar">
+                      <mat-icon aria-hidden="true">edit</mat-icon>
                     </button>
                   }
                   @if (canCreateMemberships()) {
-                    <button mat-icon-button (click)="createMembership(user)" matTooltip="Crear membresía" class="action-button membership-button">
-                      <mat-icon>card_membership</mat-icon>
+                    <button mat-icon-button (click)="createMembership(user)" matTooltip="Crear membresía" class="action-button membership-button" aria-label="Crear membresía">
+                      <mat-icon aria-hidden="true">card_membership</mat-icon>
                     </button>
                   }
                   @if (canDeleteUsers() && !isCurrentUser(user)) {
-                    <button mat-icon-button (click)="deleteUser(user)" matTooltip="Eliminar" class="action-button delete-button">
-                      <mat-icon>delete</mat-icon>
+                    <button mat-icon-button (click)="deleteUser(user)" matTooltip="Eliminar" class="action-button delete-button" aria-label="Eliminar">
+                      <mat-icon aria-hidden="true">delete</mat-icon>
                     </button>
                   }
                 </td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns();" class="table-row"></tr>
             </table>
           </div>
+
+          <mat-paginator
+            [length]="total()"
+            [pageIndex]="pageIndex()"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="[10, 25, 50, 100]"
+            (page)="onPageChange($event)"
+            aria-label="Seleccionar página de usuarios">
+          </mat-paginator>
         } @else {
-          <p class="empty-state">No hay usuarios disponibles</p>
+          @if (searchTerm()) {
+            <p class="empty-state">No se han encontrado usuarios que coincidan con «{{ searchTerm() }}»</p>
+          } @else {
+            <p class="empty-state">No hay usuarios disponibles</p>
+          }
         }
       </mat-card-content>
     </mat-card>

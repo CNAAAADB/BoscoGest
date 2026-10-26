@@ -1,0 +1,206 @@
+<h2 mat-dialog-title>
+  <mat-icon class="title-icon" aria-hidden="true">group</mat-icon>
+  {{ data.conversation.name || 'Configuración del grupo' }}
+</h2>
+
+<mat-dialog-content>
+  <mat-tab-group>
+
+    <!-- Info tab -->
+    <mat-tab label="Info">
+      <div class="tab-content">
+        @if (isAdmin) {
+          <!-- Avatar upload -->
+          <div class="avatar-upload-row">
+            <input #avatarInput type="file" accept="image/*" style="display:none" (change)="onAvatarFileSelected($event)" />
+            <button mat-stroked-button (click)="avatarInput.click()" [disabled]="uploadingAvatar()">
+              <mat-icon aria-hidden="true">photo_camera</mat-icon>
+              {{ uploadingAvatar() ? 'Subiendo…' : 'Cambiar avatar del grupo' }}
+            </button>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nombre del grupo *</mat-label>
+            <input
+              matInput
+              [value]="editName()"
+              (input)="editName.set($any($event.target).value)"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Descripción</mat-label>
+            <textarea
+              matInput
+              rows="3"
+              [value]="editDescription()"
+              (input)="editDescription.set($any($event.target).value)"
+            ></textarea>
+          </mat-form-field>
+
+          <div class="info-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="saveGroupInfo()"
+              [disabled]="!editName().trim() || saving()"
+            >
+              {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          </div>
+        } @else {
+          <div class="info-readonly">
+            <p><strong>Nombre:</strong> {{ data.conversation.name }}</p>
+          </div>
+        }
+
+        <div class="leave-section">
+          <button mat-stroked-button color="warn" (click)="leaveGroup()">
+            <mat-icon aria-hidden="true">exit_to_app</mat-icon>
+            Abandonar grupo
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Members tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        Miembros
+        <span class="tab-badge">{{ members().length }}</span>
+      </ng-template>
+
+      <div class="tab-content">
+        @if (isAdmin) {
+          <!-- Add member search -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Añadir miembro</mat-label>
+            <input
+              matInput
+              placeholder="Buscar por nombre o email..."
+              [value]="addSearchQuery()"
+              (input)="onAddSearchInput($any($event.target).value)"
+            />
+            <mat-icon matPrefix aria-hidden="true">person_add</mat-icon>
+          </mat-form-field>
+
+          @if (addSearchLoading()) {
+            <p class="hint">Buscando...</p>
+          }
+
+          @if (addSearchResults().length > 0) {
+            <div class="search-results">
+              @for (user of addSearchResults(); track user.id) {
+                <div class="user-item" (click)="addMember(user)">
+                  <div class="user-avatar">{{ user.name.charAt(0).toUpperCase() }}</div>
+                  <div class="user-info">
+                    <span class="user-name">{{ user.name }} {{ user.surname }}</span>
+                    <span class="user-email">{{ user.email }}</span>
+                  </div>
+                  <mat-icon class="add-icon" aria-hidden="true">add_circle_outline</mat-icon>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- Members list -->
+        @if (loading()) {
+          <p class="hint">Cargando miembros...</p>
+        } @else {
+          <div class="member-list">
+            @for (member of members(); track member.id) {
+              <div class="member-item">
+                <div class="user-avatar">
+                  {{ member.user.name.charAt(0).toUpperCase() }}
+                </div>
+                <div class="user-info">
+                  <span class="user-name">
+                    {{ member.user.name }} {{ member.user.surname }}
+                    @if (isCurrentUser(member)) {
+                      <span class="you-badge">(tú)</span>
+                    }
+                    @if (member.is_online) {
+                      <span class="online-dot" title="En línea"></span>
+                    }
+                  </span>
+                  <span class="member-role" [class.admin]="member.role === 'admin'">
+                    {{ member.role === 'admin' ? 'Administrador' : 'Miembro' }}
+                  </span>
+                </div>
+
+                @if (isAdmin && !isCurrentUser(member)) {
+                  <button mat-icon-button [matMenuTriggerFor]="memberMenu" aria-label="Más opciones">
+                    <mat-icon aria-hidden="true">more_vert</mat-icon>
+                  </button>
+                  <mat-menu #memberMenu>
+                    @if (member.role === 'member') {
+                      <button mat-menu-item (click)="promoteToAdmin(member)">
+                        <mat-icon aria-hidden="true">star</mat-icon>
+                        <span>Hacer administrador</span>
+                      </button>
+                    } @else {
+                      <button mat-menu-item (click)="demoteToMember(member)">
+                        <mat-icon aria-hidden="true">star_border</mat-icon>
+                        <span>Quitar administrador</span>
+                      </button>
+                    }
+                    <button mat-menu-item class="danger" (click)="removeMember(member)">
+                      <mat-icon aria-hidden="true">person_remove</mat-icon>
+                      <span>Expulsar del grupo</span>
+                    </button>
+                  </mat-menu>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Join requests tab (admin only) -->
+    @if (isAdmin) {
+      <mat-tab>
+        <ng-template mat-tab-label>
+          Solicitudes
+          @if (joinRequests().length > 0) {
+            <span class="tab-badge pending">{{ joinRequests().length }}</span>
+          }
+        </ng-template>
+
+        <div class="tab-content">
+          @if (joinRequests().length === 0) {
+            <p class="hint">No hay solicitudes pendientes</p>
+          } @else {
+            <div class="request-list">
+              @for (req of joinRequests(); track req.id) {
+                <div class="request-item">
+                  <div class="user-avatar">
+                    {{ req.user.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name">{{ req.user.name }} {{ req.user.surname }}</span>
+                    <span class="req-date">{{ req.requested_at | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                  <div class="req-actions">
+                    <button mat-icon-button color="primary" (click)="acceptRequest(req)" matTooltip="Aceptar" aria-label="Aceptar">
+                      <mat-icon aria-hidden="true">check_circle</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="rejectRequest(req)" matTooltip="Rechazar" aria-label="Rechazar">
+                      <mat-icon aria-hidden="true">cancel</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </mat-tab>
+    }
+
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Cerrar</button>
+</mat-dialog-actions>

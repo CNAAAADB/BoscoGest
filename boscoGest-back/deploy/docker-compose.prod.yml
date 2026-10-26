@@ -1,0 +1,67 @@
+# Production compose file for the EC2 instance.
+#
+# Kept as a real file rather than a heredoc inside user_data.sh so it can be
+# reviewed and versioned. The database is RDS and uploads go to S3, so neither
+# appears here.
+#
+# Deploy with deploy/deploy.sh, which copies this file, the Caddyfile and .env
+# to /opt/boscogest on the instance.
+
+services:
+  back:
+    image: ${DOCKER_IMAGE}
+    container_name: boscogest_back
+    restart: always
+    # tini as PID 1, to reap orphaned processes. uvicorn does not, and the
+    # zombies left by timed-out healthchecks eventually stopped the container
+    # from forking at all. See the HEALTHCHECK note in the Dockerfile.
+    init: true
+    env_file:
+      - .env
+    # Deliberately no `ports:` — the API is reachable only through Caddy.
+    # Publishing 8000 on the host is what forced the security group open and
+    # made plain HTTP possible.
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: boscogest_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Read by the Caddyfile.
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here. Losing this volume means re-issuing from
+      # Let's Encrypt, which is rate-limited to 5 per week per hostname.
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - back
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

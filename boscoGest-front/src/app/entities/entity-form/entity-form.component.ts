@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -29,6 +29,8 @@ import { EntityCreate, EntityUpdate, EntityResponse } from '../../models/user.mo
   ],
   templateUrl: './entity-form.component.html',
   styleUrl: './entity-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityFormComponent implements OnInit {
   entityForm: FormGroup;

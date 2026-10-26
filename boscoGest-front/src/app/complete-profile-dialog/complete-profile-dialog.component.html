@@ -1,0 +1,59 @@
+<h2 mat-dialog-title>Completa tu perfil</h2>
+
+<mat-dialog-content>
+  @if (hasFields) {
+    <p class="intro">Puedes rellenar ahora los datos que faltan en tu perfil. Es opcional, podrás hacerlo más tarde.</p>
+
+    <form [formGroup]="form" class="profile-form">
+      @for (field of fields; track field.key) {
+        @switch (field.type) {
+          @case ('select') {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>{{ field.label }}</mat-label>
+              <mat-select [formControlName]="field.key">
+                <mat-option [value]="null">Sin especificar</mat-option>
+                @for (s of sizeOptions; track s) {
+                  <mat-option [value]="s">{{ s }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix aria-hidden="true">{{ field.icon }}</mat-icon>
+            </mat-form-field>
+          }
+          @case ('date') {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>{{ field.label }}</mat-label>
+              <input matInput [matDatepicker]="picker" [formControlName]="field.key">
+              <mat-datepicker-toggle matIconPrefix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker startView="multi-year"></mat-datepicker>
+            </mat-form-field>
+          }
+          @default {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>{{ field.label }}</mat-label>
+              <input
+                matInput
+                [type]="field.type === 'email' ? 'email' : (field.type === 'tel' ? 'tel' : 'text')"
+                [formControlName]="field.key"
+              >
+              <mat-icon matPrefix aria-hidden="true">{{ field.icon }}</mat-icon>
+              @if (field.type === 'email' && form.get(field.key)?.hasError('email')) {
+                <mat-error>El email no es válido</mat-error>
+              }
+            </mat-form-field>
+          }
+        }
+      }
+    </form>
+  } @else {
+    <p class="intro">Tu perfil ya está completo. ¡Gracias!</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onSkip()">Omitir</button>
+  @if (hasFields) {
+    <button mat-raised-button color="primary" (click)="onSave()" [disabled]="form.invalid || isSubmitting()">
+      Guardar
+    </button>
+  }
+</mat-dialog-actions>

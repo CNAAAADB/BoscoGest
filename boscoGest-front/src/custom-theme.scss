@@ -4,29 +4,52 @@
 // components according to the Material 3 design spec.
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
+@use 'sass:map';
 @use '@angular/material' as mat;
 
-html {
-  // Define custom palette based on design colors
-  $custom-primary: (
-    0: #000000,
-    10: #1A2840,
-    20: #2C3E5A,
-    25: #3D4E7C,
-    30: #4E5F8F,
-    35: #5F70A2,
-    40: #7081B5,
-    50: #93A4D1,
-    60: #B6C7ED,
-    70: #D9EAFF,
-    80: #E8F2FF,
-    90: #F5F9FF,
-    95: #FAFCFF,
-    98: #FDFEFF,
-    99: #FEFEFF,
-    100: #FFFFFF,
-  );
+// A Material 3 palette is more than a tonal ramp: `mat.theme()` derives the
+// surface, outline and container colours from the `neutral` and
+// `neutral-variant` sub-maps, and the on-* colours from `secondary` and
+// `error`.
+//
+// The brand ramp below was previously passed on its own, without those
+// sub-maps, so every derived token came out empty — `--mat-sys-surface`
+// resolved to the literal `light-dark(, )`. Nothing that relies on the theme
+// got a background, which is why the dropdown panels, cards and dialogs each
+// had to be forced white by hand in styles.css, and why the datepicker — the
+// one overlay nobody patched — rendered fully transparent over the form
+// underneath.
+//
+// Merging over a complete built-in palette keeps the brand tones while
+// restoring the sub-maps the theme needs.
+// Material 3 takes tone 40 as the light-theme primary. The brand blue used to
+// sit at tone 25, so once the theme started producing real tokens it handed
+// Material the much lighter tone 40 (#7081b5) as the primary — 3.8:1 on white,
+// below the 4.5:1 WCAG 1.4.3 AA requires. Reindexing the same colours so the
+// brand lands on 40 puts #3d4e7c in front of Material's components, where it
+// reaches 7.7:1.
+$brand-tones: (
+  0: #000000,
+  10: #101a2b,
+  20: #1a2840,
+  25: #23304d,
+  30: #2c3e5a,
+  35: #354669,
+  40: #3d4e7c,
+  50: #4e5f8f,
+  60: #7081b5,
+  70: #93a4d1,
+  80: #b6c7ed,
+  90: #d9eaff,
+  95: #e8f2ff,
+  98: #f5f9ff,
+  99: #fafcff,
+  100: #ffffff,
+);
 
+$custom-primary: map.merge(mat.$azure-palette, $brand-tones);
+
+html {
   @include mat.theme((
     color: (
       primary: $custom-primary,
@@ -38,9 +61,8 @@ html {
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
+  // The style guide defines a light palette only, so the theme is pinned to
+  // light rather than following the operating system.
   color-scheme: light;
 
   // Set a default background, font and text colors for the application using

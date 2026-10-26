@@ -66,14 +66,14 @@
   font-size: 4rem;
   width: 4rem;
   height: 4rem;
-  color: #6c757d;
+  color: #646c74;
   opacity: 0.5;
   margin-bottom: 1rem;
 }
 
 .empty-state p {
   font-size: 1.125rem;
-  color: #6c757d;
+  color: #646c74;
   margin: 0;
 }
 
@@ -129,7 +129,7 @@
 }
 
 .no-image mat-icon {
-  color: #6c757d;
+  color: #646c74;
   opacity: 0.5;
 }
 
@@ -146,7 +146,7 @@
 
 .content-preview {
   font-size: 0.875rem;
-  color: #6c757d;
+  color: #646c74;
   line-height: 1.4;
 }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 import { ActivitiesService } from '../activities/activities.service';
 import { CommunicationsService } from '../communications/communications.service';
 import { ActivityResponse, CommunicationResponse } from '../models/user.model';
+import { activityNotFinished, activityStart, formatActivityDates } from '../activities/activity-dates';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 
@@ -32,6 +33,8 @@ import { environment } from '../../environments/environment';
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
   @ViewChild('calendar') calendarComponent!: FullCalendarComponent;
@@ -50,10 +53,26 @@ export class DashboardComponent implements OnInit {
   totalNews = signal<number>(0);
   apiUrl = environment.apiUrl;
 
-  calendarOptions: CalendarOptions = {
+  // Signal: the events array is replaced from inside a subscribe callback.
+  // As a plain field under OnPush the calendar would render permanently empty.
+  calendarOptions = signal<CalendarOptions>({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
     locale: esLocale,
+    // The default arrows are <span role="img"> with no accessible name, which
+    // fails WCAG 1.1.1. Text buttons carry their own label.
+    buttonIcons: false,
+    buttonText: {
+      today: 'Hoy',
+      month: 'Mes',
+      week: 'Semana',
+      day: 'Día',
+    },
+    buttonHints: {
+      prev: 'Mes anterior',
+      next: 'Mes siguiente',
+      today: 'Ir a hoy',
+    },
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
@@ -68,7 +87,7 @@ export class DashboardComponent implements OnInit {
     navLinks: true,
     editable: false,
     selectable: false
-  };
+  });
 
   constructor(
     private activitiesService: ActivitiesService,
@@ -93,7 +112,9 @@ export class DashboardComponent implements OnInit {
         const events: EventInput[] = activities.map(activity => ({
           id: activity.id.toString(),
           title: activity.title,
-          start: new Date(activity.date),
+          start: activityStart(activity),
+          // Without an end, FullCalendar draws it at its start, as before.
+          end: activity.end_date ? new Date(activity.end_date) : undefined,
           backgroundColor: '#3D4E7C',
           borderColor: '#D4A76A',
           extendedProps: {
@@ -102,15 +123,13 @@ export class DashboardComponent implements OnInit {
         }));
 
         // Update calendar events
-        this.calendarOptions = {
-          ...this.calendarOptions,
-          events: events
-        };
+        this.calendarOptions.update(options => ({ ...options, events }));
 
-        // Get upcoming activities (sorted by date, future only)
+        // Upcoming and ongoing activities, earliest first: a camp that
+        // started yesterday is still worth seeing here.
         const now = new Date();
         const upcoming = activities
-          .filter(activity => new Date(activity.date) >= now)
+          .filter(activity => activityNotFinished(activity, now))
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         this.upcomingActivities.set(upcoming);
@@ -182,14 +201,8 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  formatShortDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  formatActivityShort(activity: ActivityResponse): string {
+    return formatActivityDates(activity, 'short');
   }
 
   viewActivityDetails(activityId: number): void {

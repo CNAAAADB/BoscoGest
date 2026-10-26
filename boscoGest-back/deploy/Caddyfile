@@ -1,0 +1,48 @@
+# Caddy terminates TLS for the API.
+#
+# Caddy obtains and renews a Let's Encrypt certificate on its own, which is why
+# this is the cheap way to satisfy NFR-SEC-01 without paying for an ALB. Two
+# preconditions must hold before it starts, or the ACME challenge fails:
+#
+#   1. api.<domain> already resolves to this instance's Elastic IP.
+#   2. Ports 80 and 443 are reachable from the internet (80 is needed for the
+#      HTTP-01 challenge even though all traffic ends up on 443).
+#
+# {$API_DOMAIN} and {$ACME_EMAIL} come from the .env file next to the compose
+# file.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	# The backend is no longer published on the host; it is reachable only
+	# through this proxy, on the compose network.
+	reverse_proxy back:8000 {
+		# WebSocket upgrades for chat and notifications pass through
+		# untouched; Caddy handles them natively.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+	}
+
+	encode gzip zstd
+
+	header {
+		# Tells browsers never to try this host over plain HTTP again.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# The API serves JSON, never a document that should run scripts.
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/api.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+		format json
+	}
+}

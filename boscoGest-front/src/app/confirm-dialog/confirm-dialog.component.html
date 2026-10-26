@@ -2,13 +2,26 @@
   <h2 mat-dialog-title>{{ data.title }}</h2>
   <mat-dialog-content>
     <p class="dialog-message">{{ data.message }}</p>
+    @if (data.details?.length) {
+      <ul class="dialog-details">
+        @for (detail of data.details; track detail) {
+          <li>{{ detail }}</li>
+        }
+      </ul>
+    }
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button (click)="onCancel()" class="cancel-button">
       {{ data.cancelText }}
     </button>
-    <button mat-raised-button color="primary" (click)="onConfirm()" class="confirm-button">
-      {{ data.confirmText }}
-    </button>
+    @if (data.variant !== 'info') {
+      <button
+        mat-raised-button
+        [color]="data.danger ? 'warn' : 'primary'"
+        (click)="onConfirm()"
+        class="confirm-button">
+        {{ data.confirmText }}
+      </button>
+    }
   </mat-dialog-actions>
 </div>

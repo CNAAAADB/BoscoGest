@@ -1,9 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from typing import List
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.models.user_model import User
 from app.schemas.notification import (
+    DeviceRegistration,
+    DeviceResponse,
     NotificationResponse,
     NotificationPreferenceResponse,
     NotificationPreferencesUpdate,
@@ -62,6 +73,47 @@ def get_event_types():
     return [
         {"event_type": k, "label": v} for k, v in EVENT_TYPE_LABELS.items()
     ]
+
+
+# ── Dispositivos para push ───────────────────────────────────────────
+#
+# Declarados antes que las rutas con "/{notification_id}": FastAPI casa en
+# orden de declaración y "/devices" acabaría entrando por ahí, que espera un
+# entero y responde 422.
+
+
+@notification_router.post(
+    "/devices", response_model=DeviceResponse, status_code=status.HTTP_201_CREATED
+)
+def register_device(
+    registration: DeviceRegistration,
+    service: NotificationService = Depends(get_notification_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Registra el dispositivo del usuario autenticado para recibir push.
+
+    Se llama en cada arranque de la aplicación, no solo la primera vez: el
+    token que emite FCM caduca y se renueva solo, y si no se vuelve a mandar,
+    el servidor se queda apuntando a uno que ya no existe.
+    """
+    return service.register_device(
+        current_user.id, registration.token, registration.platform
+    )
+
+
+@notification_router.delete("/devices", status_code=status.HTTP_204_NO_CONTENT)
+def unregister_device(
+    registration: DeviceRegistration,
+    service: NotificationService = Depends(get_notification_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Da de baja el dispositivo. Se llama al cerrar sesión.
+
+    Sin esto, quien cierre sesión en un móvil compartido seguiría recibiendo
+    ahí los avisos de su asociación.
+    """
+    service.unregister_device(current_user.id, registration.token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @notification_router.put("/{notification_id}/read")
@@ -134,11 +186,12 @@ async def websocket_notifications(
     # Validate JWT
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str | None = payload.get("sub")
-        if email is None:
+        sub: str | None = payload.get("sub")
+        if sub is None:
             await websocket.close(code=4001)
             return
-    except JWTError:
+        user_sub_id = int(sub)
+    except (JWTError, ValueError, TypeError):
         await websocket.close(code=4001)
         return
 
@@ -148,7 +201,7 @@ async def websocket_notifications(
         from sqlalchemy import select
 
         user = db.execute(
-            select(User).where(User.email == email, User.is_active == True)
+            select(User).where(User.id == user_sub_id, User.is_active == True)
         ).scalars().first()
 
         if not user:

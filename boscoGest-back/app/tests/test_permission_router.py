@@ -9,7 +9,7 @@ def test_create_permission(client, auth_headers):
         "description": "Test permission"
     }
 
-    response = client.post("/permissions/", json=permission_data, headers=auth_headers)
+    response = client.post("/permissions", json=permission_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -28,7 +28,7 @@ def test_create_permission_with_conditions(client, auth_headers):
         "conditions": {"time_between": ["09:00", "17:00"]}
     }
 
-    response = client.post("/permissions/", json=permission_data, headers=auth_headers)
+    response = client.post("/permissions", json=permission_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -44,7 +44,7 @@ def test_create_permission_duplicate(client, auth_headers, test_permissions):
         "description": "Duplicate"
     }
 
-    response = client.post("/permissions/", json=permission_data, headers=auth_headers)
+    response = client.post("/permissions", json=permission_data, headers=auth_headers)
 
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
@@ -57,13 +57,13 @@ def test_create_permission_unauthorized(client):
         "action": "test"
     }
 
-    response = client.post("/permissions/", json=permission_data)
+    response = client.post("/permissions", json=permission_data)
 
     assert response.status_code == 401
 
 
 def test_get_permissions(client, auth_headers, test_permissions):
-    response = client.get("/permissions/", headers=auth_headers)
+    response = client.get("/permissions", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -72,7 +72,7 @@ def test_get_permissions(client, auth_headers, test_permissions):
 
 
 def test_get_permissions_with_pagination(client, auth_headers):
-    response = client.get("/permissions/?skip=0&limit=10", headers=auth_headers)
+    response = client.get("/permissions?skip=0&limit=10", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -81,7 +81,7 @@ def test_get_permissions_with_pagination(client, auth_headers):
 
 
 def test_get_permissions_unauthorized(client):
-    response = client.get("/permissions/")
+    response = client.get("/permissions")
 
     assert response.status_code == 401
 

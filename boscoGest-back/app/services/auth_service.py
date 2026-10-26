@@ -22,28 +22,43 @@ class AuthService:
         self.audit_service = AuditService(db)
 
     def login(
-        self, email: str, password: str, ip_address: str | None = None
+        self, identifier: str, password: str, ip_address: str | None = None
     ) -> dict:
-        user = authenticate_user(db=self.db, email=email, password=password)
+        # identifier puede ser email o teléfono
+        user = authenticate_user(db=self.db, identifier=identifier, password=password)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
+                detail="Credenciales incorrectas",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
         # Users without active memberships (e.g. pending approval) are allowed
         # to log in — the frontend handles showing the appropriate state.
 
+        return self.session_for(user, ip_address=ip_address, method="password")
+
+    def session_for(
+        self,
+        user: User,
+        ip_address: str | None = None,
+        method: str = "password",
+    ) -> dict:
+        """Open a session for a user whose identity is already settled.
+
+        Shared by the password login and by the one-shot links from welcome
+        emails, so both produce the same kind of session and both leave the
+        same trace. ``method`` is what tells them apart in the audit log.
+        """
         access_token = create_access_token(
-            data={"sub": user.email},
+            data={"sub": str(user.id)},
             expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         )
         self.audit_service.create_audit_log(
             user_id=user.id,
             action="login",
             resource_type="auth",
-            details={"success": True},
+            details={"success": True, "method": method},
             ip_address=ip_address,
         )
         return {"access_token": access_token, "token_type": "bearer"}

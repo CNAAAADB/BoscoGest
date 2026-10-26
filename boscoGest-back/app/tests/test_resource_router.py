@@ -81,7 +81,7 @@ def test_create_resource_document(client, auth_headers, test_entity):
     """Test uploading a document resource."""
     file_content = b"%PDF-1.4 fake pdf content"
     response = client.post(
-        "/resources/",
+        "/resources",
         data={
             "title": "Test Document",
             "resource_type": "document",
@@ -105,7 +105,7 @@ def test_create_resource_image(client, auth_headers, test_entity):
     # Minimal valid PNG header
     file_content = b"\x89PNG\r\n\x1a\n fake png"
     response = client.post(
-        "/resources/",
+        "/resources",
         data={
             "title": "Test Image",
             "resource_type": "image",
@@ -123,7 +123,7 @@ def test_create_resource_image(client, auth_headers, test_entity):
 def test_create_resource_document_rejects_invalid_ext(client, auth_headers, test_entity):
     """Test that document upload rejects invalid file extensions."""
     response = client.post(
-        "/resources/",
+        "/resources",
         data={
             "title": "Bad File",
             "resource_type": "document",
@@ -152,7 +152,7 @@ def test_create_resource_requires_permission(client, db_session, test_entity):
     db_session.add(user)
     db_session.commit()
 
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     headers = {"Authorization": f"Bearer {token}"}
 
     data = {
@@ -184,7 +184,7 @@ def test_list_resources(client, auth_headers, db_session, test_entity, test_user
     db_session.add_all([r1, r2])
     db_session.commit()
 
-    response = client.get("/resources/", headers=auth_headers)
+    response = client.get("/resources", headers=auth_headers)
     assert response.status_code == 200
     body = response.json()
     assert len(body) >= 2
@@ -205,7 +205,7 @@ def test_list_resources_filter_by_type(client, auth_headers, db_session, test_en
     db_session.add_all([link, vid])
     db_session.commit()
 
-    response = client.get("/resources/?type=link", headers=auth_headers)
+    response = client.get("/resources?type=link", headers=auth_headers)
     assert response.status_code == 200
     body = response.json()
     assert all(r["resource_type"] == "link" for r in body)
@@ -222,7 +222,7 @@ def test_list_resources_filter_by_tags(client, auth_headers, db_session, test_en
     db_session.add(r)
     db_session.commit()
 
-    response = client.get("/resources/?tags=python", headers=auth_headers)
+    response = client.get("/resources?tags=python", headers=auth_headers)
     assert response.status_code == 200
     body = response.json()
     assert any("python" in (r.get("tags") or "") for r in body)
@@ -239,7 +239,7 @@ def test_list_resources_search(client, auth_headers, db_session, test_entity, te
     db_session.add(r)
     db_session.commit()
 
-    response = client.get("/resources/?search=SQLAlchemy", headers=auth_headers)
+    response = client.get("/resources?search=SQLAlchemy", headers=auth_headers)
     assert response.status_code == 200
     body = response.json()
     assert any("SQLAlchemy" in r["title"] for r in body)
@@ -330,7 +330,7 @@ def test_create_category(client, auth_headers, test_entity):
         "description": "Tutorial resources",
         "entity_id": test_entity.id,
     }
-    response = client.post("/resource-categories/", json=data, headers=auth_headers)
+    response = client.post("/resource-categories", json=data, headers=auth_headers)
     assert response.status_code == 201
     body = response.json()
     assert body["name"] == "Tutorials"
@@ -349,7 +349,7 @@ def test_list_categories(client, auth_headers, db_session, test_entity):
     db_session.commit()
 
     response = client.get(
-        f"/resource-categories/?entity_id={test_entity.id}", headers=auth_headers
+        f"/resource-categories?entity_id={test_entity.id}", headers=auth_headers
     )
     assert response.status_code == 200
     body = response.json()
@@ -413,7 +413,7 @@ def test_list_resources_filter_by_category(client, auth_headers, db_session, tes
     db_session.add_all([r_with_cat, r_without_cat])
     db_session.commit()
 
-    response = client.get(f"/resources/?category_id={cat.id}", headers=auth_headers)
+    response = client.get(f"/resources?category_id={cat.id}", headers=auth_headers)
     assert response.status_code == 200
     body = response.json()
     assert all(r["category_id"] == cat.id for r in body)
@@ -465,7 +465,7 @@ def test_hierarchical_permission_inheritance(client, db_session, test_permission
     db_session.add(membership)
     db_session.commit()
 
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     headers = {"Authorization": f"Bearer {token}"}
 
     # Admin at parent should be able to create resource in child entity

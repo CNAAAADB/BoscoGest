@@ -20,7 +20,7 @@ def test_create_communication(client, auth_headers, test_entity, test_membership
         "entity_id": test_entity.id
     }
 
-    response = client.post("/communications/", json=communication_data, headers=auth_headers)
+    response = client.post("/communications", json=communication_data, headers=auth_headers)
 
     print(f"\nResponse status: {response.status_code}")
     if response.status_code != 200:
@@ -76,7 +76,7 @@ def test_create_communication_without_permission(client, db_session, test_entity
     db_session.commit()
 
     # Create token
-    token = create_access_token({"sub": user.email, "membership_id": membership.id})
+    token = create_access_token({"sub": str(user.id), "membership_id": membership.id})
     headers = {"Authorization": f"Bearer {token}"}
 
     communication_data = {
@@ -85,7 +85,7 @@ def test_create_communication_without_permission(client, db_session, test_entity
         "entity_id": test_entity.id
     }
 
-    response = client.post("/communications/", json=communication_data, headers=headers)
+    response = client.post("/communications", json=communication_data, headers=headers)
 
     assert response.status_code == 403
 
@@ -97,7 +97,7 @@ def test_create_communication_unauthorized(client):
         "content": "Should fail"
     }
 
-    response = client.post("/communications/", json=communication_data)
+    response = client.post("/communications", json=communication_data)
 
     assert response.status_code == 401
 
@@ -137,7 +137,7 @@ def test_list_communications(client, auth_headers, db_session, test_entity, test
     db_session.commit()
 
     # List communications
-    response = client.get("/communications/", headers=auth_headers)
+    response = client.get("/communications", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -161,13 +161,13 @@ def test_list_communications_with_pagination(client, auth_headers, db_session, t
     db_session.commit()
 
     # Get first page (10 items)
-    response = client.get("/communications/?skip=0&limit=10", headers=auth_headers)
+    response = client.get("/communications?skip=0&limit=10", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 10
 
     # Get second page (5 items)
-    response = client.get("/communications/?skip=10&limit=10", headers=auth_headers)
+    response = client.get("/communications?skip=10&limit=10", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 5
@@ -282,7 +282,7 @@ def test_get_communication_no_access(client, db_session, test_entity, test_user)
     db_session.add(membership)
     db_session.commit()
 
-    token = create_access_token({"sub": user.email, "membership_id": membership.id})
+    token = create_access_token({"sub": str(user.id), "membership_id": membership.id})
     headers = {"Authorization": f"Bearer {token}"}
 
     response = client.get(f"/communications/{communication.id}", headers=headers)

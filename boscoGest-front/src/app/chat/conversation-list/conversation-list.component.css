@@ -1,0 +1,192 @@
+.conv-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.conv-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.conv-list-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #3D4E7C;
+  margin: 0;
+}
+
+.conv-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: #646c74;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.conv-empty mat-icon {
+  font-size: 3rem;
+  width: 3rem;
+  height: 3rem;
+  color: #e9ecef;
+}
+
+.conv-empty p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f4f7fa;
+  transition: background-color 0.15s ease;
+}
+
+.conv-item:hover {
+  background-color: #f4f7fa;
+}
+
+.conv-item.selected {
+  background-color: #eef1f8;
+}
+
+.conv-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  border-radius: 50%;
+  background-color: #3D4E7C;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.125rem;
+  position: relative;
+}
+
+.conv-avatar.group-avatar {
+  background-color: #D4A76A;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.25rem;
+}
+
+.conv-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conv-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.conv-name {
+  font-weight: 600;
+  color: #1b1b1b;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-time {
+  font-size: 0.75rem;
+  color: #646c74;
+  flex-shrink: 0;
+}
+
+.conv-preview {
+  font-size: 0.8125rem;
+  color: #646c74;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-preview.unread {
+  color: #1b1b1b;
+  font-weight: 500;
+}
+
+/* Pin/Mute indicators */
+.conv-item.pinned {
+  background-color: #fafbff;
+}
+
+.conv-item.pinned:hover {
+  background-color: #eef1f8;
+}
+
+.pin-icon,
+.mute-icon {
+  font-size: 0.75rem !important;
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+  color: #646c74;
+  margin-left: 0.25rem;
+}
+
+.muted-badge {
+  background-color: #6c757d !important;
+}
+
+/* Action buttons — only visible on hover */
+.conv-actions {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.conv-item:hover .conv-actions {
+  display: flex;
+}
+
+.conv-action-btn {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  line-height: 1.75rem !important;
+}
+
+.conv-action-btn mat-icon {
+  font-size: 1rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  color: #646c74;
+}

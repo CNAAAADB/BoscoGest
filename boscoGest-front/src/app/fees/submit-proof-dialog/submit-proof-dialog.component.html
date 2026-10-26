@@ -1,0 +1,103 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon class="title-icon" aria-hidden="true">receipt_long</mat-icon>
+  Enviar justificante de pago
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <!-- What they are paying, before what to attach: the member needs to check
+       the amount and the reference against their bank app. -->
+  <div class="summary">
+    <div class="summary-row">
+      <span class="summary-label">Cuota</span>
+      <span class="summary-value">{{ assignment.fee_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Periodo</span>
+      <span class="summary-value">{{ assignment.period }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Importe</span>
+      <span class="summary-value amount">{{ assignment.amount }} €</span>
+    </div>
+    @if (assignment.due_date) {
+      <div class="summary-row">
+        <span class="summary-label">Fecha límite</span>
+        <span class="summary-value">{{ assignment.due_date | date:'d MMM y' }}</span>
+      </div>
+    }
+  </div>
+
+  @if (assignment.proof_rejected_reason) {
+    <p class="rejected" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>
+        Tu justificante anterior fue devuelto:
+        <strong>{{ assignment.proof_rejected_reason }}</strong>
+      </span>
+    </p>
+  }
+
+  <p class="hint">
+    Adjunta el resguardo de la transferencia. Lo revisará la persona encargada de
+    las cuotas de tu asociación y la cuota quedará como pagada cuando lo confirme.
+  </p>
+
+  <div class="file-field">
+    <input
+      type="file"
+      id="proof-file"
+      class="file-input"
+      accept="application/pdf,image/jpeg,image/png,image/heic"
+      (change)="onFileSelected($event)">
+    <label for="proof-file" class="file-label">
+      <mat-icon aria-hidden="true">attach_file</mat-icon>
+      {{ file() ? 'Cambiar archivo' : 'Seleccionar archivo' }}
+    </label>
+
+    @if (file(); as chosen) {
+      <span class="file-chosen">
+        {{ chosen.name }}
+        <button
+          mat-icon-button
+          type="button"
+          aria-label="Quitar el archivo seleccionado"
+          (click)="clearFile()">
+          <mat-icon aria-hidden="true">close</mat-icon>
+        </button>
+      </span>
+    } @else {
+      <span class="file-none">PDF o imagen, hasta 10 MB</span>
+    }
+  </div>
+
+  <mat-form-field appearance="outline" class="reference-field">
+    <mat-label>Referencia de la transferencia (opcional)</mat-label>
+    <input
+      matInput
+      [ngModel]="reference()"
+      (ngModelChange)="reference.set($event)"
+      maxlength="140"
+      placeholder="Ej. Cuota socio 2026-2027 Ana García">
+    <mat-hint>Ayuda a localizar el ingreso en el extracto del banco</mat-hint>
+  </mat-form-field>
+
+  @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-button mat-dialog-close [disabled]="submitting()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    type="button"
+    (click)="onSubmit()"
+    [disabled]="!file() || submitting()">
+    @if (submitting()) {
+      <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+    } @else {
+      Enviar justificante
+    }
+  </button>
+</mat-dialog-actions>

@@ -3,7 +3,7 @@
     <h1 class="page-title">Revistas</h1>
     @if (canCreateMagazine()) {
       <button mat-raised-button color="primary" (click)="uploadMagazine()">
-        <mat-icon>cloud_upload</mat-icon>
+        <mat-icon aria-hidden="true">cloud_upload</mat-icon>
         Subir Revista
       </button>
     }
@@ -15,12 +15,12 @@
     </div>
   } @else if (magazines().length === 0) {
     <div class="empty-state">
-      <mat-icon class="empty-icon">library_books</mat-icon>
+      <mat-icon class="empty-icon" aria-hidden="true">library_books</mat-icon>
       <h2>No hay revistas disponibles</h2>
       <p>Sube la primera revista para comenzar</p>
       @if (canCreateMagazine()) {
         <button mat-raised-button color="primary" (click)="uploadMagazine()">
-          <mat-icon>cloud_upload</mat-icon>
+          <mat-icon aria-hidden="true">cloud_upload</mat-icon>
           Subir Revista
         </button>
       }
@@ -37,11 +37,11 @@
                 [alt]="magazine.title">
             } @else {
               <div class="cover-placeholder">
-                <mat-icon class="placeholder-icon">menu_book</mat-icon>
+                <mat-icon class="placeholder-icon" aria-hidden="true">menu_book</mat-icon>
               </div>
             }
             <div class="magazine-overlay">
-              <mat-icon class="view-icon">visibility</mat-icon>
+              <mat-icon class="view-icon" aria-hidden="true">visibility</mat-icon>
             </div>
           </div>
           <mat-card-content class="magazine-info">
@@ -60,12 +60,12 @@
             }
             @if (magazine.entity) {
               <p class="magazine-entity">
-                <mat-icon class="entity-icon">business</mat-icon>
+                <mat-icon class="entity-icon" aria-hidden="true">business</mat-icon>
                 {{ magazine.entity.name }}
               </p>
             }
             <p class="magazine-date">
-              <mat-icon class="date-icon">calendar_today</mat-icon>
+              <mat-icon class="date-icon" aria-hidden="true">calendar_today</mat-icon>
               {{ magazine.created_at | date:'dd/MM/yyyy' }}
             </p>
             @if (magazine.description) {
@@ -75,13 +75,13 @@
           @if (canEditMagazine() || canDeleteMagazine()) {
             <div class="card-actions">
               @if (canEditMagazine()) {
-                <button mat-icon-button color="primary" (click)="editMagazine($event, magazine.id)" title="Editar">
-                  <mat-icon>edit</mat-icon>
+                <button mat-icon-button color="primary" (click)="editMagazine($event, magazine.id)" title="Editar" aria-label="Editar revista">
+                  <mat-icon aria-hidden="true">edit</mat-icon>
                 </button>
               }
               @if (canDeleteMagazine()) {
-                <button mat-icon-button color="warn" (click)="deleteMagazine($event, magazine)" title="Eliminar">
-                  <mat-icon>delete</mat-icon>
+                <button mat-icon-button color="warn" (click)="deleteMagazine($event, magazine)" title="Eliminar" aria-label="Eliminar revista">
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>
               }
             </div>

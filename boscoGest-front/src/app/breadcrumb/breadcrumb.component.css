@@ -31,6 +31,14 @@
   color: #1976d2;
   text-decoration: none;
   transition: color 0.2s;
+  /* Inline links are only 20px tall, which is awkward to hit with a thumb.
+     Padding enlarges the tap area without changing the visual line height;
+     the negative margin keeps the row from growing. WCAG 2.1 has no minimum
+     target size at AA (2.5.5 is AAA), so this is comfort rather than
+     conformance — but NFR-QLT-02 asks for usability by older members. */
+  display: inline-block;
+  padding: 0.625rem 0.25rem;
+  margin: -0.625rem -0.25rem;
 }
 
 .breadcrumb-item a:hover {

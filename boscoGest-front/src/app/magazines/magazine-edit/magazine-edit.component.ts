@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -29,6 +29,8 @@ import { MagazineDetails } from '../../models/user.model';
   ],
   templateUrl: './magazine-edit.component.html',
   styleUrl: './magazine-edit.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MagazineEditComponent implements OnInit {
   editForm: FormGroup;

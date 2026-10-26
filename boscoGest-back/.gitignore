@@ -1,3 +1,19 @@
 .env
+.env.*
+!.env.example
 .venv
+__pycache__/
+*.pyc
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+uploads/
 
+# Production environment for the deploy script — never commit.
+deploy/.env.prod
+
+# Credenciales de la cuenta de servicio de Firebase, para las notificaciones
+# push. Dan acceso de envío al proyecto entero: nunca al repositorio.
+firebase-*.json
+*-service-account.json

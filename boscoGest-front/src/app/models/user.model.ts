@@ -1,36 +1,96 @@
+// Dominio de tallas (debe coincidir con ALLOWED_SIZES del backend)
+export type UserSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+
+export const USER_SIZE_OPTIONS: UserSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+/**
+ * A user as returned by the API.
+ *
+ * Fields outside the public tier are nullable because the backend redacts them
+ * according to the viewer's permissions (GDPR data minimisation): contact
+ * fields need `users:read`, and dni/iban/address/birthdate need
+ * `users:read_sensitive`. A redacted field arrives as null, so `null` means
+ * either "not set" or "not visible to you" — do not treat it as empty data.
+ */
 export interface UserResponse {
+  // Public tier — always present.
   id: number;
-  email: string;
   name: string;
   surname: string;
-  phone: string;
-  address: string | null;
-  birthdate: string;
-  dni: string;
   photo: string | null;
-  iban: string | null;
-  size: string | null;
-  hobbies: string | null;
   job_position: string | null;
   is_active: boolean;
   must_change_password: boolean;
   created_at: string;
+
+  // Contact tier — requires users:read.
+  email: string | null;
+  phone: string | null;
+  size: UserSize | null;
+  hobbies: string | null;
+
+  // Sensitive tier — requires users:read_sensitive, or being the subject.
+  dni: string | null;
+  iban: string | null;
+  address: string | null;
+  birthdate: string | null;
 }
 
+/** A page of users, with the total so a paginator knows how many there are. */
+export interface PaginatedUsers {
+  items: UserResponse[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+/** A stored version of the GDPR data-processing clause. */
+export interface ConsentClause {
+  id: number;
+  version: string;
+  text: string;
+  is_published: boolean;
+  published_at: string | null;
+  created_at: string;
+  created_by_id: number | null;
+}
+
+export interface ConsentClauseCreate {
+  version: string;
+  text: string;
+  publish: boolean;
+}
+
+/** Status of the GDPR data-processing consent for the current user. */
+export interface ConsentStatus {
+  accepted: boolean;
+  accepted_at: string | null;
+  accepted_version: string | null;
+  current_version: string;
+  /** The clause itself, present only while it has not been accepted. */
+  text: string | null;
+}
+
+/**
+ * Creating a member on someone else's behalf.
+ *
+ * No password: one is generated server-side and never disclosed. The person
+ * signs in through the one-shot link in their welcome email and chooses their
+ * own there.
+ */
 export interface UserCreate {
-  email: string;
+  email: string | null;
   name: string;
   surname: string;
-  phone: string;
+  phone: string | null;
   address?: string | null;
   birthdate: string;
   dni: string;
   photo?: string | null;
   iban?: string | null;
-  size?: string | null;
+  size?: UserSize | null;
   hobbies?: string | null;
   job_position?: string | null;
-  password: string;
   entity_id?: number | null;
   role_id?: number | null;
 }
@@ -45,7 +105,7 @@ export interface UserUpdate {
   dni?: string | null;
   photo?: string | null;
   iban?: string | null;
-  size?: string | null;
+  size?: UserSize | null;
   hobbies?: string | null;
   job_position?: string | null;
   is_active?: boolean | null;
@@ -53,16 +113,18 @@ export interface UserUpdate {
 
 export interface UserDetails {
   id: number;
-  email: string;
+  email: string | null;
   name: string;
   surname: string;
-  phone: string;
+  /** True until they choose a password of their own on first sign-in. */
+  must_change_password: boolean;
+  phone: string | null;
   address: string | null;
   birthdate: string;
   dni: string;
   photo: string | null;
   iban: string | null;
-  size: string | null;
+  size: UserSize | null;
   hobbies: string | null;
   job_position: string | null;
   is_active: boolean;
@@ -180,11 +242,14 @@ export interface ActivityResponse {
   description: string;
   image_url: string | null;
   date: string;
+  /** Optional: activities created before it existed, or one-off ones, have none. */
+  end_date?: string | null;
   capacity: number;
   price: number;
   allow_waitlist: boolean;
   entity_id: number;
   created_at: string;
+  created_by_id: number;
   entity?: EntityResponse | null;
 }
 
@@ -193,6 +258,7 @@ export interface ActivityCreate {
   description: string;
   image_url?: string | null;
   date: string;
+  end_date?: string | null;
   capacity: number;
   price: number;
   allow_waitlist: boolean;
@@ -204,6 +270,7 @@ export interface ActivityUpdate {
   description?: string | null;
   image_url?: string | null;
   date?: string | null;
+  end_date?: string | null;
   capacity?: number | null;
   price?: number | null;
   allow_waitlist?: boolean | null;
@@ -531,8 +598,257 @@ export interface NotificationPreferenceResponse {
   event_type: string;
   in_app_enabled: boolean;
   email_enabled: boolean;
+  push_enabled: boolean;
 }
 
 export interface NotificationPreferencesUpdate {
-  preferences: { event_type: string; in_app_enabled: boolean; email_enabled: boolean }[];
+  preferences: {
+    event_type: string;
+    in_app_enabled: boolean;
+    email_enabled: boolean;
+    push_enabled: boolean;
+  }[];
+}
+
+// Membership Request Models
+export type MembershipRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface MembershipRequestResponse {
+  id: number;
+  user_id: number;
+  entity_id: number;
+  status: MembershipRequestStatus;
+  message: string | null;
+  rejection_reason: string | null;
+  reviewed_by_id: number | null;
+  reviewed_at: string | null;
+  created_at: string;
+  user: UserBasicInfo | null;
+  entity: EntityResponse | null;
+}
+
+// Fee Models
+export type FeeStatus =
+  | 'pending'
+  // The member has sent the receipt and it is waiting to be checked. Its own
+  // state because with no payment gateway this is the only signal there is:
+  // not money in the account yet, but no longer waiting on the member.
+  | 'submitted'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled'
+  // Covered on purpose and owing nothing — honorary members and the like.
+  // Deliberately not the same as cancelled, which reads as billed by mistake.
+  | 'exempt';
+
+export const FEE_STATUS_LABELS: Record<FeeStatus, string> = {
+  pending: 'Pendiente',
+  submitted: 'Justificante enviado',
+  paid: 'Pagada',
+  overdue: 'Vencida',
+  cancelled: 'Cancelada',
+  exempt: 'Exenta',
+};
+
+export const FEE_STATUS_COLORS: Record<FeeStatus, string> = {
+  pending: '#ff9800',
+  submitted: '#1976d2',
+  paid: '#2e7d32',
+  overdue: '#c62828',
+  cancelled: '#646c74',
+  exempt: '#6a4c93',
+};
+
+// Periodicity = how often the fee is applied to a member (set per assignment)
+export type FeePeriodicity =
+  | 'weekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'four_monthly'
+  | 'biannual'
+  | 'annual';
+
+export const FEE_PERIODICITY_LABELS: Record<FeePeriodicity, string> = {
+  weekly: 'Semanal',
+  monthly: 'Mensual',
+  quarterly: 'Trimestral',
+  four_monthly: 'Cuatrimestral',
+  biannual: 'Semestral',
+  annual: 'Anual',
+};
+
+export const FEE_PERIODICITY_OPTIONS: FeePeriodicity[] = [
+  'weekly', 'monthly', 'quarterly', 'four_monthly', 'biannual', 'annual',
+];
+
+// A version of a fee's amount (history)
+export interface FeeConfigResponse {
+  id: number;
+  fee_id: number;
+  amount: number;
+  valid_from: string;
+  valid_until: string | null;
+  created_by: number | null;
+  created_at: string;
+}
+
+// A named fee belonging to an entity
+export interface FeeResponse {
+  id: number;
+  entity_id: number;
+  name: string;
+  periodicity: FeePeriodicity;
+  /** Month the yearly cycle starts on (1-12). 9 = the course, September to August. */
+  period_start_month: number;
+  auto_renew: boolean;
+  reminder_days: number;
+  is_active: boolean;
+  created_at: string;
+  current_config: FeeConfigResponse | null;
+}
+
+export interface FeeCreate {
+  name: string;
+  periodicity: FeePeriodicity;
+  entity_ids: number[];
+  amount: number;
+  valid_from: string;
+  valid_until?: string | null;
+  auto_renew?: boolean;
+  reminder_days?: number;
+  period_start_month?: number;
+}
+
+/** A member's enrolment in a fee: who owes it, from when, and until when. */
+export interface FeeSubscriptionResponse {
+  id: number;
+  fee_id: number;
+  user_id: number;
+  entity_id: number;
+  starts_on: string;
+  ends_on: string | null;
+  exempt: boolean;
+  exempt_reason: string | null;
+  user_name: string | null;
+  user_surname: string | null;
+}
+
+export interface FeeSubscribeRequest {
+  user_ids: number[];
+  starts_on?: string | null;
+  exempt?: boolean;
+  exempt_reason?: string | null;
+}
+
+export interface FeeMaintenanceRun {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: 'success' | 'error';
+  trigger: 'scheduled' | 'manual';
+  triggered_by_id: number | null;
+  triggered_by: { id: number; name: string; surname: string } | null;
+  overdue_count: number;
+  reminded_count: number;
+  renewed_count: number;
+  details: { overdue?: number[]; reminded?: number[]; renewed?: any[] } | null;
+  error: string | null;
+}
+
+export interface FeeVersionCreate {
+  amount: number;
+  valid_from: string;
+  valid_until?: string | null;
+}
+
+export interface UserBrief {
+  id: number;
+  name: string;
+  surname: string;
+  email: string;
+}
+
+export interface MemberPreview {
+  user_id: number;
+  name: string;
+  surname: string;
+  role_name: string | null;
+  already_assigned: boolean;
+}
+
+export interface FeeAssignmentResponse {
+  id: number;
+  fee_id: number;
+  fee_name: string | null;
+  user_id: number;
+  entity_id: number;
+  fee_config_id: number | null;
+  periodicity: FeePeriodicity;
+  period: string;
+  amount: number;
+  status: FeeStatus;
+  due_date: string | null;
+  paid_at: string | null;
+  notes: string | null;
+
+  /** Proof of payment. With no gateway, this is the whole payment record. */
+  proof_reference: string | null;
+  proof_submitted_at: string | null;
+  /** Why the treasurer sent it back, so the member knows what to correct. */
+  proof_rejected_reason: string | null;
+  has_proof: boolean;
+  created_at: string;
+  user: UserBrief | null;
+}
+
+export interface FeeAssignmentGenerateRequest {
+  fee_id: number;
+  reference_date?: string | null;
+  /** Omit to charge everyone enrolled, which is the normal case. Supplying ids
+   *  narrows that roster; it cannot add somebody who is not enrolled. */
+  user_ids?: number[] | null;
+  due_date?: string | null;
+}
+
+export interface FeeAssignmentStatusUpdate {
+  status: FeeStatus;
+  notes?: string | null;
+}
+
+export interface FeeGenerateResult {
+  created: number;
+  skipped: number;
+  /** Enrolled members recorded as owing nothing. */
+  exempt: number;
+  period: string;
+  fee_id: number;
+  entity_id: number;
+}
+
+export interface RegisterRequest {
+  name: string;
+  surname: string;
+  email: string;
+  password: string;
+  phone: string;
+  birthdate: string;
+  dni: string;
+  address?: string | null;
+  entity_id: number;
+  message?: string | null;
+}
+
+/**
+ * What removing an association would affect, consulted before the deletion so
+ * the interface can warn — or refuse — with the reason in hand.
+ */
+export interface EntityDeletionImpact {
+  entity_id: number;
+  entity_name: string;
+  /** False when it has associations under it: those block the deletion. */
+  can_delete: boolean;
+  child_count: number;
+  child_names: string[];
+  /** Memberships that would be ended along with the association. */
+  member_count: number;
 }

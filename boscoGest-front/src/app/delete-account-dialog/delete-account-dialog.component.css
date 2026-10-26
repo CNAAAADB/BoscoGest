@@ -1,0 +1,59 @@
+:host ::ng-deep .mat-mdc-dialog-container .mdc-dialog__surface {
+  background-color: white !important;
+}
+
+.danger-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-error, #b3261e);
+  background-color: white;
+}
+
+mat-dialog-content {
+  background-color: white;
+  max-width: 480px;
+}
+
+.warning-text {
+  margin: 8px 0;
+}
+
+.consequences {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.5;
+}
+
+.delete-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 360px;
+  padding: 8px 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.error-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--mat-sys-error, #b3261e);
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+  background-color: white;
+}
+
+@media (max-width: 600px) {
+  .delete-form {
+    min-width: 260px;
+  }
+}

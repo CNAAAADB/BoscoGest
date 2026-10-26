@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -25,6 +25,8 @@ import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.comp
   ],
   templateUrl: './roles-list.component.html',
   styleUrl: './roles-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RolesListComponent implements OnInit {
   roles = signal<RoleResponse[]>([]);

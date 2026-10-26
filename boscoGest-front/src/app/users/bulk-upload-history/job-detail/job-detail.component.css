@@ -1,0 +1,181 @@
+.job-detail-container {
+  padding: 1.5rem;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-secondary, #646c74);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  text-decoration: underline;
+}
+
+.page-title {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #3d4e7c;
+  /* Un nombre de fichero largo no debe empujar el estado fuera de la fila. */
+  word-break: break-word;
+}
+
+.page-sub {
+  margin: 0;
+  color: var(--text-secondary, #646c74);
+  font-size: 0.9rem;
+}
+
+.status-chip {
+  padding: 0.3rem 0.85rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chip-pending   { background: #e9ecef; color: #495057; border: 1px solid #dee2e6; }
+.chip-running   { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+.chip-completed { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.chip-failed    { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+.summary-card,
+.detail-card {
+  margin-bottom: 1.25rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1.25rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.value {
+  font-size: 1.4rem;
+  color: #3d4e7c;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.value.success { color: #2f6b4f; }
+.value.error   { color: #9c3a2b; }
+
+.rate-bar {
+  height: 6px;
+  border-radius: 3px;
+  background-color: rgba(156, 58, 43, 0.25);
+  overflow: hidden;
+  margin-top: 1.25rem;
+}
+
+.rate-fill {
+  height: 100%;
+  background-color: #2f6b4f;
+}
+
+.rate-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #646c74);
+}
+
+.errors-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+
+.errors-head p {
+  margin: 0;
+  color: var(--text-secondary, #646c74);
+  font-size: 0.9rem;
+  max-width: 40rem;
+}
+
+/* La tabla puede tener cientos de filas; que se desplace ella, no la página. */
+.table-scroll {
+  max-height: 32rem;
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+}
+
+.detail-table {
+  width: 100%;
+}
+
+.detail-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #3d4e7c;
+  padding: 0.7rem 1rem;
+}
+
+.detail-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.row-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 4.5rem;
+}
+
+.error-row {
+  background-color: #fff8f7;
+}
+
+.empty-tab {
+  color: #6c757d;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+@media (max-width: 40rem) {
+  .job-detail-container { padding: 1rem; }
+  .value { font-size: 1.2rem; }
+}

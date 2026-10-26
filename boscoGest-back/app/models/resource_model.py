@@ -26,7 +26,7 @@ class Resource(Base):
     file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     original_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     tags: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id", ondelete="CASCADE"))
+    entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id", ondelete="CASCADE"), index=True)
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("resource_categories.id", ondelete="SET NULL"), nullable=True
     )

@@ -2,47 +2,60 @@
   <h1 class="page-title">Importación Masiva de Usuarios</h1>
 
   <div class="import-inner-container">
-    <!-- Acordeón de guía de uso -->
+    <!-- Guía de uso -->
     <mat-accordion>
       <mat-expansion-panel class="info-panel">
         <mat-expansion-panel-header>
           <mat-panel-title class="section-title">
-            <mat-icon class="title-icon">info</mat-icon>
+            <mat-icon class="title-icon" aria-hidden="true">info</mat-icon>
             Guía de Uso
           </mat-panel-title>
         </mat-expansion-panel-header>
         <div class="info-content">
-          <h3>¿Qué hace esta funcionalidad?</h3>
+          <h3>¿Para qué sirve?</h3>
           <p>
-            Esta herramienta permite crear múltiples usuarios simultáneamente mediante un archivo CSV.
-            Es ideal para dar de alta grupos grandes de usuarios de forma rápida y eficiente.
+            Para dar de alta a muchas personas de una vez a partir de una hoja de Excel,
+            en lugar de crearlas una a una. Puedes usar Excel (o cualquier programa de hojas
+            de cálculo que guarde en formato <strong>.xlsx</strong>) y no hace falta saber qué es un CSV.
           </p>
-  
-          <h3>Cómo usar:</h3>
+
+          <h3>Paso a paso</h3>
           <ol>
-            <li>Descarga la plantilla CSV haciendo clic en el botón "Descargar Plantilla"</li>
-            <li>Abre el archivo con Excel, Google Sheets u otro editor de hojas de cálculo</li>
-            <li>Rellena los datos de los usuarios siguiendo el formato de la plantilla</li>
-            <li>Guarda el archivo como CSV (delimitado por comas)</li>
-            <li>Sube el archivo usando el botón "Seleccionar Archivo"</li>
-            <li>Haz clic en "Importar Usuarios" para procesarlo</li>
+            <li>Pulsa <strong>«Descargar plantilla Excel»</strong> y abre el archivo descargado.</li>
+            <li>
+              Escribe los datos en la hoja <strong>«Usuarios»</strong>, una fila por persona.
+              No cambies la primera fila: son los nombres de las columnas. En la hoja
+              «Instrucciones» del mismo archivo tienes un ejemplo.
+            </li>
+            <li>Guarda el archivo tal cual, como Excel. No hace falta convertirlo.</li>
+            <li>Aquí, elige la <strong>asociación</strong> y el <strong>rol</strong> que tendrán todas esas personas.</li>
+            <li>Pulsa <strong>«Seleccionar archivo»</strong> y elige el Excel que has rellenado.</li>
+            <li>
+              Pulsa <strong>«Comprobar el archivo»</strong>. Te dirá qué filas hay que corregir y por qué,
+              sin crear a nadie. Corrige, guarda y vuelve a comprobar las veces que haga falta.
+            </li>
+            <li>Cuando diga que el archivo está listo, pulsa <strong>«Importar usuarios»</strong>.</li>
+            <li>
+              La importación sigue en segundo plano: pulsa «Actualizar estado» para ver cómo va, o
+              consulta el <a routerLink="history">historial de importaciones</a> más tarde.
+            </li>
           </ol>
-  
-          <h3>Campos del CSV:</h3>
+
+          <h3>Columnas de la plantilla</h3>
+          <p>
+            Las cuatro primeras son obligatorias. Si en Excel dejas el ratón sobre el nombre
+            de una columna, verás una nota con lo que hay que escribir.
+          </p>
           <div class="fields-table-container">
-            <table mat-table [dataSource]="csvFields" class="fields-table">
+            <table mat-table [dataSource]="fields" class="fields-table">
               <ng-container matColumnDef="field">
-                <th mat-header-cell *matHeaderCellDef>Campo</th>
-                <td mat-cell *matCellDef="let field">
-                  <code>{{ field.name }}</code>
-                </td>
+                <th mat-header-cell *matHeaderCellDef>Columna</th>
+                <td mat-cell *matCellDef="let field"><code>{{ field.name }}</code></td>
               </ng-container>
-  
               <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                <th mat-header-cell *matHeaderCellDef>Qué escribir</th>
                 <td mat-cell *matCellDef="let field">{{ field.description }}</td>
               </ng-container>
-  
               <ng-container matColumnDef="required">
                 <th mat-header-cell *matHeaderCellDef>Obligatorio</th>
                 <td mat-cell *matCellDef="let field">
@@ -51,226 +64,421 @@
                   </span>
                 </td>
               </ng-container>
-  
               <ng-container matColumnDef="example">
                 <th mat-header-cell *matHeaderCellDef>Ejemplo</th>
-                <td mat-cell *matCellDef="let field">
-                  <code class="example-code">{{ field.example }}</code>
-                </td>
+                <td mat-cell *matCellDef="let field"><code class="example-code">{{ field.example }}</code></td>
               </ng-container>
-  
-              <tr mat-header-row *matHeaderRowDef="csvFieldColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: csvFieldColumns;"></tr>
+              <tr mat-header-row *matHeaderRowDef="fieldColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: fieldColumns;"></tr>
             </table>
           </div>
-  
+
           <div class="warning-box">
-            <mat-icon>warning</mat-icon>
+            <mat-icon aria-hidden="true">warning</mat-icon>
             <div>
               <strong>Importante:</strong>
               <ul>
-                <li>Todos los campos deben estar entre comillas dobles ("")</li>
-                <li>Los usuarios creados deberán cambiar su contraseña en el primer inicio de sesión</li>
-                <li>El email y DNI deben ser únicos en el sistema</li>
-                <li>Se crearán automáticamente membresías en todas las entidades padre</li>
+                <li>Cada persona necesita al menos un <strong>correo</strong> o un <strong>teléfono</strong>. Si no tiene correo, deja la celda vacía (no escribas 0 ni un guion).</li>
+                <li>El correo, el teléfono y el DNI no pueden estar repetidos, ni en el archivo ni en personas que ya existan.</li>
+                <li>La asociación y el rol <strong>no</strong> van en el archivo: se eligen en esta pantalla y se aplican a todas las filas. Solo aparecen los roles que puedes asignar en esa asociación.</li>
+                <li>La persona también queda dada de alta en las entidades superiores de la asociación.</li>
+                <li>No hay que poner contraseñas. Quien tenga correo recibirá un enlace de un solo uso para entrar y elegir la suya.</li>
               </ul>
             </div>
           </div>
+
+          <h3>¿Ya trabajas con CSV?</h3>
+          <p>
+            También se admiten archivos <strong>.csv</strong>; descarga la «Plantilla CSV» para ver el formato.
+            Guárdalo con codificación <strong>UTF-8</strong> y separado por comas, con cada valor entre comillas
+            dobles (""). La fecha puede ir como <code>15/01/1950</code> o como <code>1950-01-15</code>. Las columnas <code>password</code>,
+            <code>role_id</code> o <code>entity_id</code> de archivos antiguos se ignoran.
+          </p>
+          <p>
+            Los Excel antiguos (<strong>.xls</strong>) no se admiten: ábrelos y guárdalos como «Libro de Excel (.xlsx)».
+          </p>
         </div>
       </mat-expansion-panel>
     </mat-accordion>
-  
-    <!-- Card de acciones -->
+
+    <!-- Acciones -->
     <mat-card class="action-card">
       <mat-card-header>
         <mat-card-title class="section-title">
-          <mat-icon class="title-icon">upload_file</mat-icon>
+          <mat-icon class="title-icon" aria-hidden="true">upload_file</mat-icon>
           Importar Archivo
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <div class="action-buttons">
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="downloadTemplate()"
-            [disabled]="isUploading()"
+        <mat-form-field appearance="outline" class="entity-select">
+          <mat-label>Asociación de destino</mat-label>
+          <mat-select [value]="selectedEntityId()" (selectionChange)="onEntityChange($event.value)">
+            @for (entity of creatableEntities(); track entity.id) {
+              <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix aria-hidden="true">business</mat-icon>
+          <mat-hint>Todos los usuarios del archivo se crearán en esta asociación</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="entity-select">
+          <mat-label>Rol de los usuarios</mat-label>
+          <mat-select
+            [value]="selectedRoleId()"
+            (selectionChange)="selectedRoleId.set($event.value)"
+            [disabled]="selectedEntityId() == null || loadingRoles()"
           >
-            <mat-icon>download</mat-icon>
-            Descargar Plantilla
-          </button>
-  
+            @for (role of assignableRoles(); track role.id) {
+              <mat-option [value]="role.id">{{ role.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix aria-hidden="true">badge</mat-icon>
+          @if (loadingRoles()) {
+            <mat-hint>Cargando roles…</mat-hint>
+          } @else if (selectedEntityId() == null) {
+            <mat-hint>Elige primero una asociación</mat-hint>
+          } @else if (assignableRoles().length === 0) {
+            <mat-hint>No hay roles que puedas asignar en esta asociación</mat-hint>
+          } @else {
+            <mat-hint>Todos los usuarios del archivo se crearán con este rol</mat-hint>
+          }
+        </mat-form-field>
+
+        <div class="action-buttons">
+          <div class="template-buttons">
+            <button mat-raised-button color="primary" (click)="downloadExcelTemplate()" [disabled]="isSubmitting()">
+              <mat-icon aria-hidden="true">download</mat-icon>
+              Descargar plantilla Excel
+            </button>
+            <button mat-button class="csv-template-button" (click)="downloadCsvTemplate()" [disabled]="isSubmitting()">
+              Plantilla CSV
+            </button>
+          </div>
+
           <div class="file-upload-section">
             <input
               type="file"
               #fileInput
-              accept=".csv"
-              (change)="onFileSelected($event)"
-              style="display: none"
-            />
-            <button
-              mat-raised-button
-              (click)="fileInput.click()"
-              [disabled]="isUploading()"
-            >
-              <mat-icon>folder_open</mat-icon>
-              Seleccionar Archivo
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+              (change)="onFileSelected($event)" style="display: none" />
+            <button mat-raised-button (click)="fileInput.click()" [disabled]="isSubmitting()">
+              <mat-icon aria-hidden="true">folder_open</mat-icon>
+              Seleccionar archivo
             </button>
-  
+
             @if (selectedFile()) {
               <div class="file-info">
-                <mat-icon>description</mat-icon>
+                <mat-icon aria-hidden="true">description</mat-icon>
                 <span>{{ selectedFile()!.name }}</span>
-                <button
-                  mat-icon-button
-                  (click)="clearSelection()"
-                  [disabled]="isUploading()"
-                >
-                  <mat-icon>close</mat-icon>
+                <button mat-icon-button (click)="clearSelection()" [disabled]="isSubmitting()" aria-label="Quitar el archivo seleccionado">
+                  <mat-icon aria-hidden="true">close</mat-icon>
                 </button>
               </div>
+
+              <!-- Files exported before the selectors existed still carry these
+                   columns. The import ignores them, and saying nothing left
+                   people believing the file chose the association and role. -->
+              @if (ignoredColumns().length) {
+                <div class="ignored-columns" role="status">
+                  <mat-icon aria-hidden="true">info</mat-icon>
+                  <span>
+                    El archivo incluye
+                    {{ ignoredColumns().length === 1 ? 'la columna' : 'las columnas' }}
+                    <strong>{{ ignoredColumns().join(', ') }}</strong>.
+                    No se {{ ignoredColumns().length === 1 ? 'tiene' : 'tienen' }} en cuenta:
+                    la asociación y el rol son los que elijas aquí abajo.
+                  </span>
+                </div>
+              }
             }
           </div>
-  
+
+          <!-- Comprobar antes de importar: no crea nada, así que se puede
+               repetir hasta que el archivo esté limpio. -->
+          <div class="import-actions">
+            <button
+              mat-stroked-button
+              (click)="validateFile()"
+              [disabled]="!selectedFile() || selectedEntityId() == null || validating()">
+              @if (validating()) {
+                <mat-spinner diameter="18" style="display:inline-block;margin-right:8px;"></mat-spinner>
+                Comprobando…
+              } @else {
+                <mat-icon aria-hidden="true">fact_check</mat-icon>
+                Comprobar el archivo
+              }
+            </button>
+          </div>
+
+          @if (report(); as r) {
+            <div class="report" [class.report-ok]="r.valid" role="status">
+              <div class="report-head">
+                <mat-icon aria-hidden="true">{{ r.valid ? 'check_circle' : 'report_problem' }}</mat-icon>
+                <div>
+                  @if (r.missing_columns.length) {
+                    <strong>Faltan columnas obligatorias</strong>
+                    <p>
+                      El archivo no tiene <code>{{ r.missing_columns.join(', ') }}</code>.
+                      Sin ellas no se puede comprobar nada más.
+                    </p>
+                  } @else if (r.valid) {
+                    <strong>El archivo está listo</strong>
+                    <p>{{ r.total_rows }} filas, ninguna con problemas. Ya puedes importarlo.</p>
+                  } @else {
+                    <strong>{{ r.invalid_rows }} de {{ r.total_rows }} filas tienen problemas</strong>
+                    <p>
+                      Se importarían {{ r.valid_rows }}. Corrige el archivo y vuelve a
+                      comprobarlo: aquí no se ha creado ningún usuario.
+                    </p>
+                  }
+                </div>
+              </div>
+
+              @if (r.summary.length) {
+                <ul class="report-summary">
+                  @for (s of r.summary; track s.code) {
+                    <li><strong>{{ s.count }}</strong> · {{ s.message }}</li>
+                  }
+                </ul>
+              }
+
+              @if (r.ignored_columns.length || r.unknown_columns.length) {
+                <p class="report-note">
+                  @if (r.ignored_columns.length) {
+                    Se ignoran las columnas <code>{{ r.ignored_columns.join(', ') }}</code>.
+                  }
+                  @if (r.unknown_columns.length) {
+                    No se reconocen <code>{{ r.unknown_columns.join(', ') }}</code>.
+                  }
+                </p>
+              }
+
+              @if (r.problems.length) {
+                <div class="report-table-scroll">
+                  <table class="report-table">
+                    <thead>
+                      <tr><th>Fila</th><th>Columna</th><th>Problema</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (p of r.problems.slice(0, problemsShown()); track $index) {
+                        <tr>
+                          <td class="report-row-num">{{ p.row }}</td>
+                          <td><code>{{ p.field || '—' }}</code></td>
+                          <td>{{ p.message }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="report-actions">
+                  @if (r.problems.length > problemsShown()) {
+                    <button mat-button (click)="showMoreProblems()">
+                      Ver más ({{ r.problems.length - problemsShown() }} restantes)
+                    </button>
+                  }
+                  <button mat-button (click)="downloadReport()">
+                    <mat-icon aria-hidden="true">download</mat-icon>
+                    Descargar el informe
+                  </button>
+                </div>
+
+                @if (r.truncated) {
+                  <p class="report-note">
+                    Hay más de 500 problemas; se muestran los primeros. Corrige estos
+                    y vuelve a comprobar.
+                  </p>
+                }
+              }
+            </div>
+          }
+
           <button
             mat-raised-button
             color="accent"
             (click)="uploadFile()"
-            [disabled]="!selectedFile() || isUploading()"
+            [disabled]="!selectedFile() || selectedEntityId() == null || selectedRoleId() == null || isSubmitting()"
           >
-            @if (isUploading()) {
+            @if (isSubmitting()) {
               <mat-spinner diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
-              Importando...
+              Enviando...
             } @else {
-              <mat-icon>cloud_upload</mat-icon>
-              Importar Usuarios
+              <ng-container>
+                <mat-icon aria-hidden="true">cloud_upload</mat-icon>
+                Importar usuarios
+              </ng-container>
             }
+          </button>
+
+          <button
+            mat-stroked-button
+            routerLink="history"
+          >
+            <mat-icon aria-hidden="true">history</mat-icon>
+            Ver historial
           </button>
         </div>
       </mat-card-content>
     </mat-card>
-  
-    <!-- Resultados de la importación -->
-    @if (uploadResult()) {
+
+    <!-- Estado del proceso activo -->
+    @if (currentJob()) {
       <mat-card class="results-card">
         <mat-card-header>
           <mat-card-title class="section-title">
-            <mat-icon class="title-icon">assessment</mat-icon>
-            Resultados de la Importación
+            <mat-icon class="title-icon" aria-hidden="true">
+              @switch (currentJob()!.status) {
+                @case ('pending') { hourglass_empty }
+                @case ('running') { sync }
+                @case ('completed') { check_circle }
+                @case ('failed') { error }
+              }
+            </mat-icon>
+            Estado del proceso #{{ currentJob()!.id }}
           </mat-card-title>
+          <mat-card-subtitle>
+            Archivo: {{ currentJob()!.csv_filename }}
+          </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <div class="results-summary">
-            <div class="summary-item success">
-              <mat-icon>check_circle</mat-icon>
-              <div>
-                <span class="summary-number">{{ uploadResult()!.successful }}</span>
-                <span class="summary-label">Usuarios Creados</span>
-              </div>
-            </div>
-            <div class="summary-item error">
-              <mat-icon>error</mat-icon>
-              <div>
-                <span class="summary-number">{{ uploadResult()!.failed }}</span>
-                <span class="summary-label">Errores</span>
-              </div>
-            </div>
-            <div class="summary-item total">
-              <mat-icon>description</mat-icon>
-              <div>
-                <span class="summary-number">{{ uploadResult()!.total_rows }}</span>
-                <span class="summary-label">Total Filas</span>
-              </div>
-            </div>
+
+          <!-- Chip de estado -->
+          <div class="status-row">
+            <span
+              class="status-chip"
+              [class.chip-pending]="currentJob()!.status === 'pending'"
+              [class.chip-running]="currentJob()!.status === 'running'"
+              [class.chip-completed]="currentJob()!.status === 'completed'"
+              [class.chip-failed]="currentJob()!.status === 'failed'"
+            >
+              {{ currentJob()!.status | uppercase }}
+            </span>
+
+            <!-- Botón Actualizar — siempre visible -->
+            <button
+              mat-stroked-button
+              (click)="refreshJobStatus()"
+              [disabled]="isRefreshing()"
+            >
+              @if (isRefreshing()) {
+                <mat-spinner diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              } @else {
+                <mat-icon aria-hidden="true">refresh</mat-icon>
+              }
+              Actualizar estado
+            </button>
           </div>
-  
-          <!-- Usuarios creados exitosamente -->
-          @if (uploadResult()!.created_users.length > 0) {
-            <div class="section">
-              <h3>Usuarios Creados Exitosamente</h3>
-              <table mat-table [dataSource]="uploadResult()!.created_users" class="results-table">
-                <ng-container matColumnDef="id">
-                  <th mat-header-cell *matHeaderCellDef>ID</th>
-                  <td mat-cell *matCellDef="let user">{{ user.id }}</td>
-                </ng-container>
-  
-                <ng-container matColumnDef="name">
-                  <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                  <td mat-cell *matCellDef="let user">{{ user.name }}</td>
-                </ng-container>
-  
-                <ng-container matColumnDef="email">
-                  <th mat-header-cell *matHeaderCellDef>Email</th>
-                  <td mat-cell *matCellDef="let user">{{ user.email }}</td>
-                </ng-container>
-  
-                <ng-container matColumnDef="entity_id">
-                  <th mat-header-cell *matHeaderCellDef>Asociación ID</th>
-                  <td mat-cell *matCellDef="let user">{{ user.entity_id }}</td>
-                </ng-container>
 
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Ver</th>
-                  <td mat-cell *matCellDef="let user">
-                    <button
-                      mat-icon-button
-                      color="primary"
-                      (click)="viewRowDetails(user, 'success')"
-                      matTooltip="Ver detalles completos"
-                    >
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedSuccessColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedSuccessColumns;"></tr>
-              </table>
+          <!-- Barra de progreso cuando está en marcha -->
+          @if (isJobActive() && currentJob()!.total_rows) {
+            <div class="progress-section">
+              <mat-progress-bar mode="determinate" [value]="progressPercent()"></mat-progress-bar>
+              <span class="progress-label">
+                {{ currentJob()!.processed_rows }} / {{ currentJob()!.total_rows }} filas
+                ({{ progressPercent() }}%)
+              </span>
             </div>
           }
-  
-          <!-- Errores -->
-          @if (uploadResult()!.errors.length > 0) {
-            <div class="section">
-              <h3>Errores Encontrados</h3>
-              <table mat-table [dataSource]="uploadResult()!.errors" class="results-table error-table">
-                <ng-container matColumnDef="row">
-                  <th mat-header-cell *matHeaderCellDef>Fila</th>
-                  <td mat-cell *matCellDef="let error">{{ error.row }}</td>
-                </ng-container>
-  
-                <ng-container matColumnDef="error">
-                  <th mat-header-cell *matHeaderCellDef>Error</th>
-                  <td mat-cell *matCellDef="let error">{{ error.error }}</td>
-                </ng-container>
-  
-                <ng-container matColumnDef="email">
-                  <th mat-header-cell *matHeaderCellDef>Email</th>
-                  <td mat-cell *matCellDef="let error">{{ error.data.email || 'N/A' }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Ver</th>
-                  <td mat-cell *matCellDef="let error">
-                    <button
-                      mat-icon-button
-                      color="primary"
-                      (click)="viewRowDetails(error, 'error')"
-                      matTooltip="Ver detalles completos"
-                    >
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-              </table>
-            </div>
+          @if (isJobActive() && !currentJob()!.total_rows) {
+            <mat-progress-bar mode="indeterminate" class="progress-section"></mat-progress-bar>
           }
+
+          <!-- Resumen de resultados -->
+          @if (!isJobActive()) {
+            <div class="results-summary">
+              <div class="summary-item success">
+                <mat-icon aria-hidden="true">check_circle</mat-icon>
+                <div>
+                  <span class="summary-number">{{ currentJob()!.successful }}</span>
+                  <span class="summary-label">Usuarios Creados</span>
+                </div>
+              </div>
+              <div class="summary-item error">
+                <mat-icon aria-hidden="true">error</mat-icon>
+                <div>
+                  <span class="summary-number">{{ currentJob()!.failed }}</span>
+                  <span class="summary-label">Errores</span>
+                </div>
+              </div>
+              <div class="summary-item total">
+                <mat-icon aria-hidden="true">description</mat-icon>
+                <div>
+                  <span class="summary-number">{{ currentJob()!.total_rows ?? '—' }}</span>
+                  <span class="summary-label">Total Filas</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Usuarios creados -->
+            @if (currentJob()!.created_users.length > 0) {
+              <div class="section">
+                <h3>Usuarios Creados Exitosamente</h3>
+                <table mat-table [dataSource]="currentJob()!.created_users" class="results-table">
+                  <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef>ID</th>
+                    <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                    <td mat-cell *matCellDef="let user">{{ user.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="email">
+                    <th mat-header-cell *matHeaderCellDef>Email</th>
+                    <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="entity_id">
+                    <th mat-header-cell *matHeaderCellDef>Asociación ID</th>
+                    <td mat-cell *matCellDef="let user">{{ user.entity_id }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Ver</th>
+                    <td mat-cell *matCellDef="let user">
+                      <button mat-icon-button color="primary" (click)="viewRowDetails(user, 'success')" matTooltip="Ver detalles" aria-label="Ver detalles">
+                        <mat-icon aria-hidden="true">visibility</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="displayedSuccessColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedSuccessColumns;"></tr>
+                </table>
+              </div>
+            }
+
+            <!-- Errores -->
+            @if (currentJob()!.errors.length > 0) {
+              <div class="section">
+                <h3>Errores Encontrados</h3>
+                <table mat-table [dataSource]="currentJob()!.errors" class="results-table error-table">
+                  <ng-container matColumnDef="row">
+                    <th mat-header-cell *matHeaderCellDef>Fila</th>
+                    <td mat-cell *matCellDef="let error">{{ error.row }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="error">
+                    <th mat-header-cell *matHeaderCellDef>Error</th>
+                    <td mat-cell *matCellDef="let error">{{ error.error }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="email">
+                    <th mat-header-cell *matHeaderCellDef>Email</th>
+                    <td mat-cell *matCellDef="let error">{{ error.data?.email || 'N/A' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Ver</th>
+                    <td mat-cell *matCellDef="let error">
+                      <button mat-icon-button color="primary" (click)="viewRowDetails(error, 'error')" matTooltip="Ver detalles" aria-label="Ver detalles">
+                        <mat-icon aria-hidden="true">visibility</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                </table>
+              </div>
+            }
+          }
+
         </mat-card-content>
       </mat-card>
     }
-  </div>
 
+  </div>
 </div>

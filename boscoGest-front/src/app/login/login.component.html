@@ -10,12 +10,12 @@
     <mat-card-content>
       <form (ngSubmit)="onLogin()">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
+          <mat-label>Email o teléfono</mat-label>
           <input
             matInput
-            type="email"
-            [(ngModel)]="email"
-            name="email"
+            type="text"
+            [(ngModel)]="identifier"
+            name="identifier"
             required
           />
         </mat-form-field>
@@ -40,5 +40,18 @@
         </button>
       </form>
     </mat-card-content>
+
+    <mat-card-actions class="login-actions">
+      <span class="register-link">
+        ¿No tienes cuenta? <a routerLink="/register">Regístrate</a>
+      </span>
+      <!-- Alcanzables sin sesión: es la pantalla en la que aterriza un revisor
+           de Google Play, que comprueba ambas páginas antes de aprobar la ficha. -->
+      <span class="legal-links">
+        <a routerLink="/privacidad">Política de privacidad</a>
+        <span aria-hidden="true"> · </span>
+        <a routerLink="/eliminar-cuenta">Eliminar cuenta</a>
+      </span>
+    </mat-card-actions>
   </mat-card>
 </div>

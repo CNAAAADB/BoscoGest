@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -28,6 +28,8 @@ import { EntityResponse, RoleResponse } from '../../models/user.model';
   ],
   templateUrl: './membership-form.component.html',
   styleUrl: './membership-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MembershipFormComponent implements OnInit {
   membershipForm: FormGroup;

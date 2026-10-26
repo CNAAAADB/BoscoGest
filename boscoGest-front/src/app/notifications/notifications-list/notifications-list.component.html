@@ -3,7 +3,7 @@
     <h1>Notificaciones</h1>
     @if (unreadCount() > 0) {
       <button mat-raised-button color="primary" (click)="markAllRead()">
-        <mat-icon>done_all</mat-icon>
+        <mat-icon aria-hidden="true">done_all</mat-icon>
         Marcar todas como leidas
       </button>
     }
@@ -11,7 +11,7 @@
 
   @if (notifications().length === 0) {
     <mat-card class="empty-state">
-      <mat-icon>notifications_none</mat-icon>
+      <mat-icon aria-hidden="true">notifications_none</mat-icon>
       <p>No tienes notificaciones</p>
     </mat-card>
   } @else {
@@ -24,7 +24,7 @@
         >
           <div class="notification-row">
             <div class="notification-icon">
-              <mat-icon>{{ getEventIcon(notification.event_type) }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ getEventIcon(notification.event_type) }}</mat-icon>
             </div>
             <div class="notification-content">
               <div class="notification-title">{{ notification.title }}</div>
@@ -39,8 +39,8 @@
                 <span>{{ timeAgo(notification.created_at) }}</span>
               </div>
             </div>
-            <button mat-icon-button class="delete-btn" (click)="deleteNotification($event, notification.id)">
-              <mat-icon>close</mat-icon>
+            <button mat-icon-button class="delete-btn" (click)="deleteNotification($event, notification.id)" aria-label="Eliminar notificación">
+              <mat-icon aria-hidden="true">close</mat-icon>
             </button>
           </div>
         </mat-card>

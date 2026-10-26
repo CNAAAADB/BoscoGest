@@ -1,0 +1,52 @@
+# Lint configuration.
+#
+# The codebase currently reports ~300 findings, so a blanket `ruff check` as a
+# CI gate would fail every pull request from day one and be ignored within a
+# week. This selects the rules that catch real defects and are already clean,
+# so the gate means something now; the rest are listed below as a backlog to
+# work through, at which point they can be promoted.
+
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = [
+    "F821",  # undefined name — this caught a missing import that would have
+             # raised NameError on POST /users at runtime
+    "F811",  # redefinition of an unused name
+    "F841",  # assigned but never used
+    "F632",  # `is` against a literal
+    "E711",  # comparison to None with ==
+    "E9",    # syntax and IO errors
+    "B",     # common bug patterns (flake8-bugbear)
+]
+
+ignore = [
+    # SQLAlchemy filters are expressions, not booleans: `User.is_active == True`
+    # compiles to SQL, whereas `if x is True` does not. The idiomatic
+    # alternative is `.is_(True)`, which is a worthwhile cleanup but not a bug.
+    "E712",
+    # FastAPI's dependency injection puts function calls in argument defaults
+    # by design: `Depends(...)`, `Query(...)`, `File(...)`.
+    "B008",
+    # `raise ... from err` inside an except block. Worth doing — it preserves
+    # the original traceback, which matters when diagnosing a production
+    # failure — but it is diagnostics quality rather than a defect, and there
+    # are 19 sites. Listed in the backlog below rather than blocking the gate.
+    "B904",
+]
+
+[lint.per-file-ignores]
+# Model modules use string forward references that SQLAlchemy resolves through
+# its registry at mapper configuration time; ruff cannot follow them.
+"app/models/*.py" = ["F821"]
+# Fixtures deliberately shadow names and build objects for their side effects.
+"app/tests/*.py" = ["F811", "F841"]
+# Imports inside functions here break genuine circular dependencies.
+"app/services/user_service.py" = ["E402"]
+
+# Backlog, to promote once addressed:
+#   F401  123 unused imports
+#   E402   25 imports not at top of file
+#   F403   16 star imports
+#   B904   19 raises inside except that do not chain the original error

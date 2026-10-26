@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, map } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { EntityResponse, EntityCreate, EntityUpdate, EntityDetails, MembershipDetails } from '../models/user.model';
+import { EntityResponse, EntityCreate, EntityUpdate, EntityDetails, MembershipDetails, EntityDeletionImpact } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -49,6 +49,16 @@ export class EntitiesService {
 
   deleteEntity(entityId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${entityId}`);
+  }
+
+  /**
+   * What removing this association would affect. Asked before deleting so the
+   * warning arrives beforehand instead of the result arriving afterwards.
+   */
+  getDeletionImpact(entityId: number): Observable<EntityDeletionImpact> {
+    return this.http.get<EntityDeletionImpact>(
+      `${this.apiUrl}/${entityId}/deletion-impact`
+    );
   }
 
   getAdminEntities(skip: number = 0, limit: number = 100): Observable<EntityResponse[]> {

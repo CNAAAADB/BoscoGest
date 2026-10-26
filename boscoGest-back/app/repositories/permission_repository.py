@@ -17,8 +17,13 @@ class PermissionRepository:
         return self.base.get_by_id(permission_id)
 
     def get_all_active(self, skip: int = 0, limit: int = 100) -> List[Permission]:
+        # Por nombre, que es "recurso:acción": agrupa cada recurso y deja sus
+        # acciones juntas, que es como se leen en la pantalla de roles.
         return self.base.get_all(
-            filters={"is_active": True}, skip=skip, limit=limit
+            filters={"is_active": True},
+            skip=skip,
+            limit=limit,
+            order_by=Permission.name,
         )
 
     def create(self, permission: Permission) -> Permission:

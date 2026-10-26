@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -39,6 +39,8 @@ import { environment } from '../../../environments/environment';
   ],
   templateUrl: './communications-detail.component.html',
   styleUrl: './communications-detail.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NewsDetailComponent implements OnInit {
   news = signal<CommunicationWithCommentsResponse | null>(null);

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -11,15 +11,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivitiesService } from '../activities.service';
 import { ActivityResponse, EntityResponse } from '../../models/user.model';
 import { environment } from '../../../environments/environment';
+import { NativePickerDirective } from '../../shared/native-picker.directive';
 
 @Component({
   selector: 'app-activity-form',
   imports: [
+    NativePickerDirective,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -31,11 +32,12 @@ import { environment } from '../../../environments/environment';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatSelectModule
   ],
   templateUrl: './activity-form.component.html',
   styleUrl: './activity-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ActivityFormComponent implements OnInit {
   activityForm: FormGroup;
@@ -44,13 +46,19 @@ export class ActivityFormComponent implements OnInit {
   activityId: number | null = null;
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  currentImageUrl: string | null = null;
+  // Signal: assigned inside a subscribe callback, which under OnPush
+  // would not mark the component dirty and the preview would not appear.
+  currentImageUrl = signal<string | null>(null);
   apiUrl = environment.apiUrl;
   availableEntities = signal<EntityResponse[]>([]);
 
   // Separate date and time controls
   dateControl!: FormControl<Date | null>;
   timeControl!: FormControl<string | null>;
+  // The end is optional: a one-off meeting does not need one. With only the
+  // time filled in, it ends the same day it starts.
+  endDateControl!: FormControl<Date | null>;
+  endTimeControl!: FormControl<string | null>;
 
   constructor(
     private fb: FormBuilder,
@@ -71,6 +79,8 @@ export class ActivityFormComponent implements OnInit {
     // Initialize date and time controls
     this.dateControl = this.fb.control<Date | null>(null, Validators.required);
     this.timeControl = this.fb.control<string | null>('', Validators.required);
+    this.endDateControl = this.fb.control<Date | null>(null);
+    this.endTimeControl = this.fb.control<string | null>('');
   }
 
   ngOnInit(): void {
@@ -118,9 +128,15 @@ export class ActivityFormComponent implements OnInit {
         this.dateControl.setValue(activityDate);
         this.timeControl.setValue(this.formatTimeForInput(activityDate));
 
+        if (activity.end_date) {
+          const endDate = new Date(activity.end_date);
+          this.endDateControl.setValue(endDate);
+          this.endTimeControl.setValue(this.formatTimeForInput(endDate));
+        }
+
         // Set current image if exists
         if (activity.image_url) {
-          this.currentImageUrl = activity.image_url;
+          this.currentImageUrl.set(activity.image_url);
         }
 
         this.loading.set(false);
@@ -143,10 +159,10 @@ export class ActivityFormComponent implements OnInit {
     return `${hours}:${minutes}`;
   }
 
-  combineDateAndTime(): string {
-    const date = this.dateControl.value;
-    const time = this.timeControl.value;
-
+  combineDateAndTime(
+    date: Date | null = this.dateControl.value,
+    time: string | null = this.timeControl.value,
+  ): string {
     if (!date || !time) {
       return '';
     }
@@ -156,8 +172,41 @@ export class ActivityFormComponent implements OnInit {
     combined.setHours(parseInt(hours, 10));
     combined.setMinutes(parseInt(minutes, 10));
     combined.setSeconds(0);
+    combined.setMilliseconds(0);
 
     return combined.toISOString();
+  }
+
+  /** The end as the API expects it, or null when the activity has none. */
+  combineEnd(): string | null {
+    const time = this.endTimeControl.value;
+    if (!time) {
+      return null;
+    }
+    return this.combineDateAndTime(this.endDateControl.value ?? this.dateControl.value, time) || null;
+  }
+
+  /** What is wrong with the end, if anything, in words for the form. */
+  endError(): string | null {
+    // Typed but not understood: the control holds null, which would otherwise
+    // read as "ends the same day" and save something nobody wrote.
+    if (this.endDateControl.hasError('matDatepickerParse')) {
+      return 'No se entiende la fecha de fin. Elígela en el calendario';
+    }
+    if (this.endDateControl.value && !this.endTimeControl.value) {
+      return 'Indica también la hora a la que termina';
+    }
+    const end = this.combineEnd();
+    const start = this.combineDateAndTime();
+    if (end && start && new Date(end) <= new Date(start)) {
+      return 'Tiene que terminar después de empezar';
+    }
+    return null;
+  }
+
+  clearEnd(): void {
+    this.endDateControl.setValue(null);
+    this.endTimeControl.setValue('');
   }
 
   onFileSelected(event: Event): void {
@@ -177,7 +226,7 @@ export class ActivityFormComponent implements OnInit {
   removeImage(): void {
     this.selectedFile = null;
     this.imagePreview = null;
-    this.currentImageUrl = null;
+    this.currentImageUrl.set(null);
   }
 
   getImageUrl(imageUrl: string): string {
@@ -194,10 +243,21 @@ export class ActivityFormComponent implements OnInit {
       return;
     }
 
+    const endError = this.endError();
+    if (endError) {
+      this.snackBar.open(endError, 'Cerrar', {
+        duration: 4000,
+        panelClass: 'error-snackbar'
+      });
+      return;
+    }
+
     this.loading.set(true);
     const formValue = {
       ...this.activityForm.value,
-      date: this.combineDateAndTime()
+      date: this.combineDateAndTime(),
+      // Sent as null when empty, so that clearing it on edit removes it.
+      end_date: this.combineEnd()
     };
 
     if (this.isEditMode && this.activityId) {

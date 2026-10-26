@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -36,6 +36,8 @@ import { catchError, of } from 'rxjs';
   ],
   templateUrl: './associate-user.component.html',
   styleUrl: './associate-user.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssociateUserComponent implements OnInit {
   searchForm: FormGroup;

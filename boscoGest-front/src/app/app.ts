@@ -1,5 +1,6 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ChangeDetectionStrategy} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { LoadingOverlayComponent } from './shared/loading/loading-overlay.component';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -7,9 +8,11 @@ import type { PluginListenerHandle } from '@capacitor/core';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, LoadingOverlayComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App implements OnInit, OnDestroy {
   protected readonly title = 'boscoGest-front';

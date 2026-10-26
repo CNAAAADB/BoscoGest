@@ -18,17 +18,23 @@
           <div class="header-text">
             <mat-card-title class="activity-title">{{ activity()!.title }}</mat-card-title>
           </div>
-          @if (showAdminActions()) {
+          @if (showAdminActions() || canCreateChatGroup()) {
             <div class="header-actions">
+              @if (canCreateChatGroup()) {
+                <button mat-raised-button color="accent" (click)="createChatGroup()" [disabled]="creatingChatGroup()">
+                  <mat-icon aria-hidden="true">forum</mat-icon>
+                  Crear grupo de chat
+                </button>
+              }
               @if (canEditActivities()) {
                 <button mat-raised-button color="primary" (click)="editActivity()">
-                  <mat-icon>edit</mat-icon>
+                  <mat-icon aria-hidden="true">edit</mat-icon>
                   Editar
                 </button>
               }
               @if (canDeleteActivities()) {
                 <button mat-raised-button color="warn" (click)="deleteActivity()">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                   Eliminar
                 </button>
               }
@@ -41,15 +47,15 @@
 
         <div class="info-grid">
           <div class="info-item">
-            <mat-icon class="info-icon">event</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">event</mat-icon>
             <div class="info-details">
-              <span class="info-label">Fecha y hora</span>
-              <span class="info-value">{{ formatDate(activity()!.date) }}</span>
+              <span class="info-label">{{ activity()!.end_date ? 'Cuándo' : 'Fecha y hora' }}</span>
+              <span class="info-value">{{ formatDates(activity()!) }}</span>
             </div>
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">people</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">people</mat-icon>
             <div class="info-details">
               <span class="info-label">Aforo</span>
               <span class="info-value">{{ activity()!.capacity }} personas</span>
@@ -57,7 +63,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">euro</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">euro</mat-icon>
             <div class="info-details">
               <span class="info-label">Precio</span>
               <span class="info-value">{{ activity()!.price === 0 ? 'Gratis' : activity()!.price + '€' }}</span>
@@ -65,7 +71,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">{{ activity()!.allow_waitlist ? 'check_circle' : 'cancel' }}</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">{{ activity()!.allow_waitlist ? 'check_circle' : 'cancel' }}</mat-icon>
             <div class="info-details">
               <span class="info-label">Lista de espera</span>
               <span class="info-value">{{ activity()!.allow_waitlist ? 'Permitida' : 'No permitida' }}</span>
@@ -74,7 +80,7 @@
 
           @if (activity()!.entity) {
             <div class="info-item">
-              <mat-icon class="info-icon">business</mat-icon>
+              <mat-icon class="info-icon" aria-hidden="true">business</mat-icon>
               <div class="info-details">
                 <span class="info-label">Entidad</span>
                 <span class="info-value">{{ activity()!.entity!.name }}</span>
@@ -86,7 +92,7 @@
         @if (!isRegistered() && !canManageActivities()) {
           <div class="registration-action">
             <button mat-raised-button color="accent" (click)="registerToActivity()" class="register-button">
-              <mat-icon>how_to_reg</mat-icon>
+              <mat-icon aria-hidden="true">how_to_reg</mat-icon>
               Inscribirse a la actividad
             </button>
           </div>
@@ -94,7 +100,7 @@
 
         @if (isRegistered() && !canManageActivities()) {
           <div class="already-registered">
-            <mat-icon>check_circle</mat-icon>
+            <mat-icon aria-hidden="true">check_circle</mat-icon>
             <span>Ya estás inscrito en esta actividad</span>
           </div>
         }
@@ -107,7 +113,7 @@
       <mat-card class="registrations-card">
         <mat-card-header>
           <mat-card-title class="section-title">
-            <mat-icon class="title-icon">check_circle</mat-icon>
+            <mat-icon class="title-icon" aria-hidden="true">check_circle</mat-icon>
             Inscritos Aceptados ({{ acceptedRegistrations().length }}/{{ activity()!.capacity }})
           </mat-card-title>
         </mat-card-header>
@@ -145,8 +151,8 @@
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef class="table-header">Acciones</th>
                   <td mat-cell *matCellDef="let reg" class="table-cell">
-                    <button mat-icon-button color="warn" (click)="rejectRegistration(reg)">
-                      <mat-icon>cancel</mat-icon>
+                    <button mat-icon-button color="warn" (click)="rejectRegistration(reg)" aria-label="Rechazar inscripción">
+                      <mat-icon aria-hidden="true">cancel</mat-icon>
                     </button>
                   </td>
                 </ng-container>
@@ -166,7 +172,7 @@
         <mat-card class="registrations-card">
           <mat-card-header>
             <mat-card-title class="section-title">
-              <mat-icon class="title-icon">pending</mat-icon>
+              <mat-icon class="title-icon" aria-hidden="true">pending</mat-icon>
               Pendientes y Lista de Espera
             </mat-card-title>
           </mat-card-header>
@@ -199,11 +205,11 @@
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef class="table-header">Acciones</th>
                   <td mat-cell *matCellDef="let reg" class="table-cell">
-                    <button mat-icon-button color="primary" (click)="acceptRegistration(reg)">
-                      <mat-icon>check_circle</mat-icon>
+                    <button mat-icon-button color="primary" (click)="acceptRegistration(reg)" aria-label="Aceptar inscripción">
+                      <mat-icon aria-hidden="true">check_circle</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="rejectRegistration(reg)">
-                      <mat-icon>cancel</mat-icon>
+                    <button mat-icon-button color="warn" (click)="rejectRegistration(reg)" aria-label="Rechazar inscripción">
+                      <mat-icon aria-hidden="true">cancel</mat-icon>
                     </button>
                   </td>
                 </ng-container>
@@ -220,7 +226,7 @@
     <!-- Action Buttons -->
     <div class="action-buttons">
       <button mat-button (click)="goBack()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
         Volver
       </button>
     </div>

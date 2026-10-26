@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, signal, computed } from '@angular/core';
+import { Component, HostListener, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { MainComponent } from '../main/main.component';
 
@@ -7,6 +7,8 @@ import { MainComponent } from '../main/main.component';
   imports: [SidebarComponent, MainComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent implements OnInit {
   isLeftSidebarCollapsed = signal<boolean>(false);

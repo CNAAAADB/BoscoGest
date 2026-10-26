@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select, text
 import uuid
 from app.database import SyncSessionLocal
@@ -12,12 +12,12 @@ from app.models.user_model import User
 from app.models.audit_log_model import AuditLog
 from app.models.membership_model import Membership
 from app.models.role_model import Role
+from app.models.group_model import Group
 from app.models.revoked_token_model import RevokedToken
 
-# Security configuration
-SECRET_KEY = "your-secret-key-here"  # In production, use environment variables
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Security configuration — sourced from the environment, never hardcoded.
+# Re-exported here so the existing imports across routers keep working.
+from app.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -47,8 +47,11 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     return encoded_jwt
 
 # User authentication
-def authenticate_user(db: Session, email: str, password: str) -> Union[User, bool]:
-    stmt = select(User).where(User.email == email)
+def authenticate_user(db: Session, identifier: str, password: str) -> Union[User, bool]:
+    # El identificador puede ser email o teléfono (cualquiera identifica al usuario)
+    stmt = select(User).where(
+        (User.email == identifier) | (User.phone == identifier)
+    )
     result = db.execute(stmt)
     user = result.scalars().first()
 
@@ -70,9 +73,9 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: Optional[str] = payload.get("sub")
+        sub: Optional[str] = payload.get("sub")
         jti: Optional[str] = payload.get("jti")
-        if email is None or jti is None:
+        if sub is None or jti is None:
             raise credentials_exception
 
         # Check if token is revoked
@@ -87,7 +90,31 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    stmt = select(User).where(User.email == email)
+    # El "sub" del token es el id del usuario (soporta usuarios sin email)
+    try:
+        user_id = int(sub)
+    except (TypeError, ValueError):
+        raise credentials_exception
+
+    # Every authorisation check walks memberships -> role -> permissions,
+    # direct permissions, and groups -> roles -> permissions. Loading them
+    # lazily meant each of those traversals issued its own SELECT, on every
+    # authenticated request. selectinload fetches each collection in one extra
+    # query regardless of how many rows it holds, which keeps the cost flat as
+    # a user accumulates memberships.
+    stmt = (
+        select(User)
+        .where(User.id == user_id)
+        .options(
+            selectinload(User.memberships)
+            .selectinload(Membership.role)
+            .selectinload(Role.permissions),
+            selectinload(User.direct_permissions),
+            selectinload(User.groups)
+            .selectinload(Group.roles)
+            .selectinload(Role.permissions),
+        )
+    )
     result = db.execute(stmt)
     user = result.scalars().first()
 

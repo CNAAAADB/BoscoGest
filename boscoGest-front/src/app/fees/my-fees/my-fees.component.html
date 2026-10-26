@@ -1,0 +1,101 @@
+<div class="my-fees-container">
+  <div class="header">
+    <h1 class="page-title">Mis Cuotas</h1>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  } @else if (assignments().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon" aria-hidden="true">receipt_long</mat-icon>
+      <h2>Sin cuotas asignadas</h2>
+      <p>Aún no tienes cuotas registradas.</p>
+    </div>
+  } @else {
+    <div class="fees-list">
+      @for (assignment of assignments(); track assignment.id) {
+        <mat-card class="fee-card" [class]="'status-' + assignment.status">
+          <mat-card-content>
+            <div class="fee-row">
+              <div class="fee-left">
+                <div class="fee-name">{{ assignment.fee_name || 'Cuota' }}</div>
+                <div class="fee-period">
+                  {{ assignment.period }}
+                  <span class="fee-periodicity">· {{ getPeriodicityLabel(assignment.periodicity) }}</span>
+                </div>
+                <div class="fee-amount">{{ assignment.amount | currency:'EUR':'symbol':'1.2-2' }}</div>
+                @if (assignment.due_date) {
+                  <div class="fee-due">
+                    <mat-icon class="meta-icon" aria-hidden="true">event</mat-icon>
+                    Fecha límite: {{ assignment.due_date | date:'dd/MM/yyyy' }}
+                  </div>
+                }
+                @if (assignment.paid_at) {
+                  <div class="fee-paid">
+                    <mat-icon class="meta-icon" aria-hidden="true">check_circle</mat-icon>
+                    Pagada el {{ assignment.paid_at | date:'dd/MM/yyyy' }}
+                  </div>
+                }
+                @if (assignment.status === 'submitted' && assignment.proof_submitted_at) {
+                  <div class="fee-submitted">
+                    <mat-icon class="meta-icon" aria-hidden="true">hourglass_top</mat-icon>
+                    Justificante enviado el {{ assignment.proof_submitted_at | date:'dd/MM/yyyy' }}
+                    · pendiente de revisión
+                  </div>
+                }
+                @if (assignment.proof_rejected_reason) {
+                  <div class="fee-rejected" role="alert">
+                    <mat-icon class="meta-icon" aria-hidden="true">error_outline</mat-icon>
+                    Justificante devuelto: {{ assignment.proof_rejected_reason }}
+                  </div>
+                }
+                @if (assignment.proof_reference) {
+                  <div class="fee-reference">
+                    <mat-icon class="meta-icon" aria-hidden="true">tag</mat-icon>
+                    Referencia: {{ assignment.proof_reference }}
+                  </div>
+                }
+                @if (assignment.notes) {
+                  <div class="fee-notes">
+                    <mat-icon class="meta-icon" aria-hidden="true">notes</mat-icon>
+                    {{ assignment.notes }}
+                  </div>
+                }
+              </div>
+              <div class="fee-right">
+                <div class="status-badge" [style.background-color]="getStatusColor(assignment.status)">
+                  <mat-icon class="badge-icon" aria-hidden="true">{{ getStatusIcon(assignment.status) }}</mat-icon>
+                  {{ getStatusLabel(assignment.status) }}
+                </div>
+
+                <!-- With no payment gateway, this is how a member pays: they
+                     transfer the money at their bank and send the receipt. -->
+                @if (canSendProof(assignment)) {
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    class="pay-button"
+                    (click)="openProofDialog(assignment)">
+                    <mat-icon aria-hidden="true">upload_file</mat-icon>
+                    {{ assignment.proof_rejected_reason ? 'Reenviar justificante' : 'He pagado' }}
+                  </button>
+                }
+                @if (assignment.has_proof) {
+                  <button
+                    mat-button
+                    class="proof-link"
+                    (click)="viewProof(assignment)">
+                    <mat-icon aria-hidden="true">description</mat-icon>
+                    Ver justificante
+                  </button>
+                }
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

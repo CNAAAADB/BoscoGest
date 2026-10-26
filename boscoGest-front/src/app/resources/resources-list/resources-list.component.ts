@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -36,6 +36,8 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/
   ],
   templateUrl: './resources-list.component.html',
   styleUrl: './resources-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResourcesListComponent implements OnInit {
   resources = signal<ResourceDetails[]>([]);

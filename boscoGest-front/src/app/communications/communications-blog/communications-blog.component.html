@@ -10,7 +10,7 @@
   } @else if (newsList().length === 0) {
     <div class="empty-state">
       <mat-card>
-        <mat-icon>article</mat-icon>
+        <mat-icon aria-hidden="true">article</mat-icon>
         <p>No hay comunicaciones disponibles</p>
       </mat-card>
     </div>
@@ -28,12 +28,12 @@
               <div class="blog-item-meta">
                 @if (news.entity_name) {
                   <span class="blog-item-entity">
-                    <mat-icon>business</mat-icon>
+                    <mat-icon aria-hidden="true">business</mat-icon>
                     {{ news.entity_name }}
                   </span>
                 }
                 <span class="blog-item-date">
-                  <mat-icon>calendar_today</mat-icon>
+                  <mat-icon aria-hidden="true">calendar_today</mat-icon>
                   {{ formatDate(news.created_at) }}
                 </span>
               </div>

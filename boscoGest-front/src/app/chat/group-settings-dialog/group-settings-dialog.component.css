@@ -1,0 +1,177 @@
+h2[mat-dialog-title] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  color: #3D4E7C;
+}
+
+.title-icon {
+  color: #D4A76A;
+}
+
+.tab-content {
+  padding: 1.25rem 0 0.5rem;
+  min-height: 260px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.hint {
+  color: #646c74;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  color: #495057;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  margin-left: 0.375rem;
+}
+
+.tab-badge.pending {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Info tab */
+.info-readonly {
+  padding: 0.5rem 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.info-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.leave-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* User / member items */
+.search-results,
+.member-list,
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.user-item,
+.member-item,
+.request-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.user-item {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.user-item:hover {
+  background-color: #f4f7fa;
+}
+
+.user-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  border-radius: 50%;
+  background-color: #3D4E7C;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #1b1b1b;
+  font-size: 0.9375rem;
+}
+
+.you-badge {
+  font-weight: 400;
+  color: #646c74;
+  font-size: 0.8125rem;
+}
+
+.user-email,
+.req-date {
+  font-size: 0.75rem;
+  color: #646c74;
+}
+
+.member-role {
+  font-size: 0.75rem;
+  color: #646c74;
+}
+
+.member-role.admin {
+  color: #D4A76A;
+  font-weight: 600;
+}
+
+.add-icon {
+  color: #3D4E7C;
+}
+
+.req-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.danger {
+  color: #dc3545 !important;
+}
+
+/* Avatar upload */
+.avatar-upload-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+/* Online presence dot */
+.online-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: #28a745;
+  margin-left: 0.375rem;
+  vertical-align: middle;
+}

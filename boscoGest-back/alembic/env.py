@@ -1,57 +1,48 @@
 import os
-import sys
 from logging.config import fileConfig
+
+from sqlalchemy import engine_from_config, pool
+
 from alembic import context
-from sqlalchemy import create_engine, pool
 
-# Añadir el path de la app
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from app.database import Base  # tu Base declarativa
-from app.models import *        # importa modelos para que Alembic los detecte
-
-# Configuración Alembic
 config = context.config
-fileConfig(config.config_file_name)
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Import all models so their metadata is registered on Base
+from app.database.database import Base
+import app.models  # noqa: F401
+
 target_metadata = Base.metadata
 
-def get_database_url() -> str:
-    """Obtiene la URL de la DB según el entorno (local o Docker)."""
-    return (
-        os.getenv("DATABASE_URL")      # si estamos en local
-        or os.getenv("DATABASE_URL_DOCKER")  # si estamos en Docker
-        or config.get_main_option("sqlalchemy.url")  # fallback
-    )
+
+def get_url() -> str:
+    url = os.getenv("DATABASE_URL", "postgresql+psycopg2://admin:admin123@db:5432/boscogest")
+    return url.replace("postgresql://", "postgresql+psycopg2://")
+
 
 def run_migrations_offline() -> None:
-    """Ejecuta migraciones en modo offline."""
-    url = get_database_url()
     context.configure(
-        url=url,
+        url=get_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    """Ejecuta migraciones en modo online (sync)."""
-    url = get_database_url()
-    connectable = create_engine(
-        url,
+    cfg = config.get_section(config.config_ini_section, {})
+    cfg["sqlalchemy.url"] = get_url()
+    connectable = engine_from_config(
+        cfg,
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        future=True
     )
-
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata
-        )
-
+        context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BoscoGest</string>
+    <string name="title_activity_main">BoscoGest</string>
+    <string name="package_name">es.urjc.boscogest</string>
+    <string name="custom_url_scheme">es.urjc.boscogest</string>
+</resources>

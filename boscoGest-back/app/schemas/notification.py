@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 
 class ActorBrief(BaseModel):
@@ -46,15 +46,33 @@ class NotificationPreferenceItem(BaseModel):
     event_type: str
     in_app_enabled: bool = True
     email_enabled: bool = False
+    push_enabled: bool = True
 
 
 class NotificationPreferenceResponse(BaseModel):
     event_type: str
     in_app_enabled: bool
     email_enabled: bool
+    push_enabled: bool
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class NotificationPreferencesUpdate(BaseModel):
     preferences: List[NotificationPreferenceItem]
+
+
+class DeviceRegistration(BaseModel):
+    """Alta de un dispositivo para recibir push."""
+
+    token: str = Field(min_length=1, max_length=4096)
+    # Solo las dos plataformas que la aplicación publica. La web no recibe push.
+    platform: Literal["ios", "android"]
+
+
+class DeviceResponse(BaseModel):
+    id: int
+    platform: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

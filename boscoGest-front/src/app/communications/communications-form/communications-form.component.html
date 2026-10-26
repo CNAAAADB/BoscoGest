@@ -24,7 +24,7 @@
                 <mat-option [value]="entity.id">{{ entity.name }}</mat-option>
               }
             </mat-select>
-            <mat-icon matSuffix>business</mat-icon>
+            <mat-icon matSuffix aria-hidden="true">business</mat-icon>
             @if (newsForm.get('entity_id')?.hasError('required') && newsForm.get('entity_id')?.touched) {
               <mat-error>La entidad es obligatoria</mat-error>
             }
@@ -58,41 +58,41 @@
           <div class="image-upload-section">
             <h3>Imagen de la comunicación</h3>
 
-            @if (imagePreview || currentImageUrl) {
+            @if (imagePreview || currentImageUrl()) {
               <div class="image-preview">
-                <img [src]="imagePreview || getImageUrl(currentImageUrl!)" alt="Vista previa">
-                <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn">
-                  <mat-icon>close</mat-icon>
+                <img [src]="imagePreview || getImageUrl(currentImageUrl()!)" alt="Vista previa">
+                <button mat-icon-button type="button" (click)="removeImage()" class="remove-image-btn" aria-label="Quitar imagen">
+                  <mat-icon aria-hidden="true">close</mat-icon>
                 </button>
               </div>
             }
 
             <input #fileInput type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
             <button mat-raised-button type="button" (click)="fileInput.click()" color="accent">
-              <mat-icon>photo_camera</mat-icon>
-              {{ (imagePreview || currentImageUrl) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+              <mat-icon aria-hidden="true">photo_camera</mat-icon>
+              {{ (imagePreview || currentImageUrl()) ? 'Cambiar imagen' : 'Seleccionar imagen' }}
             </button>
           </div>
 
           <div class="form-actions">
             <button mat-raised-button type="button" (click)="cancel()">
-              <mat-icon>close</mat-icon>
+              <mat-icon aria-hidden="true">close</mat-icon>
               Cancelar
             </button>
             <button mat-raised-button type="button" (click)="saveDraft()"
                     [disabled]="newsForm.invalid || loading()">
-              <mat-icon>save</mat-icon>
+              <mat-icon aria-hidden="true">save</mat-icon>
               Guardar borrador
             </button>
             <button mat-raised-button color="accent" type="button" (click)="sendToReview()"
                     [disabled]="newsForm.invalid || loading()">
-              <mat-icon>send</mat-icon>
+              <mat-icon aria-hidden="true">send</mat-icon>
               Enviar a revisión
             </button>
             @if (canPublish()) {
               <button mat-raised-button color="primary" type="button" (click)="publishDirectly()"
                       [disabled]="newsForm.invalid || loading()">
-                <mat-icon>publish</mat-icon>
+                <mat-icon aria-hidden="true">publish</mat-icon>
                 Publicar
               </button>
             }

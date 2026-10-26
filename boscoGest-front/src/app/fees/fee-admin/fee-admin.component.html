@@ -1,0 +1,588 @@
+<div class="fees-container">
+  <div class="header">
+    <h1 class="page-title">Cuotas</h1>
+
+    @if (entities().length > 1) {
+      <mat-form-field appearance="outline" class="entity-selector">
+        <mat-label>Entidad</mat-label>
+        <mat-select [value]="selectedEntityId()" (selectionChange)="selectEntity($event.value)">
+          @for (e of entities(); track e.id) {
+            <mat-option [value]="e.id">{{ e.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+  </div>
+
+  @if (entities().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon" aria-hidden="true">lock</mat-icon>
+      <h2>Sin entidades</h2>
+      <p>No tienes permiso para gestionar cuotas en ninguna entidad.</p>
+    </div>
+  } @else {
+
+  <mat-tab-group>
+
+    <!-- ── Tab Cuotas ──────────────────────────────────────────────────────── -->
+    <mat-tab label="Cuotas">
+      <div class="tab-content">
+
+        <!-- Nueva cuota -->
+        @if (canCreate()) {
+          <mat-card class="section-card">
+            <mat-card-header>
+              <mat-card-title><mat-icon aria-hidden="true">add_circle</mat-icon> Nueva cuota</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="newFeeForm" (ngSubmit)="createFee()" class="fee-form">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre</mat-label>
+                  <input matInput formControlName="name" placeholder="Ej. Cuota anual de socio">
+                  @if (newFeeForm.get('name')?.hasError('required')) {
+                    <mat-error>El nombre es obligatorio</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Periodicidad</mat-label>
+                  <mat-select formControlName="periodicity">
+                    @for (p of periodicityOptions; track p) {
+                      <mat-option [value]="p">{{ periodicityLabels[p] }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-hint>Cada cuánto se aplica al socio</mat-hint>
+                </mat-form-field>
+
+                <!-- The cycle's start month. With September, an annual fee is
+                     labelled by the course ("2026-2027") and falls due at the
+                     end of it, instead of splitting a course across two
+                     calendar years. -->
+                @if (newFeeForm.get('periodicity')?.value !== 'weekly'
+                     && newFeeForm.get('periodicity')?.value !== 'monthly') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Comienzo del ciclo</mat-label>
+                    <mat-select formControlName="period_start_month">
+                      @for (m of cycleStartMonths; track m.value) {
+                        <mat-option [value]="m.value">{{ m.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-hint>Con septiembre, el período es el curso: 2026-2027</mat-hint>
+                  </mat-form-field>
+                }
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Importe (€)</mat-label>
+                  <input matInput type="number" step="0.01" min="0.01" formControlName="amount" placeholder="0.00">
+                  <mat-icon matSuffix aria-hidden="true">euro</mat-icon>
+                  @if (newFeeForm.get('amount')?.hasError('required')) {
+                    <mat-error>El importe es obligatorio</mat-error>
+                  }
+                  @if (newFeeForm.get('amount')?.hasError('min')) {
+                    <mat-error>Debe ser mayor que 0</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Vigente desde</mat-label>
+                  <input matInput type="date" formControlName="valid_from">
+                  @if (newFeeForm.get('valid_from')?.hasError('required')) {
+                    <mat-error>Obligatorio</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Vigente hasta (opcional)</mat-label>
+                  <input matInput type="date" formControlName="valid_until">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Aviso (días antes)</mat-label>
+                  <input matInput type="number" min="0" formControlName="reminder_days">
+                  <mat-hint>Recordatorio antes del vencimiento</mat-hint>
+                </mat-form-field>
+
+                <div class="renew-field">
+                  <mat-checkbox formControlName="auto_renew">Renovación automática</mat-checkbox>
+                  <span class="renew-hint">Genera el siguiente período a los socios del anterior</span>
+                </div>
+
+                <mat-form-field appearance="outline" class="entities-field">
+                  <mat-label>Entidades</mat-label>
+                  <mat-select formControlName="entity_ids" multiple>
+                    @for (e of entities(); track e.id) {
+                      <mat-option [value]="e.id">{{ e.name }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-hint>Se crea una cuota independiente en cada entidad</mat-hint>
+                  @if (newFeeForm.get('entity_ids')?.hasError('required')) {
+                    <mat-error>Selecciona al menos una entidad</mat-error>
+                  }
+                </mat-form-field>
+
+                <div class="form-actions">
+                  <button mat-raised-button color="primary" type="submit"
+                    [disabled]="newFeeForm.invalid || creatingFee()">
+                    @if (creatingFee()) {
+                      <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+                    } @else {
+                      <mat-icon aria-hidden="true">save</mat-icon>
+                    }
+                    Crear cuota
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Lista de cuotas -->
+        @if (loadingFees()) {
+          <div class="loading-container"><mat-progress-spinner mode="indeterminate"></mat-progress-spinner></div>
+        } @else if (fees().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon" aria-hidden="true">payments</mat-icon>
+            <h2>Sin cuotas</h2>
+            <p>Esta entidad todavía no tiene ninguna cuota configurada.</p>
+          </div>
+        } @else {
+          <mat-card class="section-card">
+            <mat-card-content>
+              <table mat-table [dataSource]="fees()" class="full-width-table">
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                  <td mat-cell *matCellDef="let f">{{ f.name }}</td>
+                </ng-container>
+                <ng-container matColumnDef="periodicity">
+                  <th mat-header-cell *matHeaderCellDef>Periodicidad</th>
+                  <td mat-cell *matCellDef="let f">{{ getPeriodicityLabel(f.periodicity) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="renew">
+                  <th mat-header-cell *matHeaderCellDef>Renovación</th>
+                  <td mat-cell *matCellDef="let f">
+                    @if (f.auto_renew) {
+                      <span class="renew-chip" matTooltip="Vence a fin de período · avisa {{ f.reminder_days }} días antes">
+                        <mat-icon class="meta-icon" aria-hidden="true">autorenew</mat-icon> Auto
+                      </span>
+                    } @else {
+                      <span class="muted">Manual</span>
+                    }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="amount">
+                  <th mat-header-cell *matHeaderCellDef>Importe vigente</th>
+                  <td mat-cell *matCellDef="let f">
+                    @if (f.current_config) {
+                      {{ f.current_config.amount | currency:'EUR':'symbol':'1.2-2' }}
+                    } @else {
+                      <span class="muted">sin vigencia activa</span>
+                    }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="valid_from">
+                  <th mat-header-cell *matHeaderCellDef>Desde</th>
+                  <td mat-cell *matCellDef="let f">
+                    {{ f.current_config ? (f.current_config.valid_from | date:'dd/MM/yyyy') : '—' }}
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="valid_until">
+                  <th mat-header-cell *matHeaderCellDef>Hasta</th>
+                  <td mat-cell *matCellDef="let f">
+                    {{ f.current_config?.valid_until ? (f.current_config.valid_until | date:'dd/MM/yyyy') : '—' }}
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let f">
+                    <button mat-icon-button (click)="openHistory(f)" matTooltip="Histórico / nueva versión" aria-label="Histórico / nueva versión">
+                      <mat-icon aria-hidden="true">history</mat-icon>
+                    </button>
+                    @if (canManage()) {
+                      <button mat-icon-button color="warn" (click)="deleteFee(f)" matTooltip="Eliminar" aria-label="Eliminar">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
+                      </button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="feeColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: feeColumns;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- ── Tab Asignaciones ──────────────────────────────────────────────── -->
+    <mat-tab label="Asignaciones">
+      <div class="tab-content">
+
+        <!-- Generar asignaciones -->
+        @if (canCreate()) {
+          <mat-card class="section-card">
+            <mat-card-header>
+              <mat-card-title><mat-icon aria-hidden="true">group_add</mat-icon> Generar asignaciones</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="assignForm" class="generate-form">
+                <mat-form-field appearance="outline">
+                  <mat-label>Cuota</mat-label>
+                  <mat-select [value]="assignFeeId()" (selectionChange)="onAssignFeeChange($event.value)">
+                    @for (f of fees(); track f.id) {
+                      <mat-option [value]="f.id">{{ f.name }} · {{ getPeriodicityLabel(f.periodicity) }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (fees().length === 0) {
+                    <mat-hint>Crea una cuota primero en la pestaña «Cuotas»</mat-hint>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha de referencia (opcional)</mat-label>
+                  <input matInput type="date" formControlName="reference_date">
+                  <mat-hint>El período se deriva de la periodicidad de la cuota (hoy por defecto)</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha límite (opcional)</mat-label>
+                  <input matInput type="date" formControlName="due_date">
+                </mat-form-field>
+
+                <div class="form-actions">
+                  <button mat-stroked-button color="primary" type="button"
+                    (click)="loadMembersPreview(); loadSubscriptions()"
+                    [disabled]="!assignFeeId()">
+                    <mat-icon aria-hidden="true">visibility</mat-icon>
+                    Ver socios y padrón
+                  </button>
+                </div>
+              </form>
+
+              <!-- Resumen de la cuota seleccionada -->
+              @if (selectedFee(); as fee) {
+                <div class="fee-summary">
+                  <span class="summary-chip">
+                    <mat-icon class="meta-icon" aria-hidden="true">euro</mat-icon>
+                    @if (fee.current_config) {
+                      {{ fee.current_config.amount | currency:'EUR':'symbol':'1.2-2' }}
+                    } @else {
+                      <span class="muted">sin importe vigente</span>
+                    }
+                  </span>
+                  <span class="summary-chip">
+                    <mat-icon class="meta-icon" aria-hidden="true">event_repeat</mat-icon>
+                    {{ getPeriodicityLabel(fee.periodicity) }}
+                  </span>
+                  <span class="summary-chip" [style.background-color]="getStatusColor('pending')">
+                    {{ getStatusLabel('pending') }}
+                  </span>
+                </div>
+              }
+
+              <!-- ── Padrón de la cuota ────────────────────────────────
+                   Who owes this fee. Generation and the nightly renewal both
+                   read this, so a member is charged because they are enrolled,
+                   not because they happened to be charged last period. -->
+              @if (assignFeeId()) {
+                <div class="roster">
+                  <h3 class="roster-title">
+                    <mat-icon aria-hidden="true">groups</mat-icon>
+                    Padrón de la cuota
+                    <span class="roster-count">{{ subscriptions().length }} socio(s)</span>
+                  </h3>
+
+                  @if (loadingSubscriptions()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
+                  } @else if (subscriptions().length === 0) {
+                    <p class="roster-empty">
+                      Todavía no hay nadie dado de alta. Selecciona socios abajo y
+                      pulsa «Dar de alta»; a partir de ahí se les cobrará cada
+                      período sin volver a elegirlos.
+                    </p>
+                  } @else {
+                    <ul class="roster-list">
+                      @for (sub of subscriptions(); track sub.id) {
+                        <li class="roster-item" [class.is-exempt]="sub.exempt">
+                          <span class="roster-name">
+                            {{ sub.user_name }} {{ sub.user_surname }}
+                          </span>
+                          <span class="roster-dates">
+                            desde {{ sub.starts_on | date:'d MMM y' }}
+                            @if (sub.ends_on) {
+                              · hasta {{ sub.ends_on | date:'d MMM y' }}
+                            }
+                          </span>
+                          @if (sub.exempt) {
+                            <span class="roster-exempt" [matTooltip]="sub.exempt_reason || ''">
+                              <mat-icon aria-hidden="true">volunteer_activism</mat-icon>
+                              Exento
+                            </span>
+                          }
+                          @if (canCreate()) {
+                            <span class="roster-actions">
+                              <button mat-icon-button
+                                [attr.aria-label]="sub.exempt ? 'Retirar la exención' : 'Marcar como exento'"
+                                [matTooltip]="sub.exempt ? 'Retirar la exención' : 'Marcar como exento'"
+                                (click)="toggleExempt(sub)">
+                                <mat-icon aria-hidden="true">volunteer_activism</mat-icon>
+                              </button>
+                              @if (!sub.ends_on) {
+                                <button mat-icon-button color="warn"
+                                  aria-label="Dar de baja de esta cuota"
+                                  matTooltip="Dar de baja (las cuotas ya emitidas se conservan)"
+                                  (click)="unsubscribe(sub)">
+                                  <mat-icon aria-hidden="true">person_remove</mat-icon>
+                                </button>
+                              }
+                            </span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              }
+
+              <!-- Previsualización de socios -->
+              @if (loadingMembers()) {
+                <div class="loading-container"><mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner></div>
+              } @else if (members().length > 0) {
+                <table mat-table [dataSource]="members()" class="full-width-table members-table">
+                  <ng-container matColumnDef="select">
+                    <th mat-header-cell *matHeaderCellDef>
+                      <mat-checkbox
+                        [checked]="allSelectableChecked()"
+                        [indeterminate]="someSelectableChecked()"
+                        (change)="toggleAll()">
+                      </mat-checkbox>
+                    </th>
+                    <td mat-cell *matCellDef="let m">
+                      <mat-checkbox
+                        [checked]="isSelected(m.user_id)"
+                        [disabled]="m.already_assigned"
+                        (change)="toggleMember(m.user_id)">
+                      </mat-checkbox>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="member">
+                    <th mat-header-cell *matHeaderCellDef>Socio</th>
+                    <td mat-cell *matCellDef="let m">{{ m.name }} {{ m.surname }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="role">
+                    <th mat-header-cell *matHeaderCellDef>Rol</th>
+                    <td mat-cell *matCellDef="let m">{{ m.role_name || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="state">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let m">
+                      @if (m.already_assigned) {
+                        <span class="assigned-chip"><mat-icon class="meta-icon" aria-hidden="true">check</mat-icon> Ya asignada</span>
+                      }
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="memberColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: memberColumns;"></tr>
+                </table>
+
+                <!-- Two separate actions, because they answer different
+                     questions. Enrolling says who owes this fee, once.
+                     Generating raises this period's charges for whoever is
+                     enrolled — it no longer asks who, which is what let the
+                     list of payers drift between periods. -->
+                <div class="generate-actions">
+                  <span class="selection-count">
+                    {{ selectedUserIds().size }} socio(s) seleccionado(s)
+                  </span>
+
+                  <button mat-stroked-button color="primary"
+                    (click)="subscribeSelected(false)"
+                    [disabled]="selectedUserIds().size === 0">
+                    <mat-icon aria-hidden="true">person_add</mat-icon>
+                    Dar de alta
+                  </button>
+
+                  <button mat-stroked-button
+                    (click)="subscribeSelected(true)"
+                    [disabled]="selectedUserIds().size === 0"
+                    matTooltip="Quedan en el padrón pero no se les cobra (socios de honor, etc.)">
+                    <mat-icon aria-hidden="true">volunteer_activism</mat-icon>
+                    Alta exenta
+                  </button>
+
+                  <button mat-raised-button color="primary" (click)="generate()"
+                    [disabled]="subscriptions().length === 0 || generating()"
+                    matTooltip="Emite las cuotas del período para todo el padrón">
+                    @if (generating()) {
+                      <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+                    } @else {
+                      <mat-icon aria-hidden="true">send</mat-icon>
+                    }
+                    Generar período
+                  </button>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Filtros -->
+        <div class="filters-bar">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Período</mat-label>
+            <mat-select [value]="filterPeriod()" (selectionChange)="onFilterPeriod($event.value)">
+              <mat-option value="">Todos</mat-option>
+              @for (p of periods(); track p) {
+                <mat-option [value]="p">{{ p }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Estado</mat-label>
+            <mat-select [value]="filterStatus()" (selectionChange)="onFilterStatus($event.value)">
+              <mat-option value="">Todos</mat-option>
+              @for (s of allStatuses; track s) {
+                <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          @if (filterPeriod() || filterStatus()) {
+            <button mat-button color="primary" (click)="clearFilters()">
+              <mat-icon aria-hidden="true">clear</mat-icon> Limpiar
+            </button>
+          }
+        </div>
+
+        <!-- ── Justificantes por revisar ──────────────────────────────
+             Surfaced above the table rather than left as a status to filter
+             for: without a gateway this is the treasurer's actual inbox, and
+             a member is waiting on each one. -->
+        @if (pendingProofs().length > 0) {
+          <mat-card class="section-card proof-queue">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon aria-hidden="true">inbox</mat-icon>
+                Justificantes por revisar
+                <span class="queue-count">{{ pendingProofs().length }}</span>
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <ul class="queue-list">
+                @for (a of pendingProofs(); track a.id) {
+                  <li class="queue-item">
+                    <div class="queue-main">
+                      <span class="queue-member">
+                        @if (a.user) { {{ a.user.name }} {{ a.user.surname }} }
+                        @else { Socio #{{ a.user_id }} }
+                      </span>
+                      <span class="queue-detail">
+                        {{ a.fee_name }} · {{ a.period }} ·
+                        <strong>{{ a.amount | currency:'EUR':'symbol':'1.2-2' }}</strong>
+                      </span>
+                      @if (a.proof_reference) {
+                        <span class="queue-reference">
+                          <mat-icon class="meta-icon" aria-hidden="true">tag</mat-icon>
+                          {{ a.proof_reference }}
+                        </span>
+                      }
+                      @if (a.proof_submitted_at) {
+                        <span class="queue-date">
+                          Enviado el {{ a.proof_submitted_at | date:'d MMM y' }}
+                        </span>
+                      }
+                    </div>
+                    <div class="queue-actions">
+                      <button mat-stroked-button (click)="viewProof(a)">
+                        <mat-icon aria-hidden="true">description</mat-icon>
+                        Ver justificante
+                      </button>
+                      <button mat-raised-button color="primary" (click)="acceptProof(a)">
+                        <mat-icon aria-hidden="true">check</mat-icon>
+                        Confirmar pago
+                      </button>
+                      <button mat-button color="warn" (click)="rejectProof(a)">
+                        <mat-icon aria-hidden="true">undo</mat-icon>
+                        Devolver
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Tabla de asignaciones -->
+        @if (loadingAssignments()) {
+          <div class="loading-container"><mat-progress-spinner mode="indeterminate"></mat-progress-spinner></div>
+        } @else if (filteredAssignments().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon" aria-hidden="true">receipt_long</mat-icon>
+            <h2>Sin asignaciones</h2>
+            <p>No hay cuotas asignadas para los filtros seleccionados.</p>
+          </div>
+        } @else {
+          <mat-card class="section-card">
+            <mat-card-content>
+              <table mat-table [dataSource]="filteredAssignments()" class="full-width-table">
+                <ng-container matColumnDef="user">
+                  <th mat-header-cell *matHeaderCellDef>Socio</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (row.user) { {{ row.user.name }} {{ row.user.surname }} }
+                    @else { <span class="muted">—</span> }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="fee">
+                  <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                  <td mat-cell *matCellDef="let row">{{ row.fee_name || '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="periodicity">
+                  <th mat-header-cell *matHeaderCellDef>Periodicidad</th>
+                  <td mat-cell *matCellDef="let row">{{ getPeriodicityLabel(row.periodicity) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="period">
+                  <th mat-header-cell *matHeaderCellDef>Período</th>
+                  <td mat-cell *matCellDef="let row">{{ row.period }}</td>
+                </ng-container>
+                <ng-container matColumnDef="amount">
+                  <th mat-header-cell *matHeaderCellDef>Importe</th>
+                  <td mat-cell *matCellDef="let row">{{ row.amount | currency:'EUR':'symbol':'1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="due_date">
+                  <th mat-header-cell *matHeaderCellDef>Fecha límite</th>
+                  <td mat-cell *matCellDef="let row">{{ row.due_date ? (row.due_date | date:'dd/MM/yyyy') : '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span class="status-badge" [style.background-color]="getStatusColor(row.status)">
+                      {{ getStatusLabel(row.status) }}
+                    </span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (canManage() && nextStatuses(row.status).length > 0) {
+                      <mat-select placeholder="Cambiar estado" class="status-select"
+                        (selectionChange)="changeStatus(row, $event.value)">
+                        @for (s of nextStatuses(row.status); track s) {
+                          <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
+                        }
+                      </mat-select>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="assignmentColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: assignmentColumns;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+  }
+</div>

@@ -1,0 +1,40 @@
+:host ::ng-deep .mat-mdc-dialog-container .mdc-dialog__surface {
+  background-color: white !important;
+}
+
+mat-dialog-content {
+  background-color: white;
+  min-width: 320px;
+}
+
+.contexto {
+  margin: 0 0 1rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+.error {
+  margin-top: 0.75rem;
+  color: var(--mat-sys-error, #b3261e);
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+  background-color: white;
+}
+
+@media (max-width: 600px) {
+  mat-dialog-content {
+    min-width: 260px;
+  }
+}

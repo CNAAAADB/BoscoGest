@@ -492,11 +492,21 @@ class ChatService:
     # ── User search ───────────────────────────────────────────────────
 
     def search_users(
-        self, query: str, current_user: User
+        self, query: str, current_user: User, entity_id: Optional[int] = None
     ) -> List[UserSearchResult]:
         if not query or len(query.strip()) < 2:
             return []
-        users = self.repo.search_users(query.strip(), current_user.id)
+        # If filtering by association, ensure the user can access that entity.
+        if entity_id is not None:
+            from app.services.authorization_service import AuthorizationService
+            accessible = AuthorizationService(self.db).get_accessible_entity_ids(
+                current_user
+            )
+            if entity_id not in accessible:
+                return []
+        users = self.repo.search_users(
+            query.strip(), current_user.id, entity_id=entity_id
+        )
         return [UserSearchResult.model_validate(u) for u in users]
 
     # ── Presence ──────────────────────────────────────────────────────

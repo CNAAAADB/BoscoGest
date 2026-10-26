@@ -38,9 +38,34 @@ testem.log
 /typings
 
 # Capacitor native projects
-/ios
-/android
+#
+# Ni /ios ni /android se ignoran: los dos llevan configuración que no se puede
+# regenerar. En Android, la firma de release, el versionCode ya publicado en
+# Play y el endurecimiento del manifiesto; en iOS, el manifiesto de privacidad
+# que Apple exige, el App Transport Security y los iconos de la marca. Un
+# `npx cap add` los perdería todos y la release dejaría de ser reproducible.
+#
+# Lo que sí se excluye —artefactos de compilación, assets web copiados,
+# xcuserdata y los secretos de firma— está en android/.gitignore y en
+# ios/.gitignore.
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Generated from .env.build by scripts/set-environment.mjs
+src/environments/environment.prod.ts
+.env.build
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+e2e/.auth/
+
+# Screenshot output from e2e/screenshots.spec.ts
+/shots/
+
+# Guide screenshots, regenerated from the app
+/guide-shots/
+/guide2-shots/

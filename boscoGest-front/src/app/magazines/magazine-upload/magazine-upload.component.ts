@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -31,6 +31,8 @@ import { EntityResponse } from '../../models/user.model';
   ],
   templateUrl: './magazine-upload.component.html',
   styleUrl: './magazine-upload.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MagazineUploadComponent implements OnInit {
   uploadForm: FormGroup;

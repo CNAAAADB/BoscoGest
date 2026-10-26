@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +12,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ActivitiesService } from '../activities.service';
 import { UsersService } from '../../users/users.service';
 import { ActivityResponse, ActivityRegistrationOut, UserResponse } from '../../models/user.model';
+import { formatActivityDates } from '../activity-dates';
 import { AuthService } from '../../auth/auth.service';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { environment } from '../../../environments/environment';
@@ -34,6 +35,8 @@ interface RegistrationWithUser extends ActivityRegistrationOut {
   ],
   templateUrl: './activity-detail.component.html',
   styleUrl: './activity-detail.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ActivityDetailComponent implements OnInit {
   activity = signal<ActivityResponse | null>(null);
@@ -69,6 +72,15 @@ export class ActivityDetailComponent implements OnInit {
   showAdminActions = computed(() => {
     return this.canManageActivities() || this.canEditActivities() || this.canDeleteActivities();
   });
+
+  // Only the activity creator or an activities manager can create the chat group
+  canCreateChatGroup = computed(() => {
+    const activity = this.activity();
+    if (!activity) return false;
+    return activity.created_by_id === this.currentUserId() || this.canManageActivities();
+  });
+
+  creatingChatGroup = signal<boolean>(false);
 
   // Computed lists
   acceptedRegistrations = computed(() =>
@@ -263,6 +275,30 @@ export class ActivityDetailComponent implements OnInit {
     });
   }
 
+  createChatGroup(): void {
+    if (!this.activityId || this.creatingChatGroup()) return;
+
+    this.creatingChatGroup.set(true);
+    this.activitiesService.createChatGroup(this.activityId).subscribe({
+      next: (result) => {
+        this.creatingChatGroup.set(false);
+        this.snackBar.open('Grupo de chat creado correctamente', 'Cerrar', {
+          duration: 3000,
+          panelClass: 'success-snackbar'
+        });
+        this.router.navigate(['/chat'], { queryParams: { conversation: result.conversation_id } });
+      },
+      error: (error) => {
+        this.creatingChatGroup.set(false);
+        const errorMessage = error?.error?.detail || 'Error al crear el grupo de chat';
+        this.snackBar.open(errorMessage, 'Cerrar', {
+          duration: 3000,
+          panelClass: 'error-snackbar'
+        });
+      }
+    });
+  }
+
   editActivity(): void {
     if (this.activityId) {
       this.router.navigate(['/activities', this.activityId, 'edit']);
@@ -309,6 +345,10 @@ export class ActivityDetailComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/activities']);
+  }
+
+  formatDates(activity: ActivityResponse): string {
+    return formatActivityDates(activity);
   }
 
   formatDate(dateString: string): string {

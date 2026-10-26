@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -19,6 +19,7 @@ import { ViewConfigService } from './view-config.service';
 import { AuthService } from '../auth/auth.service';
 import { EntitiesService } from '../entities/entities.service';
 import { NotificationPreferencesComponent } from '../notifications/notification-preferences/notification-preferences.component';
+import { ConsentClausesComponent } from './consent-clauses/consent-clauses.component';
 import {
   EntityBrandingResponse,
   EntityBrandingUpdate,
@@ -46,12 +47,23 @@ import {
     MatTooltipModule,
     MatSelectModule,
     DragDropModule,
-    NotificationPreferencesComponent
+    NotificationPreferencesComponent,
+    ConsentClausesComponent
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SettingsComponent implements OnInit {
+  /**
+   * The clause governs processing across the whole platform, so managing it is
+   * a superadmin concern and is not tied to the entity selected above.
+   */
+  canManageConsent = computed(() =>
+    this.authService.hasPermission('consent', 'manage')
+  );
+
   // Estado de carga
   loading = signal(true);
   savingBranding = signal(false);

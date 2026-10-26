@@ -1,0 +1,457 @@
+.fees-container {
+  padding: 2rem;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #3D4E7C;
+  margin: 0;
+  /* El body deja 20px de interlineado; con 40px de fuente el texto se sale
+     de su propia caja y se mete debajo del selector de entidad. */
+  line-height: 1.2;
+}
+
+.tab-content {
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-card {
+  background-color: white !important;
+  border: 1px solid #e9ecef;
+}
+
+.section-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.current-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.config-amount {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #3D4E7C;
+}
+
+.config-meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.config-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.indefinite {
+  color: #4caf50 !important;
+}
+
+.meta-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+.no-config {
+  color: #888;
+  font-style: italic;
+}
+
+.entity-selector {
+  min-width: 220px;
+}
+
+.fee-form,
+.generate-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.fee-form mat-form-field,
+.generate-form mat-form-field {
+  flex: 1;
+  min-width: 180px;
+}
+
+.entities-field {
+  flex-basis: 100% !important;
+}
+
+.renew-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 180px;
+  padding-top: 0.5rem;
+}
+
+.renew-hint {
+  font-size: 0.72rem;
+  color: #888;
+}
+
+.renew-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #3D4E7C;
+  font-weight: 500;
+}
+
+.fee-summary {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 16px;
+  background-color: #eef1f8;
+  color: #3D4E7C;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.summary-chip[style*="background-color"] {
+  color: white;
+}
+
+.members-table {
+  margin-top: 0.5rem;
+}
+
+.assigned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #4caf50;
+  font-size: 0.85rem;
+}
+
+.generate-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.selection-count {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.generate-actions button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  padding-top: 0.25rem;
+}
+
+.form-actions button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  min-width: 180px;
+}
+
+.full-width-table {
+  width: 100%;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: white;
+}
+
+.status-select {
+  font-size: 0.85rem;
+  min-width: 140px;
+}
+
+.muted {
+  color: #bbb;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #666;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  width: 4rem;
+  height: 4rem;
+  color: #999;
+  margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+.empty-state p {
+  color: #777;
+}
+
+@media (max-width: 768px) {
+  .fees-container {
+    padding: 1rem;
+  }
+
+  /* En fila, el selector tiene 220px de mínimo y el título no cabe al lado:
+     se montaban el uno sobre el otro y el selector se salía por la derecha. */
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .entity-selector {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .config-form,
+  .generate-form {
+    flex-direction: column;
+  }
+
+  .config-form mat-form-field,
+  .generate-form mat-form-field {
+    width: 100%;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field {
+    width: 100%;
+  }
+}
+
+/* ── Padrón de la cuota ───────────────────────────────────────────────────── */
+
+.roster {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  background: #f8f9fa;
+}
+
+.roster-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #3D4E7C;
+}
+
+.roster-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #646c74;
+}
+
+.roster-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #646c74;
+  line-height: 1.5;
+}
+
+.roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.roster-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.25rem;
+  background: #fff;
+  font-size: 0.875rem;
+}
+
+/* Exempt members stay in the list rather than disappearing from it — the
+   association wants to see it chose not to charge them. */
+.roster-item.is-exempt {
+  background: rgba(106, 76, 147, 0.07);
+}
+
+.roster-name {
+  font-weight: 500;
+  color: #1b1b1b;
+}
+
+.roster-dates {
+  color: #646c74;
+  font-size: 0.8rem;
+}
+
+.roster-exempt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6a4c93;
+  font-size: 0.8rem;
+}
+
+.roster-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* ── Cola de justificantes ────────────────────────────────────────────────── */
+
+.proof-queue {
+  border-left: 4px solid #1976d2;
+}
+
+.queue-count {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.75rem;
+  background: #1976d2;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+}
+
+.queue-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.queue-member {
+  font-weight: 600;
+  color: #1b1b1b;
+}
+
+.queue-detail,
+.queue-reference,
+.queue-date {
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.queue-reference {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.queue-date {
+  color: #646c74;
+  font-size: 0.8rem;
+}
+
+.queue-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .queue-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .roster-actions {
+    margin-left: 0;
+  }
+}

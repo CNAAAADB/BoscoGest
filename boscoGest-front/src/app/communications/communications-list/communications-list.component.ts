@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -44,6 +44,8 @@ import { environment } from '../../../environments/environment';
   ],
   templateUrl: './communications-list.component.html',
   styleUrl: './communications-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NewsListComponent implements OnInit {
   newsList = signal<CommunicationResponse[]>([]);

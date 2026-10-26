@@ -34,46 +34,55 @@ class EntityRepository:
         return [row[0] for row in result]
 
     def get_parent_entity_ids(self, entity_id: int) -> List[int]:
-        """Walk up the parent chain, returning [parent_id, grandparent_id, ...]."""
-        parent_ids = []
-        current_id = entity_id
-        while current_id is not None:
-            entity = self.db.execute(
-                select(Entity).where(Entity.id == current_id)
-            ).scalars().first()
-            if not entity or entity.parent_id is None:
-                break
-            parent_ids.append(entity.parent_id)
-            current_id = entity.parent_id
-        return parent_ids
+        """Walk up the parent chain, returning [parent_id, grandparent_id, ...].
+
+        Reuses the ancestor CTE instead of issuing one SELECT per level: with a
+        four-level hierarchy that was four round-trips to answer a question the
+        database can settle in one.
+        """
+        chain = self.get_ancestor_chain(entity_id)
+        # get_ancestor_chain starts at entity_id itself, which is not a parent.
+        return chain[1:]
 
     def get_descendant_ids(self, entity_id: int) -> List[int]:
         """Returns all descendant entity IDs (not including entity_id itself)."""
-        result = self.db.execute(
-            text("""
-                WITH RECURSIVE descendants AS (
-                    SELECT id FROM entities WHERE parent_id = :entity_id
-                    UNION ALL
-                    SELECT e.id FROM entities e
-                    INNER JOIN descendants d ON e.parent_id = d.id
-                )
-                SELECT id FROM descendants
-            """),
-            {"entity_id": entity_id},
+        return self.get_descendant_ids_of([entity_id])
+
+    def get_descendant_ids_of(self, entity_ids: List[int]) -> List[int]:
+        """Descendants of every given entity, in a single recursive CTE.
+
+        The per-entity variant was called in a loop, so resolving what a user
+        can reach cost one recursive CTE per membership. A confederal
+        administrator with a membership in each of the 72 seeded entities paid
+        72 round-trips on every request that needed their scope.
+
+        Built with the Core rather than raw SQL: the first version used
+        `= ANY(:ids)`, which PostgreSQL understands and SQLite does not.
+        """
+        if not entity_ids:
+            return []
+
+        base = (
+            select(Entity.id)
+            .where(Entity.parent_id.in_(list(entity_ids)))
+            .cte("descendants", recursive=True)
         )
-        return [row[0] for row in result]
+        descendants = base.union(
+            select(Entity.id).join(base, Entity.parent_id == base.c.id)
+        )
+        return [row[0] for row in self.db.execute(select(descendants.c.id))]
 
     def get_accessible_entity_ids(self, user) -> List[int]:
         """Returns direct membership entity IDs + all their descendants."""
-        direct_ids = set()
-        for membership in user.memberships:
-            if membership.is_active:
-                direct_ids.add(membership.entity_id)
-
+        direct_ids = {
+            membership.entity_id
+            for membership in user.memberships
+            if membership.is_active
+        }
         if not direct_ids:
             return []
 
-        all_ids = set(direct_ids)
-        for eid in direct_ids:
-            all_ids.update(self.get_descendant_ids(eid))
-        return list(all_ids)
+        # UNION rather than UNION ALL in the CTE: overlapping subtrees (a
+        # membership in both a federation and one of its associations) would
+        # otherwise revisit the same rows.
+        return list(direct_ids | set(self.get_descendant_ids_of(list(direct_ids))))

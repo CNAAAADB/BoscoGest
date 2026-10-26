@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -7,11 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EntitiesService } from '../entities.service';
+import { EntityDeletionService } from '../entity-deletion.service';
 import { EntityResponse, MembershipDetails } from '../../models/user.model';
-import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../auth/auth.service';
 import { MembershipsService } from '../../users/memberships.service';
 
@@ -29,6 +28,8 @@ import { MembershipsService } from '../../users/memberships.service';
   ],
   templateUrl: './entities-list.component.html',
   styleUrl: './entities-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntitiesListComponent implements OnInit {
   entities = signal<EntityResponse[]>([]);
@@ -76,9 +77,9 @@ export class EntitiesListComponent implements OnInit {
     private entitiesService: EntitiesService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog,
     private authService: AuthService,
-    private membershipsService: MembershipsService
+    private membershipsService: MembershipsService,
+    private entityDeletion: EntityDeletionService
   ) {}
 
   ngOnInit(): void {
@@ -133,37 +134,26 @@ export class EntitiesListComponent implements OnInit {
   }
 
   deleteEntity(entity: EntityResponse): void {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      autoFocus: false,
-      restoreFocus: false,
-      data: {
-        title: 'Confirmar eliminación',
-        message: `¿Está seguro de que desea eliminar la asociación "${entity.name}"? Esta acción eliminará todas las membresías y entidades hijas asociadas.`,
-        confirmText: 'Eliminar',
-        cancelText: 'Cancelar'
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.entitiesService.deleteEntity(entity.id).subscribe({
-          next: () => {
-            this.snackBar.open('Asociación eliminada correctamente', 'Cerrar', {
-              duration: 3000,
-              panelClass: 'success-snackbar'
-            });
-            this.loadEntities();
-          },
-          error: (error) => {
-            console.error('Error deleting entity:', error);
-            this.snackBar.open('Error al eliminar la asociación', 'Cerrar', {
-              duration: 3000,
-              panelClass: 'error-snackbar'
-            });
-          }
+    // The rules and the wording live in EntityDeletionService, so this screen
+    // and the detail screen cannot drift apart.
+    this.entityDeletion.confirmAndDelete(entity).subscribe({
+      next: (deleted) => {
+        if (!deleted) {
+          return;
+        }
+        this.snackBar.open('Asociación eliminada correctamente', 'Cerrar', {
+          duration: 3000,
+          panelClass: 'success-snackbar'
         });
+        this.loadEntities();
+      },
+      error: (error) => {
+        console.error('Error deleting entity:', error);
+        this.snackBar.open(
+          error?.error?.detail || 'Error al eliminar la asociación',
+          'Cerrar',
+          { duration: 5000, panelClass: 'error-snackbar' }
+        );
       }
     });
   }

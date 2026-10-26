@@ -74,170 +74,225 @@ body {
 .mat-mdc-raised-button.mat-primary,
 .mat-mdc-unelevated-button.mat-primary,
 .mat-mdc-flat-button.mat-primary {
-  --mdc-protected-button-container-color: #3D4E7C !important;
-  --mdc-protected-button-label-text-color: #F5EFE6 !important;
-  --mat-protected-button-state-layer-color: #F5EFE6 !important;
-  background-color: #3D4E7C !important;
-  color: #F5EFE6 !important;
-  font-weight: 600 !important;
-  transition: background-color 0.3s ease !important;
+  --mdc-protected-button-container-color: #3D4E7C;
+  --mdc-protected-button-label-text-color: #F5EFE6;
+  --mat-protected-button-state-layer-color: #F5EFE6;
+  background-color: #3D4E7C;
+  color: #F5EFE6;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
 }
 
 .mat-mdc-raised-button.mat-primary:hover,
 .mat-mdc-unelevated-button.mat-primary:hover,
 .mat-mdc-flat-button.mat-primary:hover {
-  --mdc-protected-button-container-color: #2C3E5A !important;
-  background-color: #2C3E5A !important;
+  --mdc-protected-button-container-color: #2C3E5A;
+  background-color: #2C3E5A;
 }
 
 .mat-mdc-raised-button.mat-primary:not(:disabled),
 .mat-mdc-unelevated-button.mat-primary:not(:disabled),
 .mat-mdc-flat-button.mat-primary:not(:disabled) {
-  background-color: #3D4E7C !important;
-  color: #F5EFE6 !important;
+  background-color: #3D4E7C;
+  color: #F5EFE6;
 }
 
 .mat-mdc-raised-button.mat-primary:disabled,
 .mat-mdc-unelevated-button.mat-primary:disabled,
 .mat-mdc-flat-button.mat-primary:disabled {
-  background-color: rgba(61, 78, 124, 0.5) !important;
-  color: rgba(245, 239, 230, 0.7) !important;
+  background-color: rgba(61, 78, 124, 0.5);
+  color: rgba(245, 239, 230, 0.7);
 }
 
 /* Outlined/Stroked buttons */
 .mat-mdc-outlined-button.mat-primary {
-  --mdc-outlined-button-label-text-color: #3D4E7C !important;
-  --mdc-outlined-button-outline-color: #3D4E7C !important;
-  color: #3D4E7C !important;
-  border-color: #3D4E7C !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease !important;
+  --mdc-outlined-button-label-text-color: #3D4E7C;
+  --mdc-outlined-button-outline-color: #3D4E7C;
+  color: #3D4E7C;
+  border-color: #3D4E7C;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .mat-mdc-outlined-button.mat-primary:hover {
-  background-color: rgba(61, 78, 124, 0.1) !important;
-  border-color: #2C3E5A !important;
+  background-color: rgba(61, 78, 124, 0.1);
+  border-color: #2C3E5A;
 }
 
 /* Icon buttons */
 .mat-mdc-icon-button.mat-primary {
-  --mat-icon-button-state-layer-color: #3D4E7C !important;
-  color: #3D4E7C !important;
+  --mat-icon-button-state-layer-color: #3D4E7C;
+  color: #3D4E7C;
 }
 
 .mat-mdc-icon-button.mat-primary:hover {
-  background-color: rgba(61, 78, 124, 0.1) !important;
+  background-color: rgba(61, 78, 124, 0.1);
 }
 
-/* Dropdown panels */
-.mat-mdc-select-panel,
-.mat-mdc-autocomplete-panel,
-.mat-mdc-menu-panel {
-  background-color: white !important;
+/* Overlay panels.
+   These are rendered into the CDK overlay container at the end of <body>, so
+   no component stylesheet reaches them. The style guide calls for white
+   surfaces while the Material 3 neutral ramp resolves to a light grey, so the
+   colours are stated here.
+
+   Every selector below is qualified with `.cdk-overlay-container`. That is not
+   decoration: Material targets these with `div.mat-mdc-select-panel` and
+   `.mat-mdc-option.mdc-list-item`, which outrank a bare class. Qualifying by
+   the container that actually holds them wins on specificity, and says where
+   these elements live — which is what `!important` used to paper over. */
+.cdk-overlay-container .mat-mdc-select-panel,
+.cdk-overlay-container .mat-mdc-autocomplete-panel,
+.cdk-overlay-container .mat-mdc-menu-panel,
+.cdk-overlay-container .mat-datepicker-content,
+.cdk-overlay-container .mat-datepicker-content .mat-calendar {
+  background-color: white;
 }
 
-.mat-mdc-option {
-  background-color: white !important;
+/* An overlay must be separable from whatever is behind it. Material 3 draws
+   these with an elevation token that this theme leaves empty, so the computed
+   shadow was 0 0 0 0 — a white panel floating invisibly over a white card. */
+.cdk-overlay-container .mat-mdc-select-panel,
+.cdk-overlay-container .mat-mdc-autocomplete-panel,
+.cdk-overlay-container .mat-mdc-menu-panel,
+.cdk-overlay-container .mat-datepicker-content {
+  box-shadow:
+    0 0.25rem 0.5rem -0.125rem rgba(0, 0, 0, 0.12),
+    0 0.5rem 1.5rem 0 rgba(0, 0, 0, 0.16);
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
 }
 
-.mat-mdc-option:hover {
-  background-color: #f8f9fa !important;
+.cdk-overlay-container .mat-mdc-option {
+  background-color: white;
 }
 
-.mat-mdc-option.mat-mdc-option-active {
-  background-color: #f8f9fa !important;
+/* Material styles the active option with
+   `.mat-mdc-option.mat-mdc-option-active.mdc-list-item`, three classes. Ours
+   needs to match or beat that; a tie would be settled by injection order,
+   which is not ours to rely on. */
+.cdk-overlay-container .mat-mdc-option:hover,
+.cdk-overlay-container .mat-mdc-option.mat-mdc-option-active.mdc-list-item {
+  background-color: #f8f9fa;
 }
 
-.mat-mdc-option.mdc-list-item--selected:not(.mat-mdc-option-multiple) {
-  background-color: rgba(61, 78, 124, 0.1) !important;
+.cdk-overlay-container .mat-mdc-option.mdc-list-item--selected:not(.mat-mdc-option-multiple) {
+  background-color: rgba(61, 78, 124, 0.1);
 }
 
-/* Cards — ensure white background across all mat-card instances */
-.mat-mdc-card {
-  background-color: white !important;
+/* Cards — the style guide specifies white, while Material's own
+   `.mat-mdc-card-filled` resolves to the neutral surface tone. Both are a
+   single class, and Angular injects component styles after the global
+   stylesheets, so a bare `.mat-mdc-card` loses the tie. Qualifying with `body`
+   settles it on specificity. */
+body .mat-mdc-card {
+  background-color: white;
 }
 
 /* Dialog / Modal backgrounds */
 .mat-mdc-dialog-container .mdc-dialog__surface {
-  background-color: white !important;
+  background-color: white;
 }
 
 /* User menu positioning */
 .cdk-overlay-pane .user-menu {
-  margin-left: 1rem !important;
+  margin-left: 1rem;
 }
 
 /* Snackbar (Alert) styles */
 .mat-mdc-snack-bar-container {
-  --mdc-snackbar-container-color: #323232 !important;
-  --mdc-snackbar-supporting-text-color: #ffffff !important;
-  --mat-snack-bar-button-color: #4CAF50 !important;
+  --mdc-snackbar-container-color: #323232;
+  --mdc-snackbar-supporting-text-color: #ffffff;
+  --mat-snack-bar-button-color: #4CAF50;
 }
 
 .mat-mdc-snack-bar-container .mdc-snackbar__surface {
-  background-color: #323232 !important;
+  background-color: #323232;
 }
 
 .mat-mdc-snack-bar-container .mdc-snackbar__label {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .mat-mdc-snack-bar-container .mat-mdc-button {
-  color: #4CAF50 !important;
-  font-weight: 600 !important;
+  color: #4CAF50;
+  font-weight: 600;
 }
 
 .mat-mdc-snack-bar-container .mat-mdc-button:hover {
-  background-color: rgba(76, 175, 80, 0.1) !important;
+  background-color: rgba(76, 175, 80, 0.1);
 }
 
 /* Success snackbar */
 .success-snackbar {
-  --mdc-snackbar-container-color: #4CAF50 !important;
+  --mdc-snackbar-container-color: #4CAF50;
 }
 
 .success-snackbar .mdc-snackbar__surface {
-  background-color: #4CAF50 !important;
+  background-color: #4CAF50;
 }
 
 .success-snackbar .mdc-snackbar__label {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .success-snackbar .mat-mdc-button {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 /* Error snackbar */
 .error-snackbar {
-  --mdc-snackbar-container-color: #f44336 !important;
+  --mdc-snackbar-container-color: #f44336;
 }
 
 .error-snackbar .mdc-snackbar__surface {
-  background-color: #f44336 !important;
+  background-color: #f44336;
 }
 
 .error-snackbar .mdc-snackbar__label {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .error-snackbar .mat-mdc-button {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 /* Warning snackbar */
 .warning-snackbar {
-  --mdc-snackbar-container-color: #ff9800 !important;
+  --mdc-snackbar-container-color: #ff9800;
 }
 
 .warning-snackbar .mdc-snackbar__surface {
-  background-color: #ff9800 !important;
+  background-color: #ff9800;
 }
 
 .warning-snackbar .mdc-snackbar__label {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .warning-snackbar .mat-mdc-button {
-  color: #ffffff !important;
+  color: #ffffff;
 }
+
+
+/* ──────────────────────────────────────────────
+   FullCalendar
+   ──────────────────────────────────────────────
+   Third-party markup the dashboard cannot reach through view encapsulation.
+   These lived in dashboard.component.css behind ::ng-deep, which is the same
+   thing said less honestly — and counted against that component's style
+   budget. */
+
+/* Adjacent-month days: FullCalendar draws them at #c5cad8 and fades the inner
+   .fc-daygrid-day-top with opacity, giving 1.46:1 against the 4.5:1 WCAG 1.4.3
+   requires. De-emphasis is kept through colour alone (grey against the navy of
+   the current month) at 4.5:1. */
+/* Qualified with .fc, FullCalendar's own root class: its styles are injected
+   as component styles, so they land after this sheet and win any tie. */
+.fc .fc-day-other,
+.fc .fc-day-other .fc-daygrid-day-top { opacity: 1; }
+
+.fc .fc-day-other .fc-daygrid-day-number,
+.fc .fc-day-other .fc-daygrid-day-top,
+.fc .fc-day-other .fc-daygrid-day-number a { color: #6b7280; }
+
+.fc .fc-icon { color: #495057; }

@@ -3,7 +3,7 @@
     <h1 class="page-title">Recursos</h1>
     @if (canCreate()) {
       <button mat-raised-button color="primary" (click)="createResource()">
-        <mat-icon>add</mat-icon>
+        <mat-icon aria-hidden="true">add</mat-icon>
         Nuevo Recurso
       </button>
     }
@@ -14,7 +14,7 @@
     <mat-form-field appearance="outline" class="filter-field search-field">
       <mat-label>Buscar</mat-label>
       <input matInput [ngModel]="searchQuery()" (ngModelChange)="onSearchChange($event)" placeholder="Buscar por título, descripción o etiquetas...">
-      <mat-icon matPrefix>search</mat-icon>
+      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="filter-field">
@@ -42,7 +42,7 @@
 
     @if (searchQuery() || selectedType() || selectedCategoryId()) {
       <button mat-button color="primary" (click)="clearFilters()">
-        <mat-icon>clear</mat-icon>
+        <mat-icon aria-hidden="true">clear</mat-icon>
         Limpiar
       </button>
     }
@@ -54,13 +54,13 @@
     </div>
   } @else if (filteredResources().length === 0) {
     <div class="empty-state">
-      <mat-icon class="empty-icon">school</mat-icon>
+      <mat-icon class="empty-icon" aria-hidden="true">school</mat-icon>
       @if (resources().length === 0) {
         <h2>No hay recursos disponibles</h2>
         <p>Crea el primer recurso para comenzar</p>
         @if (canCreate()) {
           <button mat-raised-button color="primary" (click)="createResource()">
-            <mat-icon>add</mat-icon>
+            <mat-icon aria-hidden="true">add</mat-icon>
             Nuevo Recurso
           </button>
         }
@@ -68,7 +68,7 @@
         <h2>No se encontraron resultados</h2>
         <p>Prueba con otros filtros de búsqueda</p>
         <button mat-button color="primary" (click)="clearFilters()">
-          <mat-icon>clear</mat-icon>
+          <mat-icon aria-hidden="true">clear</mat-icon>
           Limpiar filtros
         </button>
       }
@@ -78,31 +78,31 @@
       @for (resource of filteredResources(); track resource.id) {
         <mat-card class="resource-card" (click)="viewResource(resource.id)">
           <div class="resource-type-badge" [class]="'type-' + resource.resource_type">
-            <mat-icon>{{ getTypeIcon(resource.resource_type) }}</mat-icon>
+            <mat-icon aria-hidden="true">{{ getTypeIcon(resource.resource_type) }}</mat-icon>
             <span>{{ getTypeLabel(resource.resource_type) }}</span>
           </div>
           <mat-card-content class="resource-info">
             <h3 class="resource-title">{{ resource.title }}</h3>
             @if (resource.category) {
               <div class="resource-category">
-                <mat-icon class="meta-icon">folder</mat-icon>
+                <mat-icon class="meta-icon" aria-hidden="true">folder</mat-icon>
                 {{ resource.category.name }}
               </div>
             }
             @if (resource.entity) {
               <p class="resource-entity">
-                <mat-icon class="meta-icon">business</mat-icon>
+                <mat-icon class="meta-icon" aria-hidden="true">business</mat-icon>
                 {{ resource.entity.name }}
               </p>
             }
             @if (resource.creator) {
               <p class="resource-creator">
-                <mat-icon class="meta-icon">person</mat-icon>
+                <mat-icon class="meta-icon" aria-hidden="true">person</mat-icon>
                 {{ resource.creator.name }} {{ resource.creator.surname }}
               </p>
             }
             <p class="resource-date">
-              <mat-icon class="meta-icon">calendar_today</mat-icon>
+              <mat-icon class="meta-icon" aria-hidden="true">calendar_today</mat-icon>
               {{ resource.created_at | date:'dd/MM/yyyy' }}
             </p>
             @if (resource.description) {
@@ -119,13 +119,13 @@
           @if (canEdit() || canDelete()) {
             <div class="card-actions">
               @if (canEdit()) {
-                <button mat-icon-button color="primary" (click)="editResource($event, resource.id)" title="Editar">
-                  <mat-icon>edit</mat-icon>
+                <button mat-icon-button color="primary" (click)="editResource($event, resource.id)" title="Editar" aria-label="Editar recurso">
+                  <mat-icon aria-hidden="true">edit</mat-icon>
                 </button>
               }
               @if (canDelete()) {
-                <button mat-icon-button color="warn" (click)="deleteResource($event, resource)" title="Eliminar">
-                  <mat-icon>delete</mat-icon>
+                <button mat-icon-button color="warn" (click)="deleteResource($event, resource)" title="Eliminar" aria-label="Eliminar recurso">
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>
               }
             </div>

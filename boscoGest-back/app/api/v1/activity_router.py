@@ -124,6 +124,16 @@ def reject_registration(
     return service.reject_registration(activity_id, user_id, current_user)
 
 
+@activity_router.post("/{activity_id}/chat-group")
+def create_activity_chat_group(
+    activity_id: int,
+    service: ActivityService = Depends(get_activity_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create a chat group with all admitted participants of the activity."""
+    return service.create_chat_group(activity_id, current_user)
+
+
 @activity_router.post("/{activity_id}/upload-image")
 def upload_activity_image(
     activity_id: int,

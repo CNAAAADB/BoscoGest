@@ -1,0 +1,93 @@
+<div class="pending-container">
+  <div class="pending-card">
+    <div class="logo-container">
+      <img src="assets/images/LogoAAAA.png" alt="BoscoGest Logo" class="pending-logo" />
+    </div>
+
+    <h2 class="page-title">BoscoGest</h2>
+    <p class="page-subtitle">Estado de tu solicitud</p>
+
+    @if (loading()) {
+      <div class="loading-center">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+    } @else if (requests().length === 0) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon" aria-hidden="true">inbox</mat-icon>
+        <p>No tienes solicitudes activas.</p>
+        <p class="hint">Contacta con el administrador de tu asociación para que te añada directamente.</p>
+      </div>
+    } @else {
+      <div class="requests-list">
+        @for (req of requests(); track req.id) {
+          <div class="request-item" [class]="statusClass(req.status)">
+            <div class="request-header">
+              <div class="entity-info">
+                <mat-icon class="entity-icon" aria-hidden="true">location_city</mat-icon>
+                <span class="entity-name">{{ req.entity?.name ?? 'Asociación' }}</span>
+              </div>
+              <span class="status-badge" [class]="statusClass(req.status)">
+                {{ statusLabel(req.status) }}
+              </span>
+            </div>
+
+            @if (req.status === 'pending') {
+              <p class="request-message">
+                <mat-icon class="info-icon" aria-hidden="true">schedule</mat-icon>
+                Tu solicitud está siendo revisada por el administrador. Te notificaremos cuando haya una respuesta.
+              </p>
+            }
+
+            @if (req.status === 'rejected') {
+              <div class="rejection-info">
+                <mat-icon aria-hidden="true">cancel</mat-icon>
+                <div>
+                  <p>Tu solicitud fue rechazada.</p>
+                  @if (req.rejection_reason) {
+                    <p class="rejection-reason">Motivo: {{ req.rejection_reason }}</p>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (req.status === 'accepted') {
+              <p class="accepted-message">
+                <mat-icon aria-hidden="true">check_circle</mat-icon>
+                ¡Fuiste aceptado! Recarga la página para acceder.
+              </p>
+            }
+
+            <div class="request-meta">
+              Solicitado el {{ req.created_at | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+
+            @if (req.status === 'pending') {
+              <button
+                mat-stroked-button
+                color="warn"
+                class="cancel-btn"
+                [disabled]="cancelling() === req.id"
+                (click)="cancelRequest(req.id)"
+              >
+                @if (cancelling() === req.id) {
+                  <mat-spinner diameter="16"></mat-spinner>
+                } @else {
+                  Cancelar solicitud
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <div class="page-actions">
+      <button mat-button (click)="loadRequests()">
+        <mat-icon aria-hidden="true">refresh</mat-icon> Actualizar
+      </button>
+      <button mat-stroked-button color="warn" (click)="logout()">
+        <mat-icon aria-hidden="true">logout</mat-icon> Cerrar sesión
+      </button>
+    </div>
+  </div>
+</div>

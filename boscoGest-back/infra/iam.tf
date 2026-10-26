@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # ──────────────────────────────────────────────
 # IAM Role for EC2 (ECR pull access)
 # ──────────────────────────────────────────────
@@ -62,4 +64,44 @@ resource "aws_iam_policy" "s3_uploads" {
 resource "aws_iam_role_policy_attachment" "s3_uploads" {
   role       = aws_iam_role.ec2.name
   policy_arn = aws_iam_policy.s3_uploads.arn
+}
+
+# ──────────────────────────────────────────────
+# SES: transactional email (welcome emails)
+# ──────────────────────────────────────────────
+
+resource "aws_iam_policy" "ses_send" {
+  name        = "${var.project_name}-ses-send-policy"
+  description = "Allow the BoscoGest EC2 instance to send transactional email through SES"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "SendTransactionalEmail"
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        # Scoped to this account and region rather than "*", so the instance
+        # cannot send on behalf of identities it does not own.
+        #
+        # The configuration set has to be listed too. Sending *through* one is
+        # a separate authorisation from sending *as* an identity, and without
+        # it every call fails with AccessDenied — silently, because delivery is
+        # best-effort and the failure is only logged. That is how this went
+        # unnoticed until a test message was actually sent.
+        Resource = [
+          "arn:aws:ses:${var.aws_region}:${data.aws_caller_identity.current.account_id}:identity/*",
+          "arn:aws:ses:${var.aws_region}:${data.aws_caller_identity.current.account_id}:configuration-set/*",
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ses_send" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = aws_iam_policy.ses_send.arn
 }

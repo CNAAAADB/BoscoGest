@@ -1,0 +1,29 @@
+<div class="chat-container">
+  <div class="chat-layout">
+    <!-- Left panel: conversation list -->
+    <div class="chat-sidebar" [class.hidden-mobile]="showMobileView() === 'chat'">
+      <app-conversation-list
+        [conversations]="conversations()"
+        [selectedId]="selectedConversationId()"
+        (selectConversation)="onSelectConversation($event)"
+        (conversationCreated)="onConversationCreated($event)"
+      />
+    </div>
+
+    <!-- Right panel: active conversation -->
+    <div class="chat-main" [class.hidden-mobile]="showMobileView() === 'list'">
+      @if (selectedConversationId()) {
+        <app-conversation-view
+          [conversationId]="selectedConversationId()!"
+          [conversation]="selectedConversation()"
+          (back)="onBackToList()"
+        />
+      } @else {
+        <div class="chat-empty-state">
+          <mat-icon class="empty-icon" aria-hidden="true">chat_bubble_outline</mat-icon>
+          <p>Selecciona una conversación para empezar a chatear</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>

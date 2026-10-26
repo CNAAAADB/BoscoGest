@@ -32,6 +32,7 @@ class RoleRepository:
             .where(entity_roles.c.entity_id == entity_id)
             .where(Role.is_active == True)
             .options(joinedload(Role.permissions))
+            .order_by(Role.name)
             .offset(skip)
             .limit(limit)
         )

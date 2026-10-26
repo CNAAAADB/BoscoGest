@@ -134,9 +134,13 @@
     margin-left: 1.5rem;
 }
 
+/* #3D4E7C on #D4A76A is 3.7:1, below the 4.5:1 WCAG 1.4.3 AA requires for
+   text this size (NFR-QLT-01). The darkest brand tone reaches 6.5:1 and keeps
+   the palette. This is the most-used control in the interface, so it is also
+   the one most worth getting right for the older members NFR-QLT-02 calls out. */
 .sidenav-nav .sidenav-nav-item:hover .sidenav-nav-link {
     background-color: #D4A76A;
-    color: #3D4E7C;
+    color: #1A2840;
 }
 
 .active {
@@ -145,11 +149,22 @@
 
 .active .sidenav-link-icon,
 .active .sidenav-link-text {
-    color: #3D4E7C;
+    color: #1A2840;
 }
 
 /* User profile section */
 .user-profile {
+    /* Reset the button chrome: this became a <button> so it can carry
+       aria-haspopup and be reached from the keyboard, but it must keep looking
+       and laying out exactly as the block it replaced. */
+    appearance: none;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
     display: flex;
     align-items: center;
     padding: 1rem;
@@ -295,7 +310,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 3.5rem;
+    /* La altura suma el hueco del notch al alto de la barra. Con el
+       box-sizing: border-box global, un height de 3.5rem a secas incluía el
+       padding: en iOS los 59pt de la isla dinámica se comían los 56pt de la
+       barra y el logo quedaba aplastado contra el borde inferior. En Android
+       env(safe-area-inset-top) vale 0px y esto no cambia nada. */
+    height: calc(3.5rem + var(--sat, 0px));
     padding: 0 1rem;
     padding-top: var(--sat, 0px);
     background: linear-gradient(90deg, #E8DCC8 0%, #D9C9B0 100%);
@@ -494,4 +514,43 @@
 
 .mobile-logout:hover {
     background-color: rgba(220, 53, 69, 0.1);
+}
+/* Chat unread badge on nav items */
+.sidenav-link-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nav-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 10px;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.25rem;
+    border: 2px solid #E8DCC8;
+}
+
+.nav-badge-inline {
+    background-color: #dc3545;
+    color: white;
+    border-radius: 10px;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.375rem;
+    margin-left: auto;
 }

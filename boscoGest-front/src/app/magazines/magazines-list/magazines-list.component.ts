@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -32,6 +32,8 @@ GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   ],
   templateUrl: './magazines-list.component.html',
   styleUrl: './magazines-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MagazinesListComponent implements OnInit {
   magazines = signal<MagazineDetails[]>([]);

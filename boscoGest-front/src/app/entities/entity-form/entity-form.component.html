@@ -4,7 +4,7 @@
   <mat-card class="form-card">
     <mat-card-header>
       <mat-card-title class="section-title">
-        <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
+        <mat-icon class="title-icon" aria-hidden="true">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
         {{ isEditMode() ? 'Información de la Asociación' : 'Nueva Asociación' }}
       </mat-card-title>
     </mat-card-header>
@@ -19,7 +19,7 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Nombre</mat-label>
               <input matInput formControlName="name" placeholder="Nombre de la asociación" required>
-              <mat-icon matPrefix>business</mat-icon>
+              <mat-icon matPrefix aria-hidden="true">business</mat-icon>
               @if (entityForm.get('name')?.hasError('required')) {
                 <mat-error>El nombre es obligatorio</mat-error>
               }
@@ -38,7 +38,7 @@
                     </mat-option>
                   }
                 </mat-select>
-                <mat-icon matPrefix>account_tree</mat-icon>
+                <mat-icon matPrefix aria-hidden="true">account_tree</mat-icon>
                 @if (entityForm.get('parent_id')?.hasError('required')) {
                   <mat-error>La asociación padre es obligatoria</mat-error>
                 }
@@ -54,7 +54,7 @@
               (click)="onCancel()"
               class="cancel-button"
             >
-              <mat-icon>close</mat-icon>
+              <mat-icon aria-hidden="true">close</mat-icon>
               Cancelar
             </button>
             <button
@@ -64,7 +64,7 @@
               [disabled]="entityForm.invalid || loading()"
               class="submit-button"
             >
-              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
               {{ isEditMode() ? 'Actualizar' : 'Crear' }}
             </button>
           </div>

@@ -46,14 +46,14 @@
   font-size: 4rem;
   width: 4rem;
   height: 4rem;
-  color: #6c757d;
+  color: #646c74;
   opacity: 0.5;
   margin-bottom: 1rem;
 }
 
 .empty-state p {
   font-size: 1.125rem;
-  color: #6c757d;
+  color: #646c74;
   margin: 0;
 }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -39,6 +39,8 @@ import {
   ],
   templateUrl: './resource-form.component.html',
   styleUrl: './resource-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResourceFormComponent implements OnInit {
   resourceForm: FormGroup;

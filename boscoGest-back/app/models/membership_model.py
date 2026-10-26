@@ -10,7 +10,7 @@ class Membership(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"))
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), index=True)
     entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id", ondelete="CASCADE"))
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

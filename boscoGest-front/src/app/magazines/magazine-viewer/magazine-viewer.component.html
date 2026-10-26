@@ -5,8 +5,8 @@
     </div>
   } @else if (magazine()) {
     <div class="viewer-header">
-      <button mat-icon-button (click)="goBack()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
+      <button mat-icon-button (click)="goBack()" class="back-button" aria-label="Volver">
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
       </button>
       <div class="magazine-info">
         <h1 class="magazine-title">{{ magazine()!.title }}</h1>
@@ -29,18 +29,18 @@
       </div>
       <div class="header-actions">
         <button mat-raised-button color="primary" (click)="downloadMagazine()">
-          <mat-icon>download</mat-icon>
+          <mat-icon aria-hidden="true">download</mat-icon>
           Descargar
         </button>
         @if (canEditMagazine()) {
           <button mat-raised-button color="accent" (click)="editMagazine()">
-            <mat-icon>edit</mat-icon>
+            <mat-icon aria-hidden="true">edit</mat-icon>
             Editar
           </button>
         }
         @if (canDeleteMagazine()) {
           <button mat-raised-button color="warn" (click)="deleteMagazine()">
-            <mat-icon>delete</mat-icon>
+            <mat-icon aria-hidden="true">delete</mat-icon>
             Eliminar
           </button>
         }
@@ -58,10 +58,10 @@
     <div class="pdf-container">
       @if (isNative) {
         <div class="native-pdf-placeholder">
-          <mat-icon class="pdf-icon">picture_as_pdf</mat-icon>
+          <mat-icon class="pdf-icon" aria-hidden="true">picture_as_pdf</mat-icon>
           <p>La previsualización de PDF no está disponible en la app.</p>
           <button mat-raised-button color="primary" (click)="downloadMagazine()">
-            <mat-icon>download</mat-icon>
+            <mat-icon aria-hidden="true">download</mat-icon>
             Descargar PDF
           </button>
         </div>

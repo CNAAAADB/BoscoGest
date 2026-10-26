@@ -3,39 +3,30 @@ import { authGuard } from './auth/auth.guard';
 import { permissionGuard } from './auth/permission.guard';
 import { LoginComponent } from './login/login.component';
 import { LayoutComponent } from './layout/layout.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { MyProfileComponent } from './my-profile/my-profile.component';
-import { RolesListComponent } from './roles/roles-list/roles-list.component';
-import { RoleFormComponent } from './roles/role-form/role-form.component';
-import { RoleDetailComponent } from './roles/role-detail/role-detail.component';
-import { EntitiesListComponent } from './entities/entities-list/entities-list.component';
-import { EntityFormComponent } from './entities/entity-form/entity-form.component';
-import { EntityDetailComponent } from './entities/entity-detail/entity-detail.component';
-import { UsersListComponent } from './users/users-list/users-list.component';
-import { UserFormComponent } from './users/user-form/user-form.component';
-import { UserDetailComponent } from './users/user-detail/user-detail.component';
-import { MembershipFormComponent } from './users/membership-form/membership-form.component';
-import { UserImportComponent } from './users/user-import/user-import.component';
-import { AssociateUserComponent } from './entities/associate-user/associate-user.component';
-import { ActivitiesListComponent } from './activities/activities-list/activities-list.component';
-import { ActivityDetailComponent } from './activities/activity-detail/activity-detail.component';
-import { ActivityFormComponent } from './activities/activity-form/activity-form.component';
-import { NewsListComponent } from './communications/communications-list/communications-list.component';
-import { NewsFormComponent } from './communications/communications-form/communications-form.component';
-import { NewsDetailComponent } from './communications/communications-detail/communications-detail.component';
-import { NewsBlogComponent } from './communications/communications-blog/communications-blog.component';
-import { MagazinesListComponent } from './magazines/magazines-list/magazines-list.component';
-import { MagazineViewerComponent } from './magazines/magazine-viewer/magazine-viewer.component';
-import { MagazineUploadComponent } from './magazines/magazine-upload/magazine-upload.component';
-import { MagazineEditComponent } from './magazines/magazine-edit/magazine-edit.component';
-import { ResourcesListComponent } from './resources/resources-list/resources-list.component';
-import { ResourceFormComponent } from './resources/resource-form/resource-form.component';
-import { ResourceDetailComponent } from './resources/resource-detail/resource-detail.component';
-import { SettingsComponent } from './settings/settings.component';
-import { NotificationsListComponent } from './notifications/notifications-list/notifications-list.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'register', loadComponent: () => import('./auth/register/register.component').then(m => m.RegisterComponent) },
+  // Where the one-shot link in a welcome email lands. Outside the auth guard:
+  // the whole point is that whoever follows it has no session yet.
+  { path: 'activar', loadComponent: () => import('./auth/activate/activate.component').then(m => m.ActivateComponent) },
+  // Páginas legales públicas. Fuera del authGuard a propósito: Google Play
+  // comprueba la política de privacidad y la página de eliminación de cuenta
+  // sin instalar la app ni iniciar sesión, y una redirección al login es
+  // motivo de rechazo de la ficha.
+  {
+    path: 'privacidad',
+    loadComponent: () => import('./legal/privacy-policy/privacy-policy.component').then(m => m.PrivacyPolicyComponent),
+  },
+  {
+    path: 'eliminar-cuenta',
+    loadComponent: () => import('./legal/delete-account-info/delete-account-info.component').then(m => m.DeleteAccountInfoComponent),
+  },
+  {
+    path: 'pending',
+    loadComponent: () => import('./auth/pending-approval/pending-approval.component').then(m => m.PendingApprovalComponent),
+    canActivate: [authGuard],
+  },
   {
     path: '',
     component: LayoutComponent,
@@ -43,13 +34,19 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        component: DashboardComponent,
+        loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
         data: { breadcrumb: 'Dashboard' }
       },
       {
         path: 'my-profile',
-        component: MyProfileComponent,
+        loadComponent: () => import('./my-profile/my-profile.component').then(m => m.MyProfileComponent),
         data: { breadcrumb: 'Mi Perfil' }
+      },
+      {
+        path: 'membership-requests',
+        loadComponent: () => import('./membership-requests/membership-requests-list/membership-requests-list.component').then(m => m.MembershipRequestsListComponent),
+        canActivate: [permissionGuard('memberships', 'review')],
+        data: { breadcrumb: 'Solicitudes de alta' }
       },
       {
         path: 'roles',
@@ -57,24 +54,24 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: RolesListComponent,
+            loadComponent: () => import('./roles/roles-list/roles-list.component').then(m => m.RolesListComponent),
             canActivate: [permissionGuard('roles', 'manage')]
           },
           {
             path: 'new',
-            component: RoleFormComponent,
+            loadComponent: () => import('./roles/role-form/role-form.component').then(m => m.RoleFormComponent),
             canActivate: [permissionGuard('roles', 'create')],
             data: { breadcrumb: 'Crear Rol' }
           },
           {
             path: ':id',
-            component: RoleDetailComponent,
+            loadComponent: () => import('./roles/role-detail/role-detail.component').then(m => m.RoleDetailComponent),
             canActivate: [permissionGuard('roles', 'manage')],
             data: { breadcrumb: 'Detalle' }
           },
           {
             path: ':id/edit',
-            component: RoleFormComponent,
+            loadComponent: () => import('./roles/role-form/role-form.component').then(m => m.RoleFormComponent),
             canActivate: [permissionGuard('roles', 'update')],
             data: { breadcrumb: 'Editar Rol' }
           }
@@ -86,30 +83,30 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: EntitiesListComponent,
+            loadComponent: () => import('./entities/entities-list/entities-list.component').then(m => m.EntitiesListComponent),
             canActivate: [permissionGuard('entities', 'manage')]
           },
           {
             path: 'new',
-            component: EntityFormComponent,
+            loadComponent: () => import('./entities/entity-form/entity-form.component').then(m => m.EntityFormComponent),
             canActivate: [permissionGuard('entities', 'create')],
             data: { breadcrumb: 'Crear Asociación' }
           },
           {
             path: ':id',
-            component: EntityDetailComponent,
+            loadComponent: () => import('./entities/entity-detail/entity-detail.component').then(m => m.EntityDetailComponent),
             canActivate: [permissionGuard('entities', 'manage')],
             data: { breadcrumb: 'Detalle' }
           },
           {
             path: ':id/edit',
-            component: EntityFormComponent,
+            loadComponent: () => import('./entities/entity-form/entity-form.component').then(m => m.EntityFormComponent),
             canActivate: [permissionGuard('entities', 'update')],
             data: { breadcrumb: 'Editar Asociación' }
           },
           {
             path: ':id/associate-user',
-            component: AssociateUserComponent,
+            loadComponent: () => import('./entities/associate-user/associate-user.component').then(m => m.AssociateUserComponent),
             canActivate: [permissionGuard('memberships', 'manage')],
             data: { breadcrumb: 'Asociar Usuario' }
           }
@@ -121,36 +118,51 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: UsersListComponent,
+            loadComponent: () => import('./users/users-list/users-list.component').then(m => m.UsersListComponent),
             canActivate: [permissionGuard('users', 'manage')]
           },
           {
             path: 'import',
-            component: UserImportComponent,
+            loadComponent: () => import('./users/user-import/user-import.component').then(m => m.UserImportComponent),
             canActivate: [permissionGuard('users', 'create')],
             data: { breadcrumb: 'Importación Usuarios' }
           },
           {
+            path: 'import/history',
+            loadComponent: () => import('./users/bulk-upload-history/bulk-upload-history.component').then(m => m.BulkUploadHistoryComponent),
+            canActivate: [permissionGuard('users', 'create')],
+            data: { breadcrumb: 'Historial Importaciones' }
+          },
+          {
+            // El detalle era un modal. Como vista tiene dirección propia, se
+            // puede recargar, compartir y volver a ella, que es lo que pide una
+            // tabla de cientos de filas.
+            path: 'import/history/:id',
+            loadComponent: () => import('./users/bulk-upload-history/job-detail/job-detail.component').then(m => m.JobDetailComponent),
+            canActivate: [permissionGuard('users', 'create')],
+            data: { breadcrumb: 'Detalle de importación' }
+          },
+          {
             path: 'new',
-            component: UserFormComponent,
+            loadComponent: () => import('./users/user-form/user-form.component').then(m => m.UserFormComponent),
             canActivate: [permissionGuard('users', 'create')],
             data: { breadcrumb: 'Crear Usuario' }
           },
           {
             path: ':id',
-            component: UserDetailComponent,
+            loadComponent: () => import('./users/user-detail/user-detail.component').then(m => m.UserDetailComponent),
             canActivate: [permissionGuard('users', 'manage')],
             data: { breadcrumb: 'Detalle' }
           },
           {
             path: ':id/edit',
-            component: UserFormComponent,
+            loadComponent: () => import('./users/user-form/user-form.component').then(m => m.UserFormComponent),
             canActivate: [permissionGuard('users', 'update')],
             data: { breadcrumb: 'Editar Usuario' }
           },
           {
             path: ':id/create-membership',
-            component: MembershipFormComponent,
+            loadComponent: () => import('./users/membership-form/membership-form.component').then(m => m.MembershipFormComponent),
             canActivate: [permissionGuard('memberships', 'manage')],
             data: { breadcrumb: 'Crear Membresía' }
           }
@@ -162,22 +174,22 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: ActivitiesListComponent
+            loadComponent: () => import('./activities/activities-list/activities-list.component').then(m => m.ActivitiesListComponent)
           },
           {
             path: 'new',
-            component: ActivityFormComponent,
+            loadComponent: () => import('./activities/activity-form/activity-form.component').then(m => m.ActivityFormComponent),
             canActivate: [permissionGuard('activities', 'create')],
             data: { breadcrumb: 'Crear Actividad' }
           },
           {
             path: ':id',
-            component: ActivityDetailComponent,
+            loadComponent: () => import('./activities/activity-detail/activity-detail.component').then(m => m.ActivityDetailComponent),
             data: { breadcrumb: 'Detalle' }
           },
           {
             path: ':id/edit',
-            component: ActivityFormComponent,
+            loadComponent: () => import('./activities/activity-form/activity-form.component').then(m => m.ActivityFormComponent),
             canActivate: [permissionGuard('activities', 'update')],
             data: { breadcrumb: 'Editar Actividad' }
           }
@@ -185,7 +197,7 @@ export const routes: Routes = [
       },
       {
         path: 'blog',
-        component: NewsBlogComponent,
+        loadComponent: () => import('./communications/communications-blog/communications-blog.component').then(m => m.NewsBlogComponent),
         data: { breadcrumb: 'Blog' }
       },
       {
@@ -194,22 +206,22 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: NewsListComponent
+            loadComponent: () => import('./communications/communications-list/communications-list.component').then(m => m.NewsListComponent)
           },
           {
             path: 'new',
-            component: NewsFormComponent,
+            loadComponent: () => import('./communications/communications-form/communications-form.component').then(m => m.NewsFormComponent),
             canActivate: [permissionGuard('communications', 'create')],
             data: { breadcrumb: 'Crear Noticia' }
           },
           {
             path: ':id',
-            component: NewsDetailComponent,
+            loadComponent: () => import('./communications/communications-detail/communications-detail.component').then(m => m.NewsDetailComponent),
             data: { breadcrumb: 'Detalle' }
           },
           {
             path: ':id/edit',
-            component: NewsFormComponent,
+            loadComponent: () => import('./communications/communications-form/communications-form.component').then(m => m.NewsFormComponent),
             canActivate: [permissionGuard('communications', 'edit')],
             data: { breadcrumb: 'Editar Noticia' }
           }
@@ -221,24 +233,24 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: MagazinesListComponent,
+            loadComponent: () => import('./magazines/magazines-list/magazines-list.component').then(m => m.MagazinesListComponent),
             canActivate: [permissionGuard('magazines', 'list')]
           },
           {
             path: 'upload',
-            component: MagazineUploadComponent,
+            loadComponent: () => import('./magazines/magazine-upload/magazine-upload.component').then(m => m.MagazineUploadComponent),
             canActivate: [permissionGuard('magazines', 'create')],
             data: { breadcrumb: 'Subir Revista' }
           },
           {
             path: ':id/edit',
-            component: MagazineEditComponent,
+            loadComponent: () => import('./magazines/magazine-edit/magazine-edit.component').then(m => m.MagazineEditComponent),
             canActivate: [permissionGuard('magazines', 'update')],
             data: { breadcrumb: 'Editar Revista' }
           },
           {
             path: ':id',
-            component: MagazineViewerComponent,
+            loadComponent: () => import('./magazines/magazine-viewer/magazine-viewer.component').then(m => m.MagazineViewerComponent),
             canActivate: [permissionGuard('magazines', 'read')],
             data: { breadcrumb: 'Ver Revista' }
           }
@@ -250,35 +262,57 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            component: ResourcesListComponent
+            loadComponent: () => import('./resources/resources-list/resources-list.component').then(m => m.ResourcesListComponent)
           },
           {
             path: 'new',
-            component: ResourceFormComponent,
+            loadComponent: () => import('./resources/resource-form/resource-form.component').then(m => m.ResourceFormComponent),
             canActivate: [permissionGuard('resources', 'create')],
             data: { breadcrumb: 'Crear Recurso' }
           },
           {
             path: ':id/edit',
-            component: ResourceFormComponent,
+            loadComponent: () => import('./resources/resource-form/resource-form.component').then(m => m.ResourceFormComponent),
             canActivate: [permissionGuard('resources', 'update')],
             data: { breadcrumb: 'Editar Recurso' }
           },
           {
             path: ':id',
-            component: ResourceDetailComponent,
+            loadComponent: () => import('./resources/resource-detail/resource-detail.component').then(m => m.ResourceDetailComponent),
             data: { breadcrumb: 'Ver Recurso' }
           }
         ]
       },
       {
+        path: 'fees',
+        canActivate: [permissionGuard('fees', 'manage')],
+        loadComponent: () => import('./fees/fee-admin/fee-admin.component').then(m => m.FeeAdminComponent),
+        data: { breadcrumb: 'Cuotas' }
+      },
+      {
+        path: 'fees/mine',
+        loadComponent: () => import('./fees/my-fees/my-fees.component').then(m => m.MyFeesComponent),
+        data: { breadcrumb: 'Mis Cuotas' }
+      },
+      {
+        path: 'fees/maintenance',
+        canActivate: [permissionGuard('fees', 'maintenance')],
+        loadComponent: () => import('./fees/fee-maintenance/fee-maintenance.component').then(m => m.FeeMaintenanceComponent),
+        data: { breadcrumb: 'Mantenimiento de cuotas' }
+      },
+      {
         path: 'notifications',
-        component: NotificationsListComponent,
+        loadComponent: () => import('./notifications/notifications-list/notifications-list.component').then(m => m.NotificationsListComponent),
         data: { breadcrumb: 'Notificaciones' }
       },
       {
+        path: 'chat',
+        loadComponent: () => import('./chat/chat.component').then(m => m.ChatComponent),
+        data: { breadcrumb: 'Chat' }
+      },
+      {
         path: 'settings',
-        component: SettingsComponent,
+        loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent),
         canActivate: [permissionGuard('branding', 'update')],
         data: { breadcrumb: 'Configuración' }
       },

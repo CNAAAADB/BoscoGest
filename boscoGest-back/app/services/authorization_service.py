@@ -80,6 +80,25 @@ class AuthorizationService:
 
         return False
 
+    def has_global_permission(self, user: User, resource: str, action: str) -> bool:
+        """Entity-agnostic check: the permission (or manage_all) present in any
+        active membership role, group role, or direct permission. Used for
+        cross-entity capabilities such as fee maintenance/monitoring."""
+        def matches(perm) -> bool:
+            return perm.resource == resource and perm.action in (action, "manage_all")
+
+        for membership in user.memberships:
+            if membership.is_active and any(matches(p) for p in membership.role.permissions):
+                return True
+        for perm in user.direct_permissions:
+            if matches(perm):
+                return True
+        for group in user.groups:
+            for role in group.roles:
+                if any(matches(p) for p in role.permissions):
+                    return True
+        return False
+
     def check_entity_permission(
         self,
         user: User,

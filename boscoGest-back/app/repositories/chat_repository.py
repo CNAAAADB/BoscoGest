@@ -11,6 +11,7 @@ from app.models.chat_model import (
     ChatMessage,
 )
 from app.models.user_model import User
+from app.models.membership_model import Membership
 
 
 class ChatRepository:
@@ -369,7 +370,9 @@ class ChatRepository:
 
     # ── User search ───────────────────────────────────────────────────
 
-    def search_users(self, query: str, exclude_user_id: int) -> List[User]:
+    def search_users(
+        self, query: str, exclude_user_id: int, entity_id: Optional[int] = None
+    ) -> List[User]:
         pattern = f"%{query}%"
         stmt = (
             select(User)
@@ -382,7 +385,14 @@ class ChatRepository:
                     | User.email.ilike(pattern)
                 ),
             )
-            .order_by(User.name, User.surname)
-            .limit(20)
         )
+        if entity_id is not None:
+            # Restrict to users with an active membership in the given entity.
+            stmt = stmt.where(
+                User.memberships.any(
+                    (Membership.entity_id == entity_id)
+                    & (Membership.is_active == True)
+                )
+            )
+        stmt = stmt.order_by(User.name, User.surname).limit(20)
         return list(self.db.execute(stmt).scalars().all())

@@ -7,7 +7,7 @@ def test_create_group(client, auth_headers):
         "description": "A test group"
     }
 
-    response = client.post("/groups/", json=group_data, headers=auth_headers)
+    response = client.post("/groups", json=group_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -28,7 +28,7 @@ def test_create_group_duplicate_name(client, auth_headers, db_session):
         "description": "Duplicate"
     }
 
-    response = client.post("/groups/", json=group_data, headers=auth_headers)
+    response = client.post("/groups", json=group_data, headers=auth_headers)
 
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
@@ -39,7 +39,7 @@ def test_create_group_unauthorized(client):
         "name": "Unauthorized Group"
     }
 
-    response = client.post("/groups/", json=group_data)
+    response = client.post("/groups", json=group_data)
 
     assert response.status_code == 401
 
@@ -51,7 +51,7 @@ def test_get_groups(client, auth_headers, db_session):
     db_session.add(group)
     db_session.commit()
 
-    response = client.get("/groups/", headers=auth_headers)
+    response = client.get("/groups", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -60,7 +60,7 @@ def test_get_groups(client, auth_headers, db_session):
 
 
 def test_get_groups_with_pagination(client, auth_headers):
-    response = client.get("/groups/?skip=0&limit=5", headers=auth_headers)
+    response = client.get("/groups?skip=0&limit=5", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -69,7 +69,7 @@ def test_get_groups_with_pagination(client, auth_headers):
 
 
 def test_get_groups_unauthorized(client):
-    response = client.get("/groups/")
+    response = client.get("/groups")
 
     assert response.status_code == 401
 

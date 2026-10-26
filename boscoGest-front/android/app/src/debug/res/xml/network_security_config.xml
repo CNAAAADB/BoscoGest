@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Solo para builds de debug: sustituye al fichero de src/main durante el
+  desarrollo, cuando el backend corre en HTTP en la máquina de desarrollo.
+
+  10.0.2.2 es la dirección con la que el emulador de Android ve el localhost
+  del ordenador que lo ejecuta.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: build
+        env:
+          # environment.prod.ts is generated rather than committed, so the
+          # deployment target has to be supplied. A placeholder is fine here:
+          # the point is that it compiles.
+          APP_DOMAIN: ci.example
+        run: npm run build
+
+      - name: no hardcoded host in the bundle
+        # The production bundle carried a hardcoded EC2 IP over plain http for
+        # a long time. This fails if one comes back.
+        run: |
+          if grep -rEo 'https?://([0-9]{1,3}\.){3}[0-9]{1,3}' dist/ ; then
+            echo "The bundle contains a hardcoded IP address."
+            exit 1
+          fi
+          echo "No hardcoded addresses."
+
+      - name: bundle size
+        # The initial bundle was 2.5MB before the routes were lazy-loaded.
+        # This is a ceiling, not a target: it fails if lazy loading regresses.
+        run: |
+          bytes=$(cat dist/boscoGest-front/browser/main-*.js | wc -c)
+          echo "main.js: $bytes bytes"
+          if [ "$bytes" -gt 400000 ]; then
+            echo "main.js exceeds 400KB — has a route stopped being lazy-loaded?"
+            exit 1
+          fi
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    # Needs the backend and a seeded database, so it is opt-in rather than run
+    # on every pull request. See e2e/README.md for what it expects.
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'e2e')
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: bg
+          POSTGRES_PASSWORD: bg
+          POSTGRES_DB: boscogest
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: front
+      - uses: actions/checkout@v4
+        with:
+          repository: charlyselo/boscoGest
+          path: back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: start the backend
+        working-directory: back
+        env:
+          DATABASE_URL: 'postgresql+psycopg2://bg:bg@localhost:5432/boscogest'
+          SECRET_KEY: 'e2e-secret-key-of-at-least-thirty-two-chars'
+          CORS_ORIGINS: 'http://localhost:4200'
+          STORAGE_BACKEND: local
+          SEED_SUPERADMIN_PASSWORD: 'VerificaLocal123'
+        run: |
+          pip install -r requirements.txt
+          alembic upgrade head
+          python -m app.database.seeds.initial_seeder
+          psql "postgresql://bg:bg@localhost:5432/boscogest" -q -f scripts/seed_salesian_entities.sql
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:8000/healthz && break
+            sleep 2
+          done
+
+      - name: run the suite
+        working-directory: front
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          E2E_START_SERVER=1 npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: front/playwright-report/

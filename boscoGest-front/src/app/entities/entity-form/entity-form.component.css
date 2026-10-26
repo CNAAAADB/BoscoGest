@@ -107,12 +107,12 @@ input, textarea, mat-select {
 }
 
 .cancel-button {
-  color: #6c757d !important;
+  color: #646c74 !important;
 }
 
 .submit-button:disabled {
   background-color: #e9ecef !important;
-  color: #6c757d !important;
+  color: #646c74 !important;
 }
 
 /* Material Icons in form fields */
@@ -124,7 +124,7 @@ mat-icon[matPrefix] {
 /* Hint text */
 mat-hint {
   font-size: 1rem !important;
-  color: #6c757d !important;
+  color: #646c74 !important;
 }
 
 /* Responsive */

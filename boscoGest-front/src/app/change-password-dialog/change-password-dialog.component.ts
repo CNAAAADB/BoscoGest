@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,13 +30,18 @@ export interface ChangePasswordRequest {
   ],
   templateUrl: './change-password-dialog.component.html',
   styleUrl: './change-password-dialog.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChangePasswordDialogComponent {
   changePasswordForm: FormGroup;
   hideCurrentPassword = true;
   hideNewPassword = true;
   hideConfirmPassword = true;
-  isSubmitting = false;
+  // Signal rather than a plain field: it is flipped inside async
+  // callbacks, and under OnPush a plain assignment would not refresh
+  // the buttons bound to it.
+  isSubmitting = signal(false);
 
   constructor(
     private fb: FormBuilder,
@@ -94,8 +99,8 @@ export class ChangePasswordDialogComponent {
   }
 
   onSubmit(): void {
-    if (this.changePasswordForm.valid && !this.isSubmitting) {
-      this.isSubmitting = true;
+    if (this.changePasswordForm.valid && !this.isSubmitting()) {
+      this.isSubmitting.set(true);
       const formValue = this.changePasswordForm.value;
 
       const request: ChangePasswordRequest = {
@@ -113,7 +118,7 @@ export class ChangePasswordDialogComponent {
           this.dialogRef.close(true);
         },
         error: (error: HttpErrorResponse) => {
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
           let errorMessage = 'Error al cambiar la contraseña';
 
           if (error.status === 401) {

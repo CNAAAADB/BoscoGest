@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +28,8 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/
   ],
   templateUrl: './resource-detail.component.html',
   styleUrl: './resource-detail.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResourceDetailComponent implements OnInit, OnDestroy {
   resource = signal<ResourceDetails | null>(null);

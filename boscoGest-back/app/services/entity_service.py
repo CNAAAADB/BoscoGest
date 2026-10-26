@@ -2,7 +2,7 @@ from typing import List
 from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models.entity_model import Entity
 from app.models.role_model import Role
 from app.models.user_model import User
@@ -25,6 +25,20 @@ class EntityService:
         self.membership_repo = MembershipRepository(db)
         self.auth_service = AuthorizationService(db)
         self.audit_service = AuditService(db)
+
+    def get_accessible_entities(self, current_user: User) -> List[Entity]:
+        """Entities the user can access (own memberships + descendants).
+        Available to any authenticated user; used e.g. to filter chat search."""
+        accessible_ids = self.auth_service.get_accessible_entity_ids(current_user)
+        if not accessible_ids:
+            return []
+        return list(
+            self.db.execute(
+                select(Entity)
+                .where(Entity.id.in_(accessible_ids), Entity.is_active == True)
+                .order_by(Entity.name)
+            ).scalars().all()
+        )
 
     def get_membership_manageable_entities(
         self, current_user: User, skip: int = 0, limit: int = 100
@@ -54,6 +68,7 @@ class EntityService:
         stmt = (
             select(Entity)
             .where(Entity.id.in_(allowed_entity_ids), Entity.is_active == True)
+            .order_by(Entity.name)
             .offset(skip)
             .limit(limit)
         )
@@ -71,17 +86,16 @@ class EntityService:
             )
         ).scalars().unique().all()
 
+        # These are the associations whose look and menu the caller can
+        # *change* — it fills the selector on the settings screen. Reading
+        # branding is something every member does just to see the theme
+        # applied, so granting on `read` put every association a member
+        # belongs to on a list meant for the ones they administer.
         allowed_entity_ids = set()
         for membership in user_memberships:
             for permission in membership.role.permissions:
-                if (
-                    permission.resource == "branding"
-                    and permission.action
-                    in ["read", "update", "manage_all"]
-                ) or (
-                    permission.resource == "views"
-                    and permission.action
-                    in ["read", "update", "manage_all"]
+                if permission.resource in ("branding", "views") and (
+                    permission.action in ("update", "manage_all")
                 ):
                     allowed_entity_ids.add(membership.entity_id)
                     break
@@ -92,6 +106,7 @@ class EntityService:
         stmt = (
             select(Entity)
             .where(Entity.id.in_(allowed_entity_ids), Entity.is_active == True)
+            .order_by(Entity.name)
             .offset(skip)
             .limit(limit)
         )
@@ -107,6 +122,7 @@ class EntityService:
         stmt = (
             select(Entity)
             .where(Entity.id.in_(entity_ids), Entity.is_active == True)
+            .order_by(Entity.name)
             .offset(skip)
             .limit(limit)
         )
@@ -123,6 +139,7 @@ class EntityService:
             select(Role)
             .join(entity_roles, entity_roles.c.role_id == Role.id)
             .where(entity_roles.c.entity_id == entity_id, Role.is_active == True)
+            .order_by(Role.name)
         )
         roles = list(self.db.execute(stmt).scalars().all())
 
@@ -271,6 +288,46 @@ class EntityService:
 
         return entity
 
+    def get_deletion_impact(self, entity_id: int, current_user: User) -> dict:
+        """What deleting this association would affect, so the caller can warn
+        before doing it rather than after.
+
+        Consulted by the interface to decide between showing a confirmation and
+        refusing outright.
+        """
+        entity = self.db.get(Entity, entity_id)
+        if not entity:
+            raise HTTPException(status_code=404, detail="Entity not found")
+
+        self.auth_service.check_entity_permission(
+            current_user, entity_id, "entities", "delete"
+        )
+
+        children = self.db.execute(
+            select(Entity)
+            .where(Entity.parent_id == entity_id, Entity.is_active == True)  # noqa: E712
+            .order_by(Entity.name)
+        ).scalars().all()
+        member_count = self.db.execute(
+            select(func.count(Membership.id)).where(
+                Membership.entity_id == entity_id,
+                Membership.is_active == True,  # noqa: E712
+            )
+        ).scalar_one()
+
+        return {
+            "entity_id": entity_id,
+            "entity_name": entity.name,
+            # Children block the deletion outright: removing a parent would
+            # leave them active with no place in the hierarchy.
+            "can_delete": len(children) == 0,
+            "child_count": len(children),
+            "child_names": [c.name for c in children[:10]],
+            # Members do not block it, but they are ended along with the
+            # association, so the caller has to be told first.
+            "member_count": member_count,
+        }
+
     def delete_entity(
         self,
         entity_id: int,
@@ -285,8 +342,41 @@ class EntityService:
             current_user, entity_id, "entities", "delete"
         )
 
+        # An association with associations under it cannot be removed: they
+        # would stay active with a deleted parent, still inheriting permissions
+        # through it and still inside everyone's accessible scope. Move or
+        # delete them first.
+        children = self.db.execute(
+            select(Entity)
+            .where(Entity.parent_id == entity_id, Entity.is_active == True)  # noqa: E712
+            .order_by(Entity.name)
+        ).scalars().all()
+        if children:
+            names = ", ".join(c.name for c in children[:5])
+            more = f" y {len(children) - 5} más" if len(children) > 5 else ""
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"No se puede eliminar «{entity.name}» porque tiene "
+                    f"{len(children)} asociación(es) por debajo: {names}{more}. "
+                    "Muévelas o elimínalas primero."
+                ),
+            )
+
         entity_name = entity.name
         entity_level = entity.level
+
+        # End the memberships with the association. Leaving them active left
+        # members belonging to something that no longer exists, still counted in
+        # listings and still reachable through the hierarchy.
+        memberships = self.db.execute(
+            select(Membership).where(
+                Membership.entity_id == entity_id,
+                Membership.is_active == True,  # noqa: E712
+            )
+        ).scalars().all()
+        for membership in memberships:
+            membership.is_active = False
 
         entity.is_active = False
         self.db.commit()
@@ -296,11 +386,18 @@ class EntityService:
             action="delete",
             resource_type="entities",
             resource_id=entity_id,
-            details={"name": entity_name, "level": entity_level},
+            details={
+                "name": entity_name,
+                "level": entity_level,
+                "memberships_ended": len(memberships),
+            },
             ip_address=ip_address,
         )
 
-        return {"message": f"Entity '{entity_name}' deleted successfully"}
+        return {
+            "message": f"Entity '{entity_name}' deleted successfully",
+            "memberships_ended": len(memberships),
+        }
 
 
 def get_entity_service(

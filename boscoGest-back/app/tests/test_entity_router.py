@@ -4,7 +4,7 @@ from datetime import datetime
 
 def test_get_entities(client, auth_headers, test_entity, test_membership):
     """Test that GET /entities returns only entities where user has membership"""
-    response = client.get("/entities/", headers=auth_headers)
+    response = client.get("/entities", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -16,7 +16,7 @@ def test_get_entities(client, auth_headers, test_entity, test_membership):
 
 def test_get_entities_unauthorized(client):
     """Test that GET /entities requires authentication"""
-    response = client.get("/entities/")
+    response = client.get("/entities")
 
     assert response.status_code == 401
 
@@ -76,7 +76,7 @@ def test_get_entity_no_access(client, db_session, test_entity):
     db_session.add(membership)
     db_session.commit()
 
-    token = create_access_token({"sub": user.email, "membership_id": membership.id})
+    token = create_access_token({"sub": str(user.id), "membership_id": membership.id})
     headers = {"Authorization": f"Bearer {token}"}
 
     response = client.get(f"/entities/{other_entity.id}", headers=headers)
@@ -106,10 +106,10 @@ def test_get_entities_empty_for_user_without_memberships(client, db_session):
     db_session.refresh(user)
 
     # Crear token sin membership_id (usuario sin memberships activos)
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     headers = {"Authorization": f"Bearer {token}"}
 
-    response = client.get("/entities/", headers=headers)
+    response = client.get("/entities", headers=headers)
 
     # Sin membership activo, el require_permission devuelve 403
     assert response.status_code == 403
@@ -122,7 +122,7 @@ def test_create_entity(client, auth_headers, db_session, test_permissions, test_
         "parent_id": test_entity.id
     }
 
-    response = client.post("/entities/", json=entity_data, headers=auth_headers)
+    response = client.post("/entities", json=entity_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -154,7 +154,7 @@ def test_create_entity_without_active_membership(client, db_session):
     db_session.refresh(user)
 
     # Crear token sin membership_id
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     headers = {"Authorization": f"Bearer {token}"}
 
     entity_data = {
@@ -162,7 +162,7 @@ def test_create_entity_without_active_membership(client, db_session):
         "parent_id": 1  # dummy parent_id — permission check happens before entity validation
     }
 
-    response = client.post("/entities/", json=entity_data, headers=headers)
+    response = client.post("/entities", json=entity_data, headers=headers)
 
     # Without active membership, check_entity_permission returns 403
     assert response.status_code in (400, 403)  # 400 if parent not found, 403 if permission denied
@@ -178,7 +178,7 @@ def test_create_entity_creates_admin_and_socio_roles(client, auth_headers, db_se
         "parent_id": test_entity.id
     }
 
-    response = client.post("/entities/", json=entity_data, headers=auth_headers)
+    response = client.post("/entities", json=entity_data, headers=auth_headers)
 
     assert response.status_code == 201
     entity_id = response.json()["id"]
@@ -207,7 +207,7 @@ def test_create_entity_unauthorized(client):
         "name": "Unauthorized Entity"
     }
 
-    response = client.post("/entities/", json=entity_data)
+    response = client.post("/entities", json=entity_data)
 
     assert response.status_code == 401
 
@@ -344,7 +344,7 @@ def test_get_admin_entities_only_admin_superadmin(client, db_session, test_entit
 
     # Crear token para socio user
     token = create_access_token({
-        "sub": socio_user.email,
+        "sub": str(socio_user.id),
         "membership_id": socio_membership.id
     })
     socio_headers = {"Authorization": f"Bearer {token}"}
@@ -424,7 +424,7 @@ def test_get_membership_manageable_entities_requires_permission(client, db_sessi
 
     # Crear token para limited user
     token = create_access_token({
-        "sub": limited_user.email,
+        "sub": str(limited_user.id),
         "membership_id": limited_membership.id
     })
     limited_headers = {"Authorization": f"Bearer {token}"}
@@ -505,7 +505,7 @@ def test_get_entity_roles_filters_superadmin_for_admin(client, db_session, test_
 
     # Crear token para admin user
     token = create_access_token({
-        "sub": admin_user.email,
+        "sub": str(admin_user.id),
         "membership_id": admin_membership.id
     })
     admin_headers = {"Authorization": f"Bearer {token}"}
@@ -576,7 +576,7 @@ def test_get_entity_roles_superadmin_sees_all(client, db_session, test_entity, t
 
     # Crear token para superadmin user
     token = create_access_token({
-        "sub": superadmin_user.email,
+        "sub": str(superadmin_user.id),
         "membership_id": superadmin_membership.id
     })
     superadmin_headers = {"Authorization": f"Bearer {token}"}
@@ -638,9 +638,145 @@ def test_get_entity_roles_requires_membership(client, db_session, test_entity):
     db_session.add(membership)
     db_session.commit()
 
-    token = create_access_token({"sub": user.email, "membership_id": membership.id})
+    token = create_access_token({"sub": str(user.id), "membership_id": membership.id})
     headers = {"Authorization": f"Bearer {token}"}
 
     response = client.get(f"/entities/{other_entity.id}/roles", headers=headers)
 
     assert response.status_code == 403
+
+
+def test_delete_entity_ends_its_memberships(
+    client, auth_headers, db_session, test_entity, test_user, test_role
+):
+    """Deleting an association ends the memberships inside it.
+
+    They used to stay active, leaving members belonging to something that no
+    longer existed and still showing up in listings.
+    """
+    from app.models.entity_model import Entity
+    from app.models.membership_model import Membership
+
+    doomed = Entity(
+        name="Asociación con socios",
+        level=2,
+        parent_id=test_entity.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(doomed)
+    db_session.commit()
+    db_session.refresh(doomed)
+
+    membership = Membership(
+        user_id=test_user.id,
+        entity_id=doomed.id,
+        role_id=test_role.id,
+        is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(membership)
+    db_session.commit()
+    db_session.refresh(membership)
+
+    response = client.delete(f"/entities/{doomed.id}", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["memberships_ended"] == 1
+
+    db_session.refresh(membership)
+    assert membership.is_active is False
+
+
+def test_delete_entity_refuses_when_it_has_children(
+    client, auth_headers, db_session, test_entity
+):
+    """An association with associations under it cannot be removed.
+
+    They would stay active with a deleted parent, still inheriting permissions
+    through it.
+    """
+    from app.models.entity_model import Entity
+
+    parent = Entity(
+        name="Federación con hijas",
+        level=2,
+        parent_id=test_entity.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(parent)
+    db_session.commit()
+    db_session.refresh(parent)
+
+    child = Entity(
+        name="Asociación hija",
+        level=3,
+        parent_id=parent.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(child)
+    db_session.commit()
+
+    response = client.delete(f"/entities/{parent.id}", headers=auth_headers)
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert "Asociación hija" in detail
+
+    db_session.refresh(parent)
+    assert parent.is_active is True
+
+
+def test_deletion_impact_reports_what_would_be_affected(
+    client, auth_headers, db_session, test_entity, test_user, test_role
+):
+    """The interface asks first so it can warn before deleting, not after."""
+    from app.models.entity_model import Entity
+    from app.models.membership_model import Membership
+
+    target = Entity(
+        name="Asociación a consultar",
+        level=2,
+        parent_id=test_entity.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(target)
+    db_session.commit()
+    db_session.refresh(target)
+
+    db_session.add(
+        Membership(
+            user_id=test_user.id,
+            entity_id=target.id,
+            role_id=test_role.id,
+            is_active=True,
+            created_at=datetime.utcnow(),
+        )
+    )
+    db_session.commit()
+
+    response = client.get(
+        f"/entities/{target.id}/deletion-impact", headers=auth_headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["can_delete"] is True
+    assert data["member_count"] == 1
+    assert data["child_count"] == 0
+
+    child = Entity(
+        name="Hija sobrevenida",
+        level=3,
+        parent_id=target.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(child)
+    db_session.commit()
+
+    response = client.get(
+        f"/entities/{target.id}/deletion-impact", headers=auth_headers
+    )
+    data = response.json()
+    assert data["can_delete"] is False
+    assert data["child_count"] == 1
+    assert data["child_names"] == ["Hija sobrevenida"]

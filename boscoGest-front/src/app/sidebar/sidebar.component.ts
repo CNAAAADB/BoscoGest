@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, output, signal, OnInit, OnDestroy, effect, inject, HostListener } from '@angular/core';
+import { Component, computed, input, output, signal, OnInit, OnDestroy, effect, inject, HostListener, ChangeDetectionStrategy} from '@angular/core';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { MatMenuModule } from '@angular/material/menu';
@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../auth/auth.service';
 import { ViewConfigService, ViewMenuItem } from '../settings/view-config.service';
 import { NotificationService } from '../notifications/notification.service';
+import { ChatService } from '../chat/chat.service';
 
 export interface MenuItem extends ViewMenuItem {
   separator?: boolean;
@@ -19,6 +20,8 @@ export interface MenuItem extends ViewMenuItem {
   imports: [RouterModule, CommonModule, MatMenuModule, MatIconModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SidebarComponent implements OnInit, OnDestroy {
   isLeftSidebarCollapsed = input.required<boolean>();
@@ -49,7 +52,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
   });
 
   private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
   unreadCount = this.notificationService.unreadCount;
+  chatUnreadCount = this.chatService.totalUnread;
 
   constructor(
     private authService: AuthService,
@@ -137,6 +142,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       requiresPermission: { resource: 'users', action: 'create' }
     },
     {
+      routeLink: 'membership-requests',
+      icon: 'how_to_reg',
+      label: 'Solicitudes de alta',
+      requiresPermission: { resource: 'memberships', action: 'review' }
+    },
+    {
       routeLink: 'roles',
       icon: 'admin_panel_settings',
       label: 'Roles',
@@ -149,6 +160,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       requiresPermission: { resource: 'communications', action: 'create' }
     },
     {
+      routeLink: 'fees/maintenance',
+      icon: 'autorenew',
+      label: 'Mantenimiento de cuotas',
+      requiresPermission: { resource: 'fees', action: 'maintenance' }
+    },
+    {
       routeLink: 'settings',
       icon: 'settings',
       label: 'Configuración',
@@ -156,9 +173,34 @@ export class SidebarComponent implements OnInit, OnDestroy {
     },
   ];
 
+  // Chat is always visible; only injected if not already in dynamic items
+  private readonly chatItem: MenuItem = {
+    routeLink: 'chat',
+    icon: 'chat',
+    label: 'Chat',
+  };
+
+  // "Mis cuotas" — injected next to the dynamic "fees" view when it is enabled
+  private readonly myFeesItem: MenuItem = {
+    routeLink: 'fees/mine',
+    icon: 'receipt_long',
+    label: 'Mis cuotas',
+  };
+
   // Combined visible items
   visibleItems = computed((): MenuItem[] => {
-    const dynamicItems = this.menuItems();
+    const canManageFees = this.authService.hasPermission('fees', 'manage');
+
+    // Expand the dynamic "fees" view: managers keep the admin view and also get
+    // "Mis cuotas"; members only get "Mis cuotas" (the admin route is guarded).
+    const dynamicItems = this.menuItems().flatMap((item): MenuItem[] => {
+      if (item.routeLink !== 'fees') return [item];
+      return canManageFees ? [item, this.myFeesItem] : [this.myFeesItem];
+    });
+
+    const hasChatDynamic = dynamicItems.some(item => item.routeLink === 'chat');
+    const chatItems: MenuItem[] = hasChatDynamic ? [] : [this.chatItem];
+
     const adminItemsFiltered = this.adminItems.filter(item => {
       if (!item.requiresPermission) return true;
       const { resource, action } = item.requiresPermission;
@@ -169,10 +211,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const hasVisibleAdminItems = adminItemsFiltered.some(item => !item.separator);
 
     if (hasVisibleAdminItems) {
-      return [...dynamicItems, ...adminItemsFiltered];
+      return [...dynamicItems, ...chatItems, ...adminItemsFiltered];
     }
 
-    return dynamicItems;
+    return [...dynamicItems, ...chatItems];
   });
 
   toggleCollapse(): void {

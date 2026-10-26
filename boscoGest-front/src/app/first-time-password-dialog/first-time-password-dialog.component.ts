@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,12 +30,17 @@ export interface FirstTimePasswordChangeRequest {
   ],
   templateUrl: './first-time-password-dialog.component.html',
   styleUrl: './first-time-password-dialog.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FirstTimePasswordDialogComponent {
   changePasswordForm: FormGroup;
   hideNewPassword = true;
   hideConfirmPassword = true;
-  isSubmitting = false;
+  // Signal rather than a plain field: it is flipped inside async
+  // callbacks, and under OnPush a plain assignment would not refresh
+  // the buttons bound to it.
+  isSubmitting = signal(false);
 
   constructor(
     private fb: FormBuilder,
@@ -93,8 +98,8 @@ export class FirstTimePasswordDialogComponent {
   }
 
   onSubmit(): void {
-    if (this.changePasswordForm.valid && !this.isSubmitting) {
-      this.isSubmitting = true;
+    if (this.changePasswordForm.valid && !this.isSubmitting()) {
+      this.isSubmitting.set(true);
       const formValue = this.changePasswordForm.value;
 
       const request: FirstTimePasswordChangeRequest = {
@@ -104,19 +109,16 @@ export class FirstTimePasswordDialogComponent {
 
       this.http.post(`${environment.apiUrl}/users/first-time-password-change`, request).subscribe({
         next: (response: any) => {
-          this.snackBar.open('Contraseña cambiada exitosamente. Por favor, inicia sesión de nuevo.', 'Cerrar', {
-            duration: 5000,
+          this.snackBar.open('Contraseña cambiada correctamente.', 'Cerrar', {
+            duration: 4000,
             panelClass: ['success-snackbar']
           });
-          this.dialogRef.close(true);
-          // Redirigir al login para que el usuario inicie sesión con la nueva contraseña
-          setTimeout(() => {
-            localStorage.removeItem('authToken');
-            this.router.navigate(['/login']);
-          }, 1000);
+          // La sesión sigue siendo válida (el token no se revoca al cambiar la
+          // contraseña). Señalamos al login que ofrezca completar el perfil.
+          this.dialogRef.close('completeProfile');
         },
         error: (error: HttpErrorResponse) => {
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
           let errorMessage = 'Error al cambiar la contraseña';
 
           if (error.status === 403) {

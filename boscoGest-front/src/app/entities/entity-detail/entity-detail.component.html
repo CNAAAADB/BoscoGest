@@ -27,12 +27,12 @@
           @if (showAdminSections()) {
             <div class="header-actions">
               <button mat-raised-button color="primary" (click)="editEntity()">
-                <mat-icon>edit</mat-icon>
+                <mat-icon aria-hidden="true">edit</mat-icon>
                 Editar
               </button>
               @if (entity()!.level !== 1) {
                 <button mat-raised-button color="warn" (click)="deleteEntity()">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                   Eliminar
                 </button>
               }
@@ -43,7 +43,7 @@
       <mat-card-content class="card-content">
         <div class="info-grid">
           <div class="info-item">
-            <mat-icon class="info-icon">fingerprint</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">fingerprint</mat-icon>
             <div class="info-details">
               <span class="info-label">ID</span>
               <span class="info-value">{{ entity()!.id }}</span>
@@ -51,7 +51,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">badge</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">badge</mat-icon>
             <div class="info-details">
               <span class="info-label">Nombre</span>
               <span class="info-value">{{ entity()!.name }}</span>
@@ -59,7 +59,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">layers</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">layers</mat-icon>
             <div class="info-details">
               <span class="info-label">Tipo</span>
               <span class="info-value">{{ getLevelName(entity()!.level) }}</span>
@@ -67,7 +67,7 @@
           </div>
 
           <div class="info-item">
-            <mat-icon class="info-icon">account_tree</mat-icon>
+            <mat-icon class="info-icon" aria-hidden="true">account_tree</mat-icon>
             <div class="info-details">
               <span class="info-label">Asociación Padre</span>
               <span class="info-value">{{ entity()!.parent?.name || 'Sin asociación padre' }}</span>
@@ -82,7 +82,7 @@
       <mat-card class="entity-card">
         <mat-card-header>
           <mat-card-title class="section-title">
-            <mat-icon class="title-icon">admin_panel_settings</mat-icon>
+            <mat-icon class="title-icon" aria-hidden="true">admin_panel_settings</mat-icon>
             Roles Asociados
           </mat-card-title>
         </mat-card-header>
@@ -131,11 +131,11 @@
         <mat-card-header>
           <div class="header-with-action">
             <mat-card-title class="section-title">
-              <mat-icon class="title-icon">people</mat-icon>
+              <mat-icon class="title-icon" aria-hidden="true">people</mat-icon>
               Usuarios Asociados
             </mat-card-title>
             <button mat-raised-button color="primary" (click)="associateUser()">
-              <mat-icon>person_add</mat-icon>
+              <mat-icon aria-hidden="true">person_add</mat-icon>
               Asociar Usuario
             </button>
           </div>
@@ -194,7 +194,7 @@
     <!-- Action Buttons -->
     <div class="action-buttons">
       <button mat-button (click)="goBack()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
         Volver
       </button>
     </div>

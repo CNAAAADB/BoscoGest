@@ -2,8 +2,8 @@
   <mat-card class="upload-card">
     <mat-card-header>
       <div class="header-content">
-        <button mat-icon-button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
+        <button mat-icon-button (click)="goBack()" class="back-button" aria-label="Volver">
+          <mat-icon aria-hidden="true">arrow_back</mat-icon>
         </button>
         <mat-card-title>Subir Nueva Revista</mat-card-title>
       </div>
@@ -77,13 +77,13 @@
             color="accent"
             (click)="fileInput.click()"
             class="file-button">
-            <mat-icon>attach_file</mat-icon>
+            <mat-icon aria-hidden="true">attach_file</mat-icon>
             Seleccionar Archivo PDF
           </button>
 
           @if (selectedFile) {
             <div class="file-info">
-              <mat-icon class="file-icon">picture_as_pdf</mat-icon>
+              <mat-icon class="file-icon" aria-hidden="true">picture_as_pdf</mat-icon>
               <span class="file-name">{{ selectedFile.name }}</span>
               <span class="file-size">({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)</span>
             </div>
@@ -103,7 +103,7 @@
               <mat-spinner diameter="20" class="spinner"></mat-spinner>
               <span>Subiendo...</span>
             } @else {
-              <mat-icon>cloud_upload</mat-icon>
+              <mat-icon aria-hidden="true">cloud_upload</mat-icon>
               <span>Subir Revista</span>
             }
           </button>

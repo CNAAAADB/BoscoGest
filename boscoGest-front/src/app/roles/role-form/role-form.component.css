@@ -182,15 +182,21 @@ input, textarea {
   background-color: rgba(40, 167, 69, 0.15);
 }
 
+/* mat-list-item projects content into its own inner container, so the
+   flex-direction on .permission-item never reaches these. Blocks stack them
+   without depending on Material's internal markup. */
 .permission-label {
+  display: block;
   font-weight: 600;
   color: #1b1b1b;
   font-size: 1rem;
 }
 
 .permission-description {
-  font-size: 0.875rem;
-  color: #6c757d;
+  display: block;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.8rem;
+  color: #646c74;
   margin-top: 0.25rem;
   line-height: 1.4;
 }
@@ -198,7 +204,7 @@ input, textarea {
 .empty-message {
   padding: 2rem;
   text-align: center;
-  color: #6c757d;
+  color: #646c74;
   font-style: italic;
   font-size: 1rem;
 }

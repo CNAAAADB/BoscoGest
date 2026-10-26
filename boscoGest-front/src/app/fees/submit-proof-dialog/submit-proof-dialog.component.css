@@ -1,0 +1,128 @@
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.title-icon {
+  color: #D4A76A;
+}
+
+.dialog-content {
+  max-width: 34rem;
+}
+
+/* What is being paid, stated before what to attach: the member checks this
+   against their bank app. */
+.summary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  background: #f8f9fa;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.summary-label {
+  color: #646c74;
+}
+
+.summary-value {
+  font-weight: 500;
+  color: #1b1b1b;
+}
+
+.summary-value.amount {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #3D4E7C;
+  font-variant-numeric: tabular-nums;
+}
+
+.rejected {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  border-left: 3px solid #c62828;
+  background: rgba(198, 40, 40, 0.06);
+  font-size: 0.875rem;
+}
+
+.hint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #495057;
+  line-height: 1.5;
+}
+
+.file-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+/* The native control is hidden but still focusable, so the label acts as the
+   button and the keyboard path is unchanged. */
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #3D4E7C;
+  border-radius: 1.25rem;
+  color: #3D4E7C;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.file-input:focus-visible + .file-label {
+  outline: 2px solid #3D4E7C;
+  outline-offset: 2px;
+}
+
+.file-chosen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #1b1b1b;
+  word-break: break-all;
+}
+
+.file-none {
+  font-size: 0.8rem;
+  color: #646c74;
+}
+
+.reference-field {
+  width: 100%;
+}
+
+.error-message {
+  margin: 0.5rem 0 0;
+  color: #c62828;
+  font-size: 0.875rem;
+}
+
+.dialog-actions {
+  padding: 0.5rem 1.5rem 1.25rem;
+}

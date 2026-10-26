@@ -5,10 +5,10 @@ from datetime import date
 def test_create_user(client, auth_headers):
     user_data = {
         "email": "newuser@example.com",
-        "password": "SecurePass123",
         "name": "John",
         "surname": "Doe",
-        "phone": "123456789",
+        # Not the fixture user's number: phone is unique as well.
+        "phone": "600111222",
         "address": "123 Main St",
         "birthdate": "1990-01-01",
         "dni": "11111111A",
@@ -19,9 +19,9 @@ def test_create_user(client, auth_headers):
         "job_position": "Software Engineer"
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["email"] == "newuser@example.com"
     assert data["name"] == "John"
@@ -36,7 +36,6 @@ def test_create_user_without_optional_fields(client, auth_headers):
     """Test creating user without hobbies and job_position (optional fields)"""
     user_data = {
         "email": "minimal@example.com",
-        "password": "SecurePass123",
         "name": "Minimal",
         "surname": "User",
         "phone": "111111111",
@@ -45,9 +44,9 @@ def test_create_user_without_optional_fields(client, auth_headers):
         # No hobbies ni job_position
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["email"] == "minimal@example.com"
     assert data["name"] == "Minimal"
@@ -58,7 +57,6 @@ def test_create_user_without_optional_fields(client, auth_headers):
 def test_create_user_duplicate_email(client, auth_headers, test_user):
     user_data = {
         "email": test_user.email,
-        "password": "Password123",
         "name": "Jane",
         "surname": "Doe",
         "phone": "987654321",
@@ -66,16 +64,15 @@ def test_create_user_duplicate_email(client, auth_headers, test_user):
         "dni": "22222222B"
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
     assert response.status_code == 409
-    assert "already exists" in response.json()["detail"]
+    assert response.json()["detail"] == "Ya existe un usuario con ese email"
 
 
 def test_create_user_duplicate_dni(client, auth_headers, test_user):
     user_data = {
         "email": "different@example.com",
-        "password": "Password123",
         "name": "Jane",
         "surname": "Doe",
         "phone": "987654321",
@@ -83,16 +80,15 @@ def test_create_user_duplicate_dni(client, auth_headers, test_user):
         "dni": test_user.dni
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
     assert response.status_code == 409
-    assert "already exists" in response.json()["detail"]
+    assert response.json()["detail"] == "Ya existe un usuario con ese DNI"
 
 
 def test_create_user_unauthorized(client):
     user_data = {
         "email": "unauthorized@example.com",
-        "password": "Password123",
         "name": "Unauthorized",
         "surname": "User",
         "phone": "555555555",
@@ -100,32 +96,31 @@ def test_create_user_unauthorized(client):
         "dni": "99999999Z"
     }
 
-    response = client.post("/users/", json=user_data)
+    response = client.post("/users", json=user_data)
 
     assert response.status_code == 401
 
 
 def test_get_users(client, auth_headers, test_user):
-    response = client.get("/users/", headers=auth_headers)
+    response = client.get("/users", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) >= 1
-    assert any(user["email"] == test_user.email for user in data)
+    assert data["total"] >= 1
+    assert any(user["email"] == test_user.email for user in data["items"])
 
 
 def test_get_users_with_pagination(client, auth_headers):
-    response = client.get("/users/?skip=0&limit=5", headers=auth_headers)
+    response = client.get("/users?skip=0&limit=5", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) <= 5
+    assert data["limit"] == 5
+    assert len(data["items"]) <= 5
 
 
 def test_get_users_unauthorized(client):
-    response = client.get("/users/")
+    response = client.get("/users")
 
     assert response.status_code == 401
 
@@ -243,7 +238,7 @@ def test_update_user_duplicate_email(client, auth_headers, test_user, db_session
     response = client.put(f"/users/{other_user.id}", json=update_data, headers=auth_headers)
 
     assert response.status_code == 409
-    assert "already exists" in response.json()["detail"]
+    assert response.json()["detail"] == "Ya existe un usuario con ese email"
 
 
 def test_delete_user(client, auth_headers, db_session):
@@ -294,7 +289,6 @@ def test_create_user_with_entity_and_role(client, auth_headers, test_entity, tes
     """Test creating user with explicit entity_id and role_id creates membership"""
     user_data = {
         "email": "user_with_membership@example.com",
-        "password": "SecurePass123",
         "name": "Member",
         "surname": "User",
         "phone": "111222333",
@@ -304,9 +298,9 @@ def test_create_user_with_entity_and_role(client, auth_headers, test_entity, tes
         "role_id": test_role.id
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["email"] == "user_with_membership@example.com"
     assert data["name"] == "Member"
@@ -319,7 +313,6 @@ def test_create_user_without_entity_creates_default_membership(client, auth_head
 
     user_data = {
         "email": "default_member@example.com",
-        "password": "SecurePass123",
         "name": "Default",
         "surname": "Member",
         "phone": "444555666",
@@ -328,9 +321,9 @@ def test_create_user_without_entity_creates_default_membership(client, auth_head
         # No entity_id ni role_id
     }
 
-    response = client.post("/users/", json=user_data, headers=auth_headers)
+    response = client.post("/users", json=user_data, headers=auth_headers)
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["email"] == "default_member@example.com"
 
@@ -354,10 +347,12 @@ def test_get_managed_users(client, auth_headers, test_user, db_session):
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    # Should include at least the test_user
-    assert len(data) >= 1
-    assert any(user["email"] == test_user.email for user in data)
+    # The endpoint returns a page envelope so the client can tell when results
+    # have been cut off; it used to return a bare list capped at 100.
+    assert set(data) == {"items", "total", "skip", "limit"}
+    assert len(data["items"]) >= 1
+    assert data["total"] >= 1
+    assert any(user["email"] == test_user.email for user in data["items"])
 
 
 def test_get_managed_users_with_multiple_entities(client, auth_headers, db_session, test_user, test_permissions):
@@ -414,7 +409,7 @@ def test_get_managed_users_with_multiple_entities(client, auth_headers, db_sessi
     assert response.status_code == 200
     data = response.json()
     # Debe incluir tanto test_user como second_user
-    emails = [user["email"] for user in data]
+    emails = [user["email"] for user in data["items"]]
     assert test_user.email in emails
     # second_user podría no estar si no tiene membership, pero al menos test_user debe estar
 

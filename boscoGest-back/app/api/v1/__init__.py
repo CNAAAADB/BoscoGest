@@ -16,6 +16,8 @@ from .notification_router import notification_router
 from .chat_router import chat_router
 from .membership_request_router import membership_request_router
 from .download_router import download_router
+from .fee_router import fee_router
+from .consent_router import consent_router
 
 routers = [
     auth_router,
@@ -37,4 +39,6 @@ routers = [
     notification_router,
     chat_router,
     download_router,
+    fee_router,
+    consent_router,
 ]

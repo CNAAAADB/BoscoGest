@@ -117,7 +117,7 @@ mat-card-header {
 }
 
 .description-cell {
-  color: #6c757d;
+  color: #646c74;
 }
 
 .actions-cell {
@@ -168,7 +168,7 @@ mat-card-header {
 /* Empty State */
 .empty-state {
   text-align: center;
-  color: #6c757d;
+  color: #646c74;
   font-size: 1.25rem;
   padding: 2rem;
   margin: 0;

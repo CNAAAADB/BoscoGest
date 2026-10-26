@@ -7,7 +7,7 @@ def test_create_role(client, auth_headers):
         "description": "A test role"
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -23,11 +23,12 @@ def test_create_role_duplicate_name(client, auth_headers, test_role):
         "description": "Duplicate role"
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     # No debe permitirse crear roles con el mismo nombre (son únicos globalmente)
     assert response.status_code == 409
-    assert "already exists" in response.json()["detail"]
+    # The message now says where the name is taken and what to call this one.
+    assert "Ya existe un rol llamado" in response.json()["detail"]
 
 
 def test_create_role_unauthorized(client):
@@ -36,13 +37,13 @@ def test_create_role_unauthorized(client):
         "description": "Should not be created"
     }
 
-    response = client.post("/roles/", json=role_data)
+    response = client.post("/roles", json=role_data)
 
     assert response.status_code == 401
 
 
 def test_get_roles(client, auth_headers, test_role):
-    response = client.get("/roles/", headers=auth_headers)
+    response = client.get("/roles", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -52,7 +53,7 @@ def test_get_roles(client, auth_headers, test_role):
 
 
 def test_get_roles_with_pagination(client, auth_headers):
-    response = client.get("/roles/?skip=0&limit=5", headers=auth_headers)
+    response = client.get("/roles?skip=0&limit=5", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -61,7 +62,7 @@ def test_get_roles_with_pagination(client, auth_headers):
 
 
 def test_get_roles_unauthorized(client):
-    response = client.get("/roles/")
+    response = client.get("/roles")
 
     assert response.status_code == 401
 
@@ -226,7 +227,7 @@ def test_create_role_associates_with_current_membership_entity(client, auth_head
         "description": "Should be associated with current membership entity"
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -273,7 +274,7 @@ def test_get_roles_returns_only_roles_from_current_entity(client, auth_headers, 
     db_session.commit()
 
     # Get roles with current membership context
-    response = client.get("/roles/", headers=auth_headers)
+    response = client.get("/roles", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -300,7 +301,7 @@ def test_create_multiple_roles_all_associate_with_entity(client, auth_headers, t
             "name": name,
             "description": f"Test role {name}"
         }
-        response = client.post("/roles/", json=role_data, headers=auth_headers)
+        response = client.post("/roles", json=role_data, headers=auth_headers)
         assert response.status_code == 201
         created_role_ids.append(response.json()["id"])
 
@@ -323,7 +324,7 @@ def test_delete_role_associated_with_current_entity(client, auth_headers, test_m
         "name": "deletable_role",
         "description": "Can be deleted"
     }
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
     assert response.status_code == 201
     role_id = response.json()["id"]
 
@@ -437,7 +438,7 @@ def test_create_role_with_permissions(client, auth_headers, db_session, test_per
         "permission_ids": [permission1.id, permission2.id]
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -468,7 +469,7 @@ def test_create_role_without_permissions(client, auth_headers):
         "description": "A test role without permissions"
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -485,7 +486,7 @@ def test_create_role_with_empty_permission_list(client, auth_headers):
         "permission_ids": []
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -500,7 +501,7 @@ def test_create_role_with_invalid_permission_ids(client, auth_headers):
         "permission_ids": [9999, 8888]
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 404
     assert "permission IDs not found" in response.json()["detail"]
@@ -523,7 +524,7 @@ def test_create_role_with_partial_invalid_permission_ids(client, auth_headers, d
         "permission_ids": [valid_permission.id, 9999]
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     assert response.status_code == 404
     assert "permission IDs not found" in response.json()["detail"]
@@ -555,7 +556,7 @@ def test_create_role_with_duplicate_permission_ids(client, auth_headers, db_sess
         "permission_ids": [permission.id, permission.id, permission.id]
     }
 
-    response = client.post("/roles/", json=role_data, headers=auth_headers)
+    response = client.post("/roles", json=role_data, headers=auth_headers)
 
     # Should succeed - SQLAlchemy handles duplicates gracefully
     assert response.status_code == 201
@@ -758,3 +759,62 @@ def test_update_role_with_invalid_permission_ids(client, auth_headers, test_role
     from app.models.role_model import Role
     role = db_session.get(Role, test_role.id)
     assert role.description == test_role.description  # Original description unchanged
+
+
+def test_create_role_explains_a_name_taken_in_another_entity(
+    client, auth_headers, db_session, test_entity, test_permissions
+):
+    """A clash with a role in an association you cannot see needs explaining.
+
+    The list of roles is scoped to your own association, so 'Role name already
+    exists' looked wrong when nothing by that name was on screen.
+    """
+    from app.models.entity_model import Entity
+    from app.models.role_model import Role
+    from datetime import datetime
+
+    other = Entity(
+        name="Atocha",
+        level=3,
+        parent_id=test_entity.id,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(other)
+    db_session.commit()
+
+    taken = Role(name="Tesorero", description="Tesorero de Atocha")
+    db_session.add(taken)
+    db_session.commit()
+    other.roles.append(taken)
+    db_session.commit()
+
+    response = client.post(
+        "/roles",
+        json={"name": "Tesorero", "description": "El nuestro", "permission_ids": []},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert "otra asociación" in detail
+    assert "Atocha" in detail
+    # It should suggest a name that would work, built from the caller's entity.
+    assert f"Tesorero {test_entity.name}" in detail
+
+
+def test_create_role_reports_a_name_already_used_here(
+    client, auth_headers, db_session, test_entity, test_role
+):
+    """Same name, own association — a plain duplicate, and it says so.
+
+    The fixture already links test_role to test_entity.
+    """
+
+    response = client.post(
+        "/roles",
+        json={"name": test_role.name, "description": "Duplicado", "permission_ids": []},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 409
+    assert "en esta asociación" in response.json()["detail"]

@@ -1,0 +1,135 @@
+.consent-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.scope-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: rgba(61, 78, 124, 0.08);
+  font-size: 0.9rem;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  color: #3d4e7c;
+}
+
+.clause-card.current {
+  border-left: 4px solid #3d4e7c;
+}
+
+.clause-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.version-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #3d4e7c;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.version-badge.draft {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.state-label {
+  margin-left: 10px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.state-label.in-force { color: #2e7d32; }
+.state-label.superseded { color: rgba(0, 0, 0, 0.5); }
+.state-label.draft-label { color: #ed6c02; }
+
+.meta-item {
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.meta-item.pending {
+  color: #ed6c02;
+  font-weight: 500;
+}
+
+.meta-item.pending.all-accepted {
+  color: #2e7d32;
+}
+
+/* Preserves the blank lines that separate the clause's sections, which is how
+   the text is authored and how the member-facing dialog renders it. */
+.clause-text {
+  margin: 0;
+  padding: 16px;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.02);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hint {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.version-field {
+  width: 220px;
+  margin-bottom: 8px;
+}
+
+.text-field {
+  width: 100%;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.immutable-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.empty-state {
+  padding: 20px 0;
+  color: rgba(0, 0, 0, 0.55);
+  text-align: center;
+}

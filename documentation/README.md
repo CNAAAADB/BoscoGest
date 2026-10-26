@@ -212,6 +212,8 @@ TFG/
 │   │   ├── magazines/          # Revistas PDF
 │   │   ├── resources/          # Recursos formativos
 │   │   ├── notifications/      # Notificaciones in-app
+│   │   ├── chat/               # Chat en tiempo real
+│   │   ├── fees/               # Cuotas y asignaciones
 │   │   ├── roles/              # Gestion de roles
 │   │   ├── users/              # Gestion de usuarios
 │   │   ├── settings/           # Branding y vistas

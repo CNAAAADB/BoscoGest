@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Request, Response, UploadFile, File, status
-from typing import List, Dict, Any
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Query, Request, Response, UploadFile, File, status
+from typing import List, Dict, Any, Optional
 from app.models.user_model import User
 from app.schemas.user import (
     UserResponse,
@@ -8,45 +8,89 @@ from app.schemas.user import (
     UserDetails,
     PasswordChange,
     FirstTimePasswordChange,
+    PaginatedUsers,
+    ConsentStatus,
+    ConsentAccept,
+    AccountDeletionRequest,
+    AccountDeletionResult,
 )
-from app.utils.auth import require_permission, get_current_active_user
-from app.services.user_service import UserService, get_user_service
+from app.utils.auth import (
+    require_permission,
+    get_current_active_user,
+    get_sync_db,
+    oauth2_scheme,
+)
+from app.services.auth_service import AuthService, get_auth_service
+from app.services.user_service import UserService, get_user_service, process_bulk_upload_job
+from app.services.user_visibility import redact_user, redact_user_details
+from app.services.consent_service import ConsentService
+from app.services.email_service import send_welcome_email
+from app.services import activation_service
+from app.services.member_file import build_template_xlsx
 
 user_router = APIRouter(prefix="/users", tags=["User Management"])
 
 
-@user_router.post("", response_model=UserResponse)
+@user_router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     user: UserCreate,
+    background_tasks: BackgroundTasks,
     request: Request = None,
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_active_user),
 ):
-    return service.create_user(
+    db_user = service.create_user(
         user,
         current_user,
         ip_address=request.client.host if request else None,
     )
+    # The password was generated here and never shown to them, so the email
+    # carries a one-shot link instead. Issued now, synchronously, because the
+    # background task needs the secret to put in the message.
+    activation_url = None
+    if db_user.email:
+        raw_token = activation_service.issue_token(service.db, db_user)
+        activation_url = activation_service.build_activation_url(raw_token)
+
+    background_tasks.add_task(
+        send_welcome_email,
+        db_user.email,
+        f"{db_user.name} {db_user.surname}",
+        activation_url,
+    )
+    return db_user
 
 
-@user_router.get("/managed", response_model=List[UserResponse])
+@user_router.get("/managed", response_model=PaginatedUsers)
 def get_managed_users(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = Query(50, ge=1, le=200),
+    search: Optional[str] = Query(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Case-insensitive match on name, surname, email, DNI or phone.",
+    ),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "manage")),
 ):
-    return service.get_managed_users(current_user, skip=skip, limit=limit)
+    return service.get_managed_users(current_user, skip=skip, limit=limit, search=search)
 
 
-@user_router.get("", response_model=List[UserResponse])
+@user_router.get("", response_model=PaginatedUsers)
 def get_users(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = Query(50, ge=1, le=200),
+    search: Optional[str] = Query(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Case-insensitive match on name, surname, email, DNI or phone.",
+    ),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "list")),
 ):
-    return service.get_users(current_user, skip=skip, limit=limit)
+    return service.get_users(current_user, skip=skip, limit=limit, search=search)
 
 
 @user_router.get("/search/email/{email}", response_model=UserResponse)
@@ -55,7 +99,7 @@ def search_user_by_email(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    return service.search_by_email(email)
+    return redact_user(service.auth_service, current_user, service.search_by_email(email))
 
 
 @user_router.get("/search/dni/{dni}", response_model=UserResponse)
@@ -64,7 +108,145 @@ def search_user_by_dni(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    return service.search_by_dni(dni)
+    return redact_user(service.auth_service, current_user, service.search_by_dni(dni))
+
+
+@user_router.get("/creatable-entities", response_model=List[Dict[str, Any]])
+def get_creatable_entities(
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Entities (asociaciones) where the user may create users — used to
+    populate the association selector of the bulk import."""
+    return service.get_user_creatable_entities(current_user)
+
+
+@user_router.get("/assignable-roles", response_model=List[Dict[str, Any]])
+def get_assignable_roles(
+    entity_id: int,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Roles of a given association that the current user may assign — used to
+    populate the role selector of the bulk import (conditioned on the selected
+    association)."""
+    return service.get_assignable_roles(entity_id, current_user)
+
+
+@user_router.get("/me", response_model=UserDetails)
+def get_my_profile(
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    return service.get_user(current_user.id)
+
+
+@user_router.put("/me", response_model=UserResponse)
+def update_my_profile(
+    user_update: UserUpdate,
+    request: Request = None,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Allows the authenticated user to update their own profile fields."""
+    return service.update_own_profile(
+        current_user,
+        user_update,
+        ip_address=request.client.host if request else None,
+    )
+
+
+@user_router.post("/me/photo", response_model=UserResponse)
+def upload_my_photo(
+    file: UploadFile = File(...),
+    request: Request = None,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """The authenticated user uploads their own profile photo."""
+    content = file.file.read()
+    return service.set_user_photo(
+        current_user.id,
+        content,
+        file.content_type,
+        current_user,
+        ip_address=request.client.host if request else None,
+    )
+
+
+@user_router.post("/{user_id}/photo", response_model=UserResponse)
+def upload_user_photo(
+    user_id: int,
+    file: UploadFile = File(...),
+    request: Request = None,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(require_permission("users", "update")),
+):
+    content = file.file.read()
+    return service.set_user_photo(
+        user_id,
+        content,
+        file.content_type,
+        current_user,
+        ip_address=request.client.host if request else None,
+    )
+
+
+# ──────────────────────────────────────────────
+# GDPR consent
+# ──────────────────────────────────────────────
+#
+# Declared before the /{user_id} routes: FastAPI matches in declaration order,
+# and "/me/consent" would otherwise be captured by "/{user_id}".
+
+@user_router.get("/me/consent", response_model=ConsentStatus)
+def get_my_consent(
+    current_user: User = Depends(get_current_active_user),
+    db=Depends(get_sync_db),
+):
+    """Whether the caller has accepted the current data-processing clause.
+
+    Returns the clause text when they have not, so the client shows exactly
+    what is being agreed to.
+    """
+    return ConsentService(db).get_status(current_user)
+
+
+@user_router.post("/me/consent", response_model=ConsentStatus)
+def accept_my_consent(
+    payload: ConsentAccept,
+    current_user: User = Depends(get_current_active_user),
+    db=Depends(get_sync_db),
+):
+    """Record acceptance of the clause, with the version and a timestamp."""
+    return ConsentService(db).accept(current_user, payload.version)
+
+
+@user_router.delete("/me", response_model=AccountDeletionResult)
+def delete_my_account(
+    deletion: AccountDeletionRequest,
+    request: Request = None,
+    service: UserService = Depends(get_user_service),
+    auth_service: AuthService = Depends(get_auth_service),
+    current_user: User = Depends(get_current_active_user),
+    token: str = Depends(oauth2_scheme),
+):
+    """Delete the caller's own account.
+
+    Reachable by every signed-in user, with no permission attached: this is the
+    in-app deletion route Google Play requires of an app that lets people
+    register themselves, and it has to work for the accounts that used that
+    form. Declared above "/{user_id}" because FastAPI matches in declaration
+    order and would otherwise read "me" as an id.
+    """
+    ip_address = request.client.host if request else None
+    service.delete_own_account(current_user, deletion.password, ip_address=ip_address)
+    # The session outlives the account it belongs to unless the token is
+    # revoked here: it stays valid until it expires on its own.
+    auth_service.logout(current_user, token, ip_address=ip_address)
+    return AccountDeletionResult(
+        message="Tu cuenta ha sido eliminada y tus datos personales borrados."
+    )
 
 
 @user_router.get("/{user_id}", response_model=UserDetails)
@@ -73,7 +255,8 @@ def get_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    return service.get_user(user_id)
+    db_user = service.get_user(user_id)
+    return redact_user_details(service.auth_service, current_user, db_user)
 
 
 @user_router.put("/{user_id}", response_model=UserResponse)
@@ -107,17 +290,114 @@ def delete_user(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@user_router.post("/bulk-upload", response_model=Dict[str, Any])
-def bulk_upload_users(
+@user_router.get("/bulk-upload/template.xlsx")
+def download_bulk_upload_template(
+    current_user: User = Depends(get_current_active_user),
+):
+    """The Excel template for the bulk import.
+
+    Built here rather than in the browser so that the column names come from
+    the same rules the importer applies. Declared before /bulk-upload/{job_id},
+    which would otherwise capture it.
+    """
+    return Response(
+        content=build_template_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="plantilla_usuarios.xlsx"'},
+    )
+
+
+@user_router.post("/bulk-upload/validate", status_code=status.HTTP_200_OK)
+def validate_bulk_upload(
     file: UploadFile = File(...),
+    entity_id: int = Form(...),
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Check a member file (CSV or Excel) and report on it without creating anything.
+
+    Deliberately not a dry-run flag on the import endpoint: this creates no
+    job, leaves no trace, and can be run as many times as it takes to get the
+    file right. No role is needed either — the role only matters once users are
+    actually created.
+    """
+    content = file.file.read()
+    return service.validate_bulk_csv(content, file.filename, entity_id, current_user)
+
+
+@user_router.post("/bulk-upload", status_code=status.HTTP_202_ACCEPTED)
+def bulk_upload_users(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    entity_id: int = Form(...),
+    role_id: int = Form(...),
     request: Request = None,
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_active_user),
 ):
     content = file.file.read()
-    return service.bulk_upload_users(
-        content,
-        file.filename,
+    job = service.create_bulk_upload_job(
+        content, file.filename, current_user, entity_id, role_id
+    )
+    ip = request.client.host if request else None
+    background_tasks.add_task(process_bulk_upload_job, job.id, current_user.id, ip)
+    return {"job_id": job.id, "status": job.status}
+
+
+@user_router.get("/bulk-upload/jobs", response_model=List[Dict[str, Any]])
+def list_bulk_upload_jobs(
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+    _: bool = Depends(require_permission("users", "create")),
+):
+    jobs = service.list_bulk_upload_jobs(current_user)
+    return [_job_to_dict(j) for j in jobs]
+
+
+@user_router.get("/bulk-upload/{job_id}", response_model=Dict[str, Any])
+def get_bulk_upload_job(
+    job_id: int,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+    _: bool = Depends(require_permission("users", "create")),
+):
+    job = service.get_bulk_upload_job(job_id, current_user)
+    return _job_to_dict(job)
+
+
+def _job_to_dict(job) -> Dict[str, Any]:
+    return {
+        "id": job.id,
+        "status": job.status,
+        "csv_filename": job.csv_filename,
+        "total_rows": job.total_rows,
+        "processed_rows": job.processed_rows,
+        "successful": job.successful,
+        "failed": job.failed,
+        "errors": job.errors or [],
+        "created_users": job.created_users or [],
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "created_by_id": job.created_by_id,
+    }
+
+
+@user_router.post("/{user_id}/activation-link", status_code=status.HTTP_200_OK)
+def issue_activation_link(
+    user_id: int,
+    request: Request = None,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get a fresh sign-in link to hand to someone in person.
+
+    For members the welcome email cannot reach: registered with a phone and no
+    address, or the message never arrived. Only for accounts that have never
+    set a password of their own — see the service for why that limit matters.
+    """
+    return service.issue_activation_link(
+        user_id,
         current_user,
         ip_address=request.client.host if request else None,
     )

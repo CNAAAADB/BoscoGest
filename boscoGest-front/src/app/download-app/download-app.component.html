@@ -6,7 +6,7 @@
     <mat-card class="download-card android-card">
       <mat-card-content>
         <div class="platform-header">
-          <mat-icon class="platform-icon android-icon">android</mat-icon>
+          <mat-icon class="platform-icon android-icon" aria-hidden="true">android</mat-icon>
           <div class="platform-info">
             <h2>Android</h2>
             <p class="app-version">BoscoGest v1.0</p>
@@ -21,7 +21,7 @@
             Obteniendo enlace...
           } @else {
             <ng-container>
-              <mat-icon>download</mat-icon>
+              <mat-icon aria-hidden="true">download</mat-icon>
               Descargar APK
             </ng-container>
           }
@@ -33,7 +33,7 @@
     <mat-card class="download-card ios-card disabled-card">
       <mat-card-content>
         <div class="platform-header">
-          <mat-icon class="platform-icon ios-icon">phone_iphone</mat-icon>
+          <mat-icon class="platform-icon ios-icon" aria-hidden="true">phone_iphone</mat-icon>
           <div class="platform-info">
             <h2>iOS</h2>
             <p class="app-version">Proximamente</p>
@@ -43,7 +43,7 @@
           La version para iPhone y iPad estara disponible proximamente.
         </p>
         <button mat-raised-button disabled class="download-button">
-          <mat-icon>hourglass_empty</mat-icon>
+          <mat-icon aria-hidden="true">hourglass_empty</mat-icon>
           No disponible
         </button>
       </mat-card-content>
@@ -54,7 +54,7 @@
   <mat-card class="instructions-card">
     <mat-card-content>
       <h3>
-        <mat-icon class="instructions-icon">info</mat-icon>
+        <mat-icon class="instructions-icon" aria-hidden="true">info</mat-icon>
         Instrucciones de instalacion
       </h3>
       <ol>

@@ -2,8 +2,8 @@
   <mat-card class="form-card">
     <mat-card-header>
       <div class="header-content">
-        <button mat-icon-button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
+        <button mat-icon-button (click)="goBack()" class="back-button" aria-label="Volver">
+          <mat-icon aria-hidden="true">arrow_back</mat-icon>
         </button>
         <mat-card-title>{{ isEditMode() ? 'Editar Recurso' : 'Nuevo Recurso' }}</mat-card-title>
       </div>
@@ -19,7 +19,7 @@
             <mat-select formControlName="resource_type" required>
               @for (type of resourceTypes; track type.value) {
                 <mat-option [value]="type.value">
-                  <mat-icon>{{ type.icon }}</mat-icon>
+                  <mat-icon aria-hidden="true">{{ type.icon }}</mat-icon>
                   {{ type.label }}
                 </mat-option>
               }
@@ -41,7 +41,7 @@
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>URL</mat-label>
             <input matInput formControlName="url" placeholder="https://..." type="url">
-            <mat-icon matPrefix>link</mat-icon>
+            <mat-icon matPrefix aria-hidden="true">link</mat-icon>
           </mat-form-field>
         }
 
@@ -61,13 +61,13 @@
               color="accent"
               (click)="fileInput.click()"
               class="file-button">
-              <mat-icon>attach_file</mat-icon>
+              <mat-icon aria-hidden="true">attach_file</mat-icon>
               Seleccionar Archivo
             </button>
 
             @if (selectedFile) {
               <div class="file-info">
-                <mat-icon class="file-icon">insert_drive_file</mat-icon>
+                <mat-icon class="file-icon" aria-hidden="true">insert_drive_file</mat-icon>
                 <span class="file-name">{{ selectedFile.name }}</span>
                 <span class="file-size">({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)</span>
               </div>
@@ -103,8 +103,8 @@
               }
             </mat-select>
           </mat-form-field>
-          <button type="button" mat-icon-button color="primary" (click)="openCategoryDialog()" title="Nueva categoría">
-            <mat-icon>add_circle</mat-icon>
+          <button type="button" mat-icon-button color="primary" (click)="openCategoryDialog()" title="Nueva categoría" aria-label="Crear categoría">
+            <mat-icon aria-hidden="true">add_circle</mat-icon>
           </button>
         </div>
 
@@ -112,7 +112,7 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Etiquetas (opcional)</mat-label>
           <input matInput formControlName="tags" placeholder="angular, frontend, tutorial (separadas por comas)">
-          <mat-icon matPrefix>label</mat-icon>
+          <mat-icon matPrefix aria-hidden="true">label</mat-icon>
           <mat-hint>Separa las etiquetas con comas</mat-hint>
         </mat-form-field>
 
@@ -141,7 +141,7 @@
               <mat-spinner diameter="20" class="spinner"></mat-spinner>
               <span>{{ isEditMode() ? 'Guardando...' : 'Creando...' }}</span>
             } @else {
-              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
               <span>{{ isEditMode() ? 'Guardar Cambios' : 'Crear Recurso' }}</span>
             }
           </button>

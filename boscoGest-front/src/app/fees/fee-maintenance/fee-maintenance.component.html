@@ -1,0 +1,75 @@
+<div class="maintenance-container">
+  <div class="header">
+    <h1 class="page-title">Mantenimiento de cuotas</h1>
+    <button mat-raised-button color="primary" (click)="runNow()" [disabled]="running()">
+      @if (running()) {
+        <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+      } @else {
+        <mat-icon aria-hidden="true">play_arrow</mat-icon>
+      }
+      Ejecutar ahora
+    </button>
+  </div>
+
+  <p class="subtitle">
+    Tarea diaria automática: marca vencidas, envía recordatorios y renueva cuotas.
+    Aquí se registran todas las ejecuciones (programadas y manuales).
+  </p>
+
+  @if (loading()) {
+    <div class="loading-container"><mat-progress-spinner mode="indeterminate"></mat-progress-spinner></div>
+  } @else if (runs().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon" aria-hidden="true">history</mat-icon>
+      <h2>Sin ejecuciones</h2>
+      <p>Todavía no se ha ejecutado el mantenimiento. Pulsa «Ejecutar ahora» para lanzarlo.</p>
+    </div>
+  } @else {
+    <div class="runs-list">
+      @for (run of runs(); track run.id) {
+        <mat-card class="run-card" [class.run-error]="run.status === 'error'">
+          <mat-card-content>
+            <div class="run-row">
+              <div class="run-main">
+                <div class="run-when">
+                  <mat-icon class="meta-icon" aria-hidden="true">schedule</mat-icon>
+                  {{ run.started_at | date:'dd/MM/yyyy HH:mm:ss' }}
+                  @if (durationSeconds(run) !== null) {
+                    <span class="run-duration">· {{ durationSeconds(run) | number:'1.0-2' }}s</span>
+                  }
+                </div>
+                <div class="run-chips">
+                  <span class="chip chip-trigger">
+                    <mat-icon class="meta-icon" aria-hidden="true">{{ run.trigger === 'manual' ? 'person' : 'schedule_send' }}</mat-icon>
+                    {{ run.trigger === 'manual' ? 'Manual' : 'Programada' }}
+                    @if (run.triggered_by) { · {{ run.triggered_by.name }} {{ run.triggered_by.surname }} }
+                  </span>
+                  <span class="chip" [class.chip-ok]="run.status === 'success'" [class.chip-ko]="run.status === 'error'">
+                    <mat-icon class="meta-icon" aria-hidden="true">{{ run.status === 'success' ? 'check_circle' : 'error' }}</mat-icon>
+                    {{ run.status === 'success' ? 'OK' : 'Error' }}
+                  </span>
+                </div>
+              </div>
+              <div class="run-counts">
+                <span class="count"><strong>{{ run.overdue_count }}</strong> vencidas</span>
+                <span class="count"><strong>{{ run.reminded_count }}</strong> avisos</span>
+                <span class="count"><strong>{{ run.renewed_count }}</strong> renovadas</span>
+              </div>
+            </div>
+
+            @if (run.error) {
+              <div class="run-error-msg">
+                <mat-icon class="meta-icon" aria-hidden="true">warning</mat-icon> {{ run.error }}
+              </div>
+            }
+
+            <details class="run-log">
+              <summary>Ver log</summary>
+              <pre>{{ prettyDetails(run) }}</pre>
+            </details>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

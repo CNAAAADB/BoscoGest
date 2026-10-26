@@ -15,9 +15,13 @@ services:
       - boscogest-network
 
   back:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: boscoGest_back
     restart: always
+    # Same as production: tini reaps orphaned processes (see Dockerfile).
+    init: true
     env_file:
       - .env
     environment:

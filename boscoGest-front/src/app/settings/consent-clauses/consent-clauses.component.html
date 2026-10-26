@@ -1,0 +1,205 @@
+<div class="consent-admin">
+  <div class="scope-notice">
+    <mat-icon aria-hidden="true">public</mat-icon>
+    <span>
+      La cláusula es común a toda la plataforma, no depende de la entidad
+      seleccionada.
+    </span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    </div>
+  } @else {
+
+    <!-- ── Clause currently in force ───────────────────────────────────── -->
+    <mat-card class="clause-card current">
+      <mat-card-header>
+        <mat-card-title class="card-title">
+          <mat-icon class="title-icon" aria-hidden="true">verified_user</mat-icon>
+          Cláusula en vigor
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (published(); as current) {
+          <div class="clause-meta">
+            <span class="version-badge">v{{ current.version }}</span>
+            <span class="meta-item">
+              Publicada el {{ current.published_at | date:'d MMM y, HH:mm' }}
+            </span>
+            @if (pending() !== null) {
+              <span class="meta-item pending" [class.all-accepted]="pending() === 0">
+                @if (pending() === 0) {
+                  Aceptada por todos los usuarios activos
+                } @else {
+                  {{ pending() }} usuario{{ pending() === 1 ? '' : 's' }} sin aceptarla
+                }
+              </span>
+            }
+          </div>
+          <pre class="clause-text">{{ current.text }}</pre>
+        } @else {
+          <p class="empty-state">
+            No hay ninguna versión publicada. Se está usando el texto por defecto
+            incluido en la aplicación.
+          </p>
+        }
+      </mat-card-content>
+      <mat-card-actions align="end">
+        @if (!showNewForm()) {
+          <button mat-raised-button color="primary" (click)="startNewVersion()">
+            <mat-icon aria-hidden="true">edit_note</mat-icon>
+            Nueva versión
+          </button>
+        }
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- ── New version ────────────────────────────────────────────────── -->
+    @if (showNewForm()) {
+      <mat-card class="clause-card">
+        <mat-card-header>
+          <mat-card-title class="card-title">
+            <mat-icon class="title-icon" aria-hidden="true">note_add</mat-icon>
+            Nueva versión
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="hint">
+            El texto parte de la versión en vigor. Las versiones publicadas no se
+            pueden modificar, así que cualquier cambio crea una versión nueva.
+          </p>
+
+          <mat-form-field appearance="outline" class="version-field">
+            <mat-label>Versión</mat-label>
+            <input matInput
+                   [ngModel]="newVersion()"
+                   (ngModelChange)="newVersion.set($event)"
+                   placeholder="1.1"
+                   maxlength="20">
+            <mat-hint>Identificador libre: 1.1, 2026-05…</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="text-field">
+            <mat-label>Texto de la cláusula</mat-label>
+            <textarea matInput
+                      rows="16"
+                      [ngModel]="newText()"
+                      (ngModelChange)="newText.set($event)"></textarea>
+            <mat-hint>
+              Separa los apartados con una línea en blanco. Usa **Título.** al
+              principio de cada apartado para destacarlo.
+            </mat-hint>
+          </mat-form-field>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button (click)="cancelNewVersion()" [disabled]="saving()">
+            Cancelar
+          </button>
+          <button mat-stroked-button (click)="createDraft(false)" [disabled]="saving()">
+            Guardar como borrador
+          </button>
+          <button mat-raised-button color="primary"
+                  (click)="createDraft(true)"
+                  [disabled]="saving()">
+            Guardar y publicar
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+
+    <!-- ── Version history ────────────────────────────────────────────── -->
+    <mat-card class="clause-card">
+      <mat-card-header>
+        <mat-card-title class="card-title">
+          <mat-icon class="title-icon" aria-hidden="true">history</mat-icon>
+          Historial de versiones
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (clauses().length === 0) {
+          <p class="empty-state">Todavía no hay versiones guardadas.</p>
+        } @else {
+          <mat-accordion multi="false">
+            @for (clause of clauses(); track clause.id) {
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <span class="version-badge"
+                          [class.draft]="!clause.is_published">v{{ clause.version }}</span>
+                    @if (clause.is_published) {
+                      <span class="state-label in-force">En vigor</span>
+                    } @else if (clause.published_at) {
+                      <span class="state-label superseded">Sustituida</span>
+                    } @else {
+                      <span class="state-label draft-label">Borrador</span>
+                    }
+                  </mat-panel-title>
+                  <mat-panel-description>
+                    Creada el {{ clause.created_at | date:'d MMM y' }}
+                  </mat-panel-description>
+                </mat-expansion-panel-header>
+
+                @if (editingId() === clause.id) {
+                  <mat-form-field appearance="outline" class="text-field">
+                    <mat-label>Texto del borrador</mat-label>
+                    <textarea matInput
+                              rows="14"
+                              [ngModel]="editingText()"
+                              (ngModelChange)="editingText.set($event)"></textarea>
+                  </mat-form-field>
+                  <div class="panel-actions">
+                    <button mat-button (click)="cancelEditingDraft()" [disabled]="saving()">
+                      Cancelar
+                    </button>
+                    <button mat-raised-button color="primary"
+                            (click)="saveDraft(clause)"
+                            [disabled]="saving()">
+                      Guardar
+                    </button>
+                  </div>
+                } @else {
+                  <pre class="clause-text">{{ clause.text }}</pre>
+                  <div class="panel-actions">
+                    @if (!clause.is_published && !clause.published_at) {
+                      <button mat-button (click)="startEditingDraft(clause)">
+                        <mat-icon aria-hidden="true">edit</mat-icon>
+                        Editar
+                      </button>
+                      <button mat-button color="warn" (click)="deleteDraft(clause)">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
+                        Descartar
+                      </button>
+                      <button mat-raised-button color="primary" (click)="publish(clause)">
+                        <mat-icon aria-hidden="true">publish</mat-icon>
+                        Publicar
+                      </button>
+                    } @else if (clause.is_published) {
+                      <span class="immutable-note">
+                        <mat-icon inline aria-hidden="true">lock</mat-icon>
+                        En vigor. Su texto no puede modificarse: es el registro de
+                        lo que los usuarios han aceptado.
+                      </span>
+                    } @else {
+                      <span class="immutable-note">
+                        <mat-icon inline aria-hidden="true">lock</mat-icon>
+                        Estuvo en vigor, así que se conserva como registro de lo
+                        que aceptaron los usuarios de entonces.
+                      </span>
+                      <button mat-raised-button (click)="publish(clause)"
+                              matTooltip="Volver a poner esta versión en vigor">
+                        <mat-icon aria-hidden="true">publish</mat-icon>
+                        Restaurar
+                      </button>
+                    }
+                  </div>
+                }
+              </mat-expansion-panel>
+            }
+          </mat-accordion>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

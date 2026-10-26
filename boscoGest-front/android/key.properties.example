@@ -1,0 +1,13 @@
+# Copia este fichero a android/key.properties y rellena los valores.
+# NUNCA lo subas al repositorio: contiene las contraseñas del almacén de claves.
+#
+# Generar el almacén (una sola vez, y guardar copia de seguridad: si se pierde,
+# no se puede volver a publicar una actualización de la app):
+#
+#   keytool -genkey -v -keystore ~/keys/boscogest-upload.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias boscogest
+
+storeFile=/ruta/absoluta/a/boscogest-upload.jks
+storePassword=
+keyAlias=boscogest
+keyPassword=

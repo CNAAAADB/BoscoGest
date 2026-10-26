@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -31,6 +31,8 @@ import { environment } from '../../../environments/environment';
   ],
   templateUrl: './communications-form.component.html',
   styleUrl: './communications-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NewsFormComponent implements OnInit {
   newsForm: FormGroup;
@@ -39,7 +41,9 @@ export class NewsFormComponent implements OnInit {
   communicationId: number | null = null;
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  currentImageUrl: string | null = null;
+  // Signal: assigned inside a subscribe callback, which under OnPush
+  // would not mark the component dirty and the preview would not appear.
+  currentImageUrl = signal<string | null>(null);
   uploadingImage = signal<boolean>(false);
   apiUrl = environment.apiUrl;
   availableEntities = signal<EntityResponse[]>([]);
@@ -104,7 +108,7 @@ export class NewsFormComponent implements OnInit {
 
         // Set current image if exists
         if (news.image_url) {
-          this.currentImageUrl = news.image_url;
+          this.currentImageUrl.set(news.image_url);
         }
 
         this.loading.set(false);
@@ -158,7 +162,7 @@ export class NewsFormComponent implements OnInit {
   removeImage(): void {
     this.selectedFile = null;
     this.imagePreview = null;
-    this.currentImageUrl = null;
+    this.currentImageUrl.set(null);
   }
 
   getImageUrl(imageUrl: string | null): string {

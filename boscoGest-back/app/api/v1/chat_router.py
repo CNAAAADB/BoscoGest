@@ -354,10 +354,11 @@ def review_join_request(
 @chat_router.get("/users/search", response_model=List[UserSearchResult])
 def search_users(
     q: str = Query(default="", min_length=2),
+    entity_id: Optional[int] = Query(default=None),
     service: ChatService = Depends(get_chat_service),
     current_user: User = Depends(get_current_active_user),
 ):
-    return service.search_users(q, current_user)
+    return service.search_users(q, current_user, entity_id=entity_id)
 
 
 # ── WebSocket ─────────────────────────────────────────────────────────
@@ -386,18 +387,19 @@ async def websocket_chat(
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str | None = payload.get("sub")
-        if email is None:
+        sub: str | None = payload.get("sub")
+        if sub is None:
             await websocket.close(code=4001)
             return
-    except JWTError:
+        user_sub_id = int(sub)
+    except (JWTError, ValueError, TypeError):
         await websocket.close(code=4001)
         return
 
     db: Session = next(get_sync_db())
     try:
         user = db.execute(
-            select(User).where(User.email == email, User.is_active == True)
+            select(User).where(User.id == user_sub_id, User.is_active == True)
         ).scalars().first()
 
         if not user:

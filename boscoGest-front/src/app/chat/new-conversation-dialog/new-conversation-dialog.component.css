@@ -1,0 +1,78 @@
+.tab-content {
+  padding: 1.5rem 0 0.5rem;
+  min-height: 260px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.hint {
+  color: #646c74;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.user-item:hover {
+  background-color: #f4f7fa;
+}
+
+.user-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  border-radius: 50%;
+  background-color: #3D4E7C;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #1b1b1b;
+  font-size: 0.9375rem;
+}
+
+.user-email {
+  font-size: 0.8125rem;
+  color: #646c74;
+}
+
+.user-arrow {
+  color: #646c74;
+}
+
+.group-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}

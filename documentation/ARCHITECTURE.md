@@ -18,6 +18,7 @@ BoscoGest es un sistema de gestión multi-tenant diseñado para organizaciones j
 | **Frontend** | Angular + Angular Material | Angular 20, Material 3 |
 | **Móvil** | Capacitor | 8.1 (Android + iOS) |
 | **Autenticación** | JWT (HS256) | python-jose + passlib[bcrypt] |
+| **Tareas programadas** | APScheduler (AsyncIOScheduler in-process) | 3.11 — mantenimiento diario de cuotas |
 | **Tests** | pytest (backend), Karma+Jasmine (frontend) | — |
 | **Despliegue** | Docker Compose + AWS EC2 | — |
 
@@ -105,6 +106,12 @@ Cada `Entity` tiene:
 | **ChatMember** | `chat_members` | conversation_id, user_id, role (admin/member), joined_at, left_at, last_read_at, is_active, is_muted, is_pinned | Miembro de una conversación; índice compuesto (conversation_id, user_id) |
 | **ChatMessage** | `chat_messages` | conversation_id, sender_id, content, message_type (text/system/file), reply_to_id, reply_preview, file_url, file_name, file_type, is_deleted, created_at | Mensaje de chat; soporta respuestas anidadas (self-FK) e índice compuesto (conversation_id, created_at) |
 | **ChatJoinRequest** | `chat_join_requests` | conversation_id, user_id, status (pending/accepted/rejected), requested_at, reviewed_by_id, reviewed_at | Solicitudes de acceso a grupos; revisadas por admins del grupo |
+| **ResourceCategory** | `resource_categories` | name, description, entity_id, is_active, created_at | Categorías de recursos por entidad |
+| **Resource** | `resources` | title, description, resource_type (link/document/image/video), url, file_path, original_filename, tags, entity_id, category_id, created_by, is_active | Recursos formativos por entidad |
+| **Fee** | `fees` | entity_id, name, **periodicity** (weekly/monthly/quarterly/four_monthly/biannual/annual), **auto_renew**, **reminder_days**, is_active, created_by, created_at | Cuota **con nombre y periodicidad** por entidad; una entidad puede tener varias. `auto_renew`/`reminder_days` controlan la renovación y avisos; el vencimiento se deriva de la periodicidad (fin del período). Soft-delete |
+| **FeeConfig** | `fee_configs` | fee_id, amount, valid_from, valid_until, created_by | Versión de importe (histórico) de una cuota. **Inmutable**; `valid_until` opcional, al añadir versión se auto-cierra la anterior (la última es la vigente) |
+| **FeeAssignment** | `fee_assignments` | fee_id, user_id, entity_id, fee_config_id, period, amount, status (pending/paid/overdue/cancelled), due_date, paid_at, notes, **reminder_sent** | Cuota debida por un socio en un período (**derivado** de la periodicidad de la cuota + fecha); importe = snapshot del vigente. Unique (user_id, fee_id, period) |
+| **FeeMaintenanceRun** | `fee_maintenance_runs` | started_at, finished_at, status (success/error), trigger (scheduled/manual), triggered_by_id, overdue_count, reminded_count, renewed_count, details (JSON), error | Log de cada ejecución del mantenimiento diario de cuotas (vencidas/recordatorios/renovación). Alimenta la vista de monitorización |
 
 ### 2.4 Tablas de Relación Many-to-Many
 
@@ -192,6 +199,8 @@ check_entity_permission(db, user, entity_id=Local_4, "activities", "create")
 | communications | create, read, edit, delete, publish, review | Publicar noticias en entidades descendientes; publish/review para workflow editorial |
 | comment | create, read, edit, delete | Comentar en entidades descendientes |
 | magazines | create, list, read, update, delete | Revistas gestionables desde niveles superiores |
+| resources | create, list, read, update, delete | Recursos formativos gestionables desde niveles superiores |
+| fees | list, read, manage | Consultar/gestionar cuotas y asignaciones en entidades descendientes |
 | roles | list, read | Visualizar roles disponibles en descendientes |
 | entities | list, read | Visualizar entidades descendientes |
 
@@ -205,6 +214,8 @@ check_entity_permission(db, user, entity_id=Local_4, "activities", "create")
 | memberships | create, delete, manage, update, list, read, assign, review | Gestión de membresías es local; `review` permite aceptar/rechazar solicitudes de alta |
 | roles | create, update, delete, assign | Modificación de roles es local |
 | notifications | create, list, read, update, delete, manage, manage_all | Gestión de notificaciones es local (read/list para usuarios) |
+| fees | create | Crear cuotas/generar asignaciones es operación local de la entidad |
+| fees | maintenance | Ejecutar/monitorizar el mantenimiento de cuotas — capacidad global (cross-entidad), por defecto solo superadmin |
 
 #### manage_all — Bypass global (solo superadmin)
 
@@ -273,7 +284,7 @@ La arquitectura sigue el patrón **Controller → Service → Repository**:
 ```
 boscoGest/
 ├── app/
-│   ├── api/v1/                 # 18 Routers (Controllers) — capa HTTP delgada
+│   ├── api/v1/                 # 19 Routers (Controllers) — capa HTTP delgada
 │   │   ├── __init__.py         # Lista de routers para registro
 │   │   ├── auth_router.py      # /auth — login, logout, check-permission, register (público)
 │   │   ├── user_router.py      # /users — CRUD, bulk upload, search
@@ -291,12 +302,14 @@ boscoGest/
 │   │   ├── view_config_router.py # /view-configs — sidebar dinámico
 │   │   ├── resource_router.py  # /resources + /resource-categories
 │   │   ├── notification_router.py # /notifications — REST + WebSocket
-│   │   └── chat_router.py      # /chat — conversaciones, mensajes, grupos, WebSocket
-│   ├── services/               # 21 Services — lógica de negocio
+│   │   ├── chat_router.py      # /chat — conversaciones, mensajes, grupos, WebSocket
+│   │   ├── download_router.py  # /downloads — descarga de archivos (proxy/presigned)
+│   │   └── fee_router.py       # /fees — cuotas, histórico, preview, asignaciones, mantenimiento (run/runs)
+│   ├── services/               # 24 Services — lógica de negocio
 │   │   ├── authorization_service.py  # RBAC jerárquico
 │   │   ├── audit_service.py          # Logging de auditoría
 │   │   ├── auth_service.py           # Login, logout, token refresh
-│   │   ├── user_service.py           # CRUD usuarios, bulk upload CSV
+│   │   ├── user_service.py           # CRUD usuarios, bulk upload (Excel/CSV vía member_file.py)
 │   │   ├── entity_service.py         # Gestión jerarquía, roles por defecto
 │   │   ├── membership_service.py     # Memberships + auto-creación padres
 │   │   ├── membership_request_service.py # Solicitudes de alta: crear, aceptar, rechazar, cancelar
@@ -314,6 +327,9 @@ boscoGest/
 │   │   ├── notification_manager.py   # Singleton WebSocket, cola async (notificaciones)
 │   │   ├── chat_service.py           # Lógica chat: conversaciones, mensajes, grupos
 │   │   ├── chat_manager.py           # Singleton WebSocket, cola async (chat)
+│   │   ├── fee_service.py            # Cuotas: alta multi-entidad, histórico, preview, generación, estados, run_maintenance
+│   │   ├── fee_scheduler.py          # APScheduler in-process: job diario de mantenimiento de cuotas
+│   │   ├── email_service.py          # Envío de emails (AWS SES) — bienvenida
 │   │   └── storage.py               # StorageService (S3 + Local backends)
 │   ├── repositories/           # 18 Repositories — acceso a datos
 │   │   ├── base_repository.py       # BaseRepository[T] genérico (CRUD)
@@ -332,7 +348,8 @@ boscoGest/
 │   │   ├── view_config_repository.py
 │   │   ├── resource_repository.py
 │   │   ├── notification_repository.py
-│   │   └── chat_repository.py       # Queries de conversaciones, miembros, mensajes
+│   │   ├── chat_repository.py       # Queries de conversaciones, miembros, mensajes
+│   │   └── fee_repository.py        # FeeRepository + FeeConfigRepository + FeeAssignmentRepository + FeeMaintenanceRunRepository
 │   ├── models/                 # 23 Modelos SQLAlchemy ORM
 │   │   ├── relationships.py    # Tablas M:M
 │   │   ├── chat_model.py       # ChatConversation, ChatMember, ChatMessage, ChatJoinRequest
@@ -414,7 +431,9 @@ Pydantic Response Schema → JSON
 | GET | `/{id}` | users:read | Detalle de usuario |
 | PUT | `/{id}` | users:update | Actualizar usuario |
 | DELETE | `/{id}` | users:delete | Soft delete |
-| POST | `/bulk-upload` | users:create (jerárquico) | Importación CSV masiva |
+| GET | `/bulk-upload/template.xlsx` | Autenticado | Plantilla Excel de la importación masiva |
+| POST | `/bulk-upload/validate` | users:create (jerárquico) | Comprobar un archivo (.xlsx o .csv) sin crear nada |
+| POST | `/bulk-upload` | users:create (jerárquico) | Importación masiva desde Excel (.xlsx) o CSV |
 | POST | `/change-password` | Autenticado | Cambio de contraseña |
 | POST | `/first-time-password-change` | Autenticado | Primer cambio obligatorio |
 | GET | `/search/email/{email}` | users:read | Buscar por email |
@@ -689,7 +708,7 @@ boscoGest-front/
 │   ├── breadcrumb/              # Navegación por migas de pan
 │   ├── dashboard/               # Calendario (FullCalendar) + actividades + noticias
 │   ├── login/                   # Formulario de login + enlace a registro
-│   ├── users/                   # Gestión de usuarios (CRUD, importación CSV)
+│   ├── users/                   # Gestión de usuarios (CRUD, importación Excel/CSV)
 │   ├── entities/                # Gestión de entidades/asociaciones
 │   ├── roles/                   # Gestión de roles y permisos
 │   ├── activities/              # Gestión de actividades e inscripciones

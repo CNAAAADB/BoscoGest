@@ -178,10 +178,19 @@ mat-card-header {
   transform: scale(1.1);
 }
 
+.chat-button {
+  color: #3D4E7C !important;
+}
+
+.chat-button:hover {
+  background-color: rgba(61, 78, 124, 0.1) !important;
+  transform: scale(1.1);
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
-  color: #6c757d;
+  color: #646c74;
   font-size: 1.25rem;
   padding: 2rem;
   margin: 0;
@@ -215,4 +224,28 @@ mat-card-header {
   .table-container {
     overflow-x: scroll;
   }
+}
+
+/* ── Search bar ─────────────────────────────────────────────────────────── */
+
+.search-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.search-field {
+  flex: 1 1 320px;
+  max-width: 480px;
+}
+
+.result-count {
+  /* Aligns with the input rather than the field's top edge, which includes
+     the floating label. */
+  margin-top: 18px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
+  white-space: nowrap;
 }

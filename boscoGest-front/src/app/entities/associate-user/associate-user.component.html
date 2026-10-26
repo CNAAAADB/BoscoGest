@@ -5,14 +5,14 @@
   <mat-card class="search-card">
     <mat-card-header>
       <mat-card-title class="section-title">
-        <mat-icon class="title-icon">search</mat-icon>
+        <mat-icon class="title-icon" aria-hidden="true">search</mat-icon>
         Buscar Usuario
       </mat-card-title>
     </mat-card-header>
     <mat-card-content class="card-content">
       <div class="initial-action">
         <button mat-raised-button color="accent" (click)="createNewUser()" class="create-user-button">
-          <mat-icon>person_add</mat-icon>
+          <mat-icon aria-hidden="true">person_add</mat-icon>
           Crear Nuevo Usuario
         </button>
         <div class="divider">
@@ -40,12 +40,12 @@
 
         <div class="button-row">
           <button mat-raised-button color="primary" type="submit" [disabled]="searchForm.invalid || searching()">
-            <mat-icon>search</mat-icon>
+            <mat-icon aria-hidden="true">search</mat-icon>
             Buscar
           </button>
           @if (foundUser() || userNotFound()) {
             <button mat-button type="button" (click)="resetSearch()">
-              <mat-icon>refresh</mat-icon>
+              <mat-icon aria-hidden="true">refresh</mat-icon>
               Nueva Búsqueda
             </button>
           }
@@ -62,11 +62,11 @@
       <!-- User Not Found -->
       @if (userNotFound()) {
         <div class="not-found-container">
-          <mat-icon class="not-found-icon">person_off</mat-icon>
+          <mat-icon class="not-found-icon" aria-hidden="true">person_off</mat-icon>
           <h3>Usuario no encontrado</h3>
           <p>No se encontró ningún usuario con el {{ searchForm.value.searchType === 'email' ? 'email' : 'DNI' }} especificado.</p>
           <button mat-raised-button color="accent" (click)="createNewUser()">
-            <mat-icon>person_add</mat-icon>
+            <mat-icon aria-hidden="true">person_add</mat-icon>
             Crear Nuevo Usuario
           </button>
         </div>
@@ -75,7 +75,7 @@
       <!-- User Found -->
       @if (foundUser()) {
         <div class="user-found-container">
-          <mat-icon class="found-icon">check_circle</mat-icon>
+          <mat-icon class="found-icon" aria-hidden="true">check_circle</mat-icon>
           <h3>Usuario encontrado</h3>
           <div class="user-info">
             <div class="info-row">
@@ -105,7 +105,7 @@
     <mat-card class="membership-card">
       <mat-card-header>
         <mat-card-title class="section-title">
-          <mat-icon class="title-icon">admin_panel_settings</mat-icon>
+          <mat-icon class="title-icon" aria-hidden="true">admin_panel_settings</mat-icon>
           Asignar Rol
         </mat-card-title>
       </mat-card-header>
@@ -137,14 +137,14 @@
                 @if (loading()) {
                   <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
                 } @else {
-                  <mat-icon>person_add</mat-icon>
+                  <mat-icon aria-hidden="true">person_add</mat-icon>
                 }
                 Asociar Usuario
               </button>
             </div>
           } @else {
             <div class="no-roles-container">
-              <mat-icon class="warning-icon">warning</mat-icon>
+              <mat-icon class="warning-icon" aria-hidden="true">warning</mat-icon>
               <p>No hay roles disponibles para esta entidad.</p>
             </div>
           }
@@ -156,7 +156,7 @@
   <!-- Action Buttons -->
   <div class="action-buttons">
     <button mat-button (click)="goBack()" class="back-button">
-      <mat-icon>arrow_back</mat-icon>
+      <mat-icon aria-hidden="true">arrow_back</mat-icon>
       Volver
     </button>
   </div>

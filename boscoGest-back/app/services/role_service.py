@@ -60,6 +60,29 @@ class RoleService:
             current_user, current_membership.entity_id, "roles", "create"
         )
 
+        # Role names are unique across the whole system, but the list each
+        # administrator sees is scoped to their own association. So a clash with
+        # a role they cannot see reads as nonsense unless we say where it is.
+        # Roles stay per-association — 'Tesorero Hortas' and 'Tesorero Atocha'
+        # are different roles — the name just has to say which one it is.
+        existing = self.db.execute(
+            select(Role).where(Role.name == role_in.name)
+        ).scalars().first()
+        if existing:
+            owners = [e.name for e in existing.entities]
+            if current_membership.entity_id in [e.id for e in existing.entities]:
+                detail = f"Ya existe un rol llamado «{role_in.name}» en esta asociación."
+            else:
+                entity = self.db.get(Entity, current_membership.entity_id)
+                where = f" (está en {', '.join(owners)})" if owners else ""
+                suggestion = f"{role_in.name} {entity.name}" if entity else role_in.name
+                detail = (
+                    f"Ya existe un rol llamado «{role_in.name}» en otra asociación{where}. "
+                    "Los nombres de rol no se pueden repetir, así que usa uno que "
+                    f"distinga el tuyo, por ejemplo «{suggestion}»."
+                )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
         try:
             # Extract permission_ids before creating the role
             permission_ids = role_in.permission_ids

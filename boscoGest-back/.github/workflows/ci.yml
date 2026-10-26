@@ -1,0 +1,166 @@
+name: CI
+
+# The repository had no pipeline at all: nothing ran the tests, nothing checked
+# that a migration applies to an empty database, and nothing would have caught
+# a secret being committed. All three had already happened.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: ruff
+        run: ruff check app/
+      - name: mypy
+        # Not yet clean, so it reports without failing the build. Drop the
+        # continue-on-error once the backlog is worked through.
+        run: mypy app/ --ignore-missing-imports
+        continue-on-error: true
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: pytest
+        env:
+          # app/config.py refuses to start without these, by design.
+          SECRET_KEY: 'ci-secret-key-of-at-least-thirty-two-characters'
+          CORS_ORIGINS: 'http://localhost:4200'
+          DATABASE_URL: 'sqlite:///:memory:'
+          STORAGE_BACKEND: local
+        run: pytest app/tests/ -q --junitxml=pytest.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-results
+          path: pytest.xml
+
+  migrations:
+    name: Migrations apply to an empty database
+    runs-on: ubuntu-latest
+    # This is the check that would have caught the baseline revision being an
+    # empty stub: the schema only ever existed because the test-suite built it
+    # with create_all, so `alembic upgrade head` produced nothing.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: bg
+          POSTGRES_PASSWORD: bg
+          POSTGRES_DB: boscogest
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: 'postgresql+psycopg2://bg:bg@localhost:5432/boscogest'
+      SECRET_KEY: 'ci-secret-key-of-at-least-thirty-two-characters'
+      CORS_ORIGINS: 'http://localhost:4200'
+      STORAGE_BACKEND: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: upgrade head from empty
+        # The check that would have caught the baseline revision being an empty
+        # stub.
+        run: alembic upgrade head
+
+      - name: every revision is reversible
+        # Deliberately before seeding. Reversibility is a property of the
+        # schema, and some downgrades cannot hold once data exists: the
+        # revision that made users.phone nullable restores NOT NULL on the way
+        # down, which fails as soon as one user has no phone number. Running
+        # this on an empty database tests what is actually guaranteed.
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
+      - name: seed
+        env:
+          SEED_SUPERADMIN_PASSWORD: 'ci-bootstrap-password'
+        run: python -m app.database.seeds.initial_seeder
+
+      - name: models match the migrated schema
+        # A model changed without a migration is invisible until deployment,
+        # where it surfaces as a missing column at runtime.
+        run: |
+          python - <<'PY'
+          import sqlalchemy as sa
+          from alembic.migration import MigrationContext
+          from alembic.autogenerate import produce_migrations, render_python_code
+          from app.database.database import Base
+          import app.models  # noqa
+          import os, sys
+
+          engine = sa.create_engine(os.environ["DATABASE_URL"])
+          with engine.connect() as conn:
+              code = render_python_code(
+                  produce_migrations(MigrationContext.configure(conn), Base.metadata).upgrade_ops
+              )
+          lines = [l for l in code.splitlines()
+                   if l.strip() and not l.strip().startswith("#") and l.strip() != "pass"]
+          if lines:
+              print("The models and the migrated schema disagree:")
+              print("\n".join(lines))
+              sys.exit(1)
+          print("No drift.")
+          PY
+
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    # .env was committed with credentials once already. This is the check that
+    # would have stopped it.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Image builds
+    runs-on: ubuntu-latest
+    needs: [test, migrations]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          # The instance is x86_64 and images are often built from Apple
+          # Silicon, so the platform is pinned rather than inherited.
+          platforms: linux/amd64
+          tags: boscogest-back:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

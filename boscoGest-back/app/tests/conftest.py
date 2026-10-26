@@ -1,4 +1,13 @@
 import os
+
+# Mandatory settings must exist before *any* app module is imported: app.config
+# fails fast when they are missing, by design.
+os.environ.setdefault("SECRET_KEY", "pytest-only-secret-key-not-used-anywhere-else-0123456789")
+os.environ.setdefault("CORS_ORIGINS", "http://testserver")
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("STORAGE_BACKEND", "local")
+os.environ.setdefault("UPLOAD_DIR", "uploads")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, StaticPool
@@ -11,10 +20,6 @@ from app.models.role_model import Role
 from app.models.permission_model import Permission
 from app.models.membership_model import Membership
 from datetime import datetime
-
-# Force local storage backend for tests BEFORE importing app
-os.environ.setdefault("STORAGE_BACKEND", "local")
-os.environ.setdefault("UPLOAD_DIR", "uploads")
 
 from app.services.storage import reset_storage_service
 reset_storage_service()
@@ -94,6 +99,14 @@ def test_permissions(db_session):
         ("groups:delete", "groups", "delete", "Delete group"),
         ("groups:list", "groups", "list", "List groups"),
         ("groups:assign", "groups", "assign", "Assign users/roles to groups"),
+        # Entity-specific, and the reason /entities/admin returns anything.
+        # They were enforced in the services long before this list caught up —
+        # see the note at the top of app/database/seeds/permissions_catalog.py,
+        # which is the authoritative list this one keeps drifting from.
+        ("branding:read", "branding", "read", "Read branding"),
+        ("branding:update", "branding", "update", "Update branding"),
+        ("views:read", "views", "read", "Read view configuration"),
+        ("views:update", "views", "update", "Update view configuration"),
         ("activities:create", "activities", "create", "Create activity"),
         ("activities:read", "activities", "read", "Read activity"),
         ("activities:update", "activities", "update", "Update activity"),
@@ -116,6 +129,11 @@ def test_permissions(db_session):
         ("resources:delete", "resources", "delete", "Delete resource"),
         ("resources:list", "resources", "list", "List resources"),
         ("resources:manage_all", "resources", "manage_all", "Manage all resources"),
+        ("fees:list", "fees", "list", "List fees"),
+        ("fees:read", "fees", "read", "Read fees"),
+        ("fees:create", "fees", "create", "Create fees"),
+        ("fees:manage", "fees", "manage", "Manage fees"),
+        ("fees:maintenance", "fees", "maintenance", "Run/monitor fee maintenance"),
     ]
 
     # Permissions that should NOT inherit to descendant entities
@@ -124,6 +142,7 @@ def test_permissions(db_session):
         ("memberships", "create"), ("memberships", "read"), ("memberships", "update"),
         ("memberships", "delete"), ("memberships", "list"), ("memberships", "manage"),
         ("roles", "create"), ("roles", "update"), ("roles", "delete"), ("roles", "assign"),
+        ("fees", "create"), ("fees", "maintenance"),
     }
 
     permissions = []
@@ -232,7 +251,7 @@ def test_membership(db_session, test_user, test_entity, test_role):
 @pytest.fixture(scope="function")
 def auth_token(test_user, test_membership):
     token_data = {
-        "sub": test_user.email,
+        "sub": str(test_user.id),
         "membership_id": test_membership.id
     }
     return create_access_token(token_data)

@@ -1,0 +1,67 @@
+<div class="activate-container">
+  <mat-card class="activate-card">
+    <div class="logo-container">
+      <img src="assets/images/LogoAAAA.png" alt="BoscoGest" class="activate-logo">
+    </div>
+
+    @if (exchanging()) {
+      <mat-card-content class="state-block" role="status" aria-live="polite">
+        <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+        <h1 class="state-title">Comprobando tu enlace…</h1>
+        <p class="state-text">Un momento. En seguida podrás elegir tu contraseña.</p>
+      </mat-card-content>
+    } @else if (failure()) {
+      <mat-card-content class="state-block" role="alert">
+        <mat-icon class="state-icon" aria-hidden="true">link_off</mat-icon>
+        <h1 class="state-title">Este enlace ya no sirve</h1>
+        <p class="state-text">{{ failureMessage() }}</p>
+
+        @if (canRequestNewLink()) {
+          @if (newLinkSent()) {
+            <!-- Same wording whatever the address turns out to be: telling
+                 people whether an account exists would make this a way of
+                 finding out who is a member. -->
+            <div class="sent-notice" role="status">
+              <mat-icon aria-hidden="true">mark_email_read</mat-icon>
+              <span>
+                Si esa cuenta existe y todavía no tiene contraseña, acabamos de
+                enviarle un enlace nuevo. Revisa también la carpeta de correo no
+                deseado.
+              </span>
+            </div>
+          } @else {
+            <p class="state-text">
+              Escribe el email con el que te dieron de alta y te enviamos otro.
+            </p>
+            <form class="resend-form" (ngSubmit)="requestNewLink()">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email o teléfono</mat-label>
+                <input
+                  matInput
+                  type="text"
+                  name="identifier"
+                  [ngModel]="identifier()"
+                  (ngModelChange)="identifier.set($event)"
+                  required
+                />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                type="submit"
+                class="full-width"
+                [disabled]="!identifier().trim() || requestingNew()">
+                {{ requestingNew() ? 'Enviando…' : 'Enviarme un enlace nuevo' }}
+              </button>
+            </form>
+          }
+        }
+
+        <a routerLink="/login" class="back-link">
+          <mat-icon aria-hidden="true">arrow_back</mat-icon>
+          Volver al inicio de sesión
+        </a>
+      </mat-card-content>
+    }
+  </mat-card>
+</div>

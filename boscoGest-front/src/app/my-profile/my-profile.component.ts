@@ -1,4 +1,4 @@
-import { Component, computed, OnInit } from '@angular/core';
+import { Component, computed, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,28 +6,43 @@ import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../auth/auth.service';
 import { MembershipDetails } from '../models/user.model';
+import { UsersService } from '../users/users.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
 import { ChangePasswordDialogComponent } from '../change-password-dialog/change-password-dialog.component';
+import { DeleteAccountDialogComponent } from '../delete-account-dialog/delete-account-dialog.component';
 
 @Component({
   selector: 'app-my-profile',
-  imports: [CommonModule, MatCardModule, MatIconModule, MatListModule, MatChipsModule, MatButtonModule, MatDialogModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatListModule, MatChipsModule, MatButtonModule, MatDialogModule, MatTooltipModule],
   templateUrl: './my-profile.component.html',
   styleUrl: './my-profile.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MyProfileComponent implements OnInit {
   currentUser = computed(() => this.authService.getCurrentUser());
   currentMembership = computed(() => this.authService.getCurrentMembership());
-  allMemberships: MembershipDetails[] = [];
+  // Signal: filled from a subscribe callback; a plain field would leave
+  // the memberships list empty under OnPush.
+  allMemberships = signal<MembershipDetails[]>([]);
+
+  // Local override so the photo updates immediately after upload
+  uploadedPhoto = signal<string | null>(null);
+  photoUrl = computed(() => this.uploadedPhoto() ?? this.currentUser()?.photo ?? null);
+  uploadingPhoto = signal<boolean>(false);
 
   constructor(
     private authService: AuthService,
     private http: HttpClient,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private usersService: UsersService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -106,8 +121,8 @@ export class MyProfileComponent implements OnInit {
         //     }
         //   }
         // ];
-        // this.allMemberships = [...memberships, ...mockMemberships];
-        this.allMemberships = [...memberships];
+        // this.allMemberships.set([...memberships, ...mockMemberships]);
+        this.allMemberships.set([...memberships]);
       },
       error: (error) => {
         console.error('Error loading memberships:', error);
@@ -115,8 +130,14 @@ export class MyProfileComponent implements OnInit {
     });
   }
 
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
+  formatDate(dateString: string | null | undefined): string {
+    // A birthdate is a calendar day ("1950-01-15"), not an instant: read it as
+    // that local day, and say so when there is none instead of "Invalid Date".
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateString ?? '');
+    if (!match) {
+      return 'No especificada';
+    }
+    const date = new Date(+match[1], +match[2] - 1, +match[3]);
     return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
@@ -128,6 +149,64 @@ export class MyProfileComponent implements OnInit {
       4: 'Asociación Local'
     };
     return levelMap[level] || `Nivel ${level}`;
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('El archivo debe ser una imagen', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.snackBar.open('La imagen no puede superar los 5 MB', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.uploadingPhoto.set(true);
+    this.usersService.uploadMyPhoto(file).subscribe({
+      next: (user) => {
+        this.uploadingPhoto.set(false);
+        this.uploadedPhoto.set(user.photo);
+        this.snackBar.open('Foto actualizada correctamente', 'Cerrar', {
+          duration: 3000,
+          panelClass: 'success-snackbar'
+        });
+      },
+      error: () => {
+        this.uploadingPhoto.set(false);
+        this.snackBar.open('Error al subir la foto', 'Cerrar', {
+          duration: 3000,
+          panelClass: 'error-snackbar'
+        });
+      }
+    });
+  }
+
+  /**
+   * Borrado de la propia cuenta.
+   *
+   * Vive aquí, en el perfil, porque es donde se busca: Google Play pide que la
+   * eliminación esté accesible dentro de la app para cualquier aplicación con
+   * registro público.
+   */
+  openDeleteAccountDialog(): void {
+    const dialogRef = this.dialog.open(DeleteAccountDialogComponent, {
+      width: '520px',
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(deleted => {
+      if (deleted) {
+        this.snackBar.open('Tu cuenta ha sido eliminada', 'Cerrar', {
+          duration: 5000
+        });
+        // El token ya está revocado en el servidor, así que aquí solo queda
+        // limpiar la sesión local y volver al login.
+        this.authService.endSession();
+      }
+    });
   }
 
   openChangePasswordDialog(): void {

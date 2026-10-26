@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 
@@ -8,6 +8,8 @@ import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
   imports: [RouterOutlet, CommonModule, BreadcrumbComponent],
   templateUrl: './main.component.html',
   styleUrl: './main.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MainComponent {
 

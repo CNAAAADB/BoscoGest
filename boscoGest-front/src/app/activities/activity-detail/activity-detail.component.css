@@ -57,6 +57,9 @@
   font-size: 2rem !important;
   font-weight: 600 !important;
   color: #1b1b1b;
+  /* Material deja 28px de interlineado para una fuente de 32px: un título de
+     dos líneas se pisaba a sí mismo y caía sobre los botones de debajo. */
+  line-height: 1.25 !important;
 }
 
 .header-actions {
@@ -107,7 +110,7 @@
 
 .info-label {
   font-size: 0.9rem;
-  color: #6c757d;
+  color: #646c74;
   font-weight: 500;
 }
 
@@ -210,7 +213,7 @@
 
 .empty-state {
   text-align: center;
-  color: #6c757d;
+  color: #646c74;
   font-size: 1.125rem;
   padding: 2rem;
   margin: 0;
@@ -248,10 +251,14 @@
 
   .header-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
+  /* Una por línea. Con flex:1 los tres botones se repartían 264px, y
+     "Crear grupo de chat" no cabe en 77px: la etiqueta se partía en cuatro
+     líneas y se salía por fuera de la píldora, encima del título. */
   .header-actions button {
-    flex: 1;
+    flex: 1 1 100%;
   }
 
   .info-grid {

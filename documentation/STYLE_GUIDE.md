@@ -8,14 +8,25 @@ Reference for maintaining visual consistency across all views.
 |---|---|---|
 | Primary | `#3D4E7C` | Page titles, table headers, buttons, nav accents |
 | Primary Hover | `#2C3E5A` | Button hover states |
-| Accent / Icon | `#D4A76A` | Section title icons (`.title-icon`) |
+| Accent / Icon | `#D4A76A` | Section title icons (`.title-icon`), active nav background |
+| On Accent | `#1A2840` | Text and icons **on** the accent background |
 | Text Primary | `#1b1b1b` | Table cell names, strong text |
 | Text Secondary | `#495057` | Table cells, body text |
-| Text Muted | `#6c757d` | Descriptions, empty states |
+| Text Muted | `#646c74` | Descriptions, empty states |
 | Border | `#e9ecef` | Card borders, header dividers |
 | Background | `#f4f7fa` | Layout content area (set in `layout.component.css`) |
 | Table Header BG | `#f8f9fa` | Table header row background |
 | Card Background | `white` | All cards, dialogs |
+
+> **Contrast.** NFR-QLT-01 requires WCAG 2.1 AA, and NFR-QLT-02 calls out older
+> members specifically, so every pairing above meets 4.5:1 for body text.
+> Two that do not, and must be avoided:
+>
+> - Primary `#3D4E7C` on Accent `#D4A76A` — 3.7:1. Use On Accent `#1A2840` (6.5:1).
+> - The old Text Muted `#6c757d` on Table Header BG `#f8f9fa` — 4.45:1.
+>   `#646c74` reaches 4.8:1.
+>
+> `e2e/audit-contrast.spec.ts` checks this automatically.
 
 ## Container Pattern
 

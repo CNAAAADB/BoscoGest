@@ -17,4 +17,9 @@ from .resource_category_model import ResourceCategory
 from .resource_model import Resource, ResourceType
 from .notification_model import Notification, NotificationPreference
 from .chat_model import ChatConversation, ChatMember, ChatMessage, ChatJoinRequest
+from .bulk_upload_job_model import BulkUploadJob
+from .fee_model import Fee, FeeConfig, FeeAssignment, FeeSubscription, FeeStatus, FeePeriodicity, FeeMaintenanceRun
+from .consent_clause_model import ConsentClause
+from .membership_request_model import MembershipRequest
+from .activation_token_model import ActivationToken
 from .relationships import user_groups, user_permissions, role_permissions, group_roles, entity_roles

@@ -1,6 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,11 +10,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { UsersService } from '../users.service';
-import { UserCreate, UserUpdate, EntityResponse, RoleResponse } from '../../models/user.model';
+import { UserCreate, UserUpdate, EntityResponse, RoleResponse, USER_SIZE_OPTIONS, UserSize } from '../../models/user.model';
 import { EntitiesService } from '../../entities/entities.service';
 
 @Component({
@@ -30,21 +29,25 @@ import { EntitiesService } from '../../entities/entities.service';
     MatSnackBarModule,
     MatIconModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatCheckboxModule,
     MatSelectModule
   ],
   templateUrl: './user-form.component.html',
   styleUrl: './user-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserFormComponent implements OnInit {
   userForm: FormGroup;
+  readonly sizeOptions = USER_SIZE_OPTIONS;
+  selectedPhotoFile: File | null = null;
+  photoPreviewUrl = signal<string | null>(null);
   loading = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
   userId: number | null = null;
 
   // Entity and role management
-  adminEntities = signal<EntityResponse[]>([]);
+  adminEntities = signal<{ id: number; name: string }[]>([]);
   availableRoles = signal<RoleResponse[]>([]);
   loadingRoles = signal<boolean>(false);
 
@@ -57,10 +60,10 @@ export class UserFormComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {
     this.userForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.email]],
       name: ['', [Validators.required, Validators.minLength(2)]],
       surname: ['', [Validators.required, Validators.minLength(2)]],
-      phone: ['', Validators.required],
+      phone: [''],
       address: [''],
       birthdate: ['', Validators.required],
       dni: ['', Validators.required],
@@ -69,11 +72,17 @@ export class UserFormComponent implements OnInit {
       size: [''],
       hobbies: [''],
       job_position: [''],
-      password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/)]],
       is_active: [true],
       entity_id: [null],
       role_id: [null]
-    });
+    }, { validators: UserFormComponent.atLeastOneContactValidator });
+  }
+
+  /** Requires at least one of email or phone to be provided. */
+  static atLeastOneContactValidator(group: AbstractControl): ValidationErrors | null {
+    const email = (group.get('email')?.value || '').trim();
+    const phone = (group.get('phone')?.value || '').trim();
+    return email || phone ? null : { contactRequired: true };
   }
 
   ngOnInit(): void {
@@ -83,10 +92,6 @@ export class UserFormComponent implements OnInit {
       this.userId = parseInt(id, 10);
       this.isEditMode.set(true);
       this.loadUser(this.userId);
-
-      // Make password optional in edit mode
-      this.userForm.get('password')?.clearValidators();
-      this.userForm.get('password')?.updateValueAndValidity();
     } else {
       // In create mode, load admin entities
       this.loadAdminEntities();
@@ -112,7 +117,12 @@ export class UserFormComponent implements OnInit {
   }
 
   loadAdminEntities(): void {
-    this.entitiesService.getAdminEntities().subscribe({
+    // The associations where this person may create users — the same list the
+    // bulk import uses. It used to come from /entities/admin, which answers a
+    // different question: the ones whose look and menu you can configure.
+    // Someone with a role that creates users but does not touch branding would
+    // have found the selector empty.
+    this.usersService.getCreatableEntities().subscribe({
       next: (entities) => {
         this.adminEntities.set(entities);
       },
@@ -166,6 +176,7 @@ export class UserFormComponent implements OnInit {
           job_position: user.job_position,
           is_active: user.is_active
         });
+        this.photoPreviewUrl.set(user.photo);
         this.loading.set(false);
       },
       error: (error) => {
@@ -211,29 +222,22 @@ export class UserFormComponent implements OnInit {
     if (this.isEditMode() && this.userId) {
       // Update mode
       const userData: UserUpdate = {
-        email: formValue.email,
+        email: this.emptyToNull(formValue.email),
         name: formValue.name,
         surname: formValue.surname,
-        phone: formValue.phone,
+        phone: this.emptyToNull(formValue.phone),
         address: this.emptyToNull(formValue.address),
         birthdate: this.formatDate(formValue.birthdate) || null,
         dni: formValue.dni,
-        photo: this.emptyToNull(formValue.photo),
         iban: this.emptyToNull(formValue.iban),
-        size: this.emptyToNull(formValue.size),
+        size: this.emptyToNull(formValue.size) as UserSize | null,
         hobbies: this.emptyToNull(formValue.hobbies),
         job_position: this.emptyToNull(formValue.job_position),
         is_active: formValue.is_active
       };
 
       this.usersService.updateUser(this.userId, userData).subscribe({
-        next: () => {
-          this.snackBar.open('Usuario actualizado correctamente', 'Cerrar', {
-            duration: 3000,
-            panelClass: 'success-snackbar'
-          });
-          this.router.navigate(['/users']);
-        },
+        next: () => this.uploadPhotoThenFinish(this.userId!, 'Usuario actualizado correctamente'),
         error: (error) => {
           console.error('Error updating user:', error);
           this.snackBar.open('Error al actualizar el usuario', 'Cerrar', {
@@ -246,31 +250,23 @@ export class UserFormComponent implements OnInit {
     } else {
       // Create mode
       const userData: UserCreate = {
-        email: formValue.email,
+        email: this.emptyToNull(formValue.email),
         name: formValue.name,
         surname: formValue.surname,
-        phone: formValue.phone,
+        phone: this.emptyToNull(formValue.phone),
         address: this.emptyToNull(formValue.address),
         birthdate: this.formatDate(formValue.birthdate),
         dni: formValue.dni,
-        photo: this.emptyToNull(formValue.photo),
         iban: this.emptyToNull(formValue.iban),
-        size: this.emptyToNull(formValue.size),
+        size: this.emptyToNull(formValue.size) as UserSize | null,
         hobbies: this.emptyToNull(formValue.hobbies),
         job_position: this.emptyToNull(formValue.job_position),
-        password: formValue.password,
         entity_id: formValue.entity_id,
         role_id: formValue.role_id
       };
 
       this.usersService.createUser(userData).subscribe({
-        next: () => {
-          this.snackBar.open('Usuario creado correctamente', 'Cerrar', {
-            duration: 3000,
-            panelClass: 'success-snackbar'
-          });
-          this.router.navigate(['/users']);
-        },
+        next: (user) => this.uploadPhotoThenFinish(user.id, 'Usuario creado correctamente'),
         error: (error) => {
           console.error('Error creating user:', error);
           this.snackBar.open('Error al crear el usuario', 'Cerrar', {
@@ -280,6 +276,52 @@ export class UserFormComponent implements OnInit {
           this.loading.set(false);
         }
       });
+    }
+  }
+
+  /** After the user is saved, upload the selected photo (if any) and leave. */
+  private uploadPhotoThenFinish(userId: number, successMessage: string): void {
+    const finish = () => {
+      this.snackBar.open(successMessage, 'Cerrar', {
+        duration: 3000,
+        panelClass: 'success-snackbar'
+      });
+      this.router.navigate(['/users']);
+    };
+
+    const file = this.selectedPhotoFile;
+    if (!file) {
+      finish();
+      return;
+    }
+
+    this.usersService.uploadUserPhoto(userId, file).subscribe({
+      next: () => finish(),
+      error: (error) => {
+        console.error('Error uploading photo:', error);
+        this.snackBar.open('Usuario guardado, pero falló la subida de la foto', 'Cerrar', {
+          duration: 4000,
+          panelClass: 'error-snackbar'
+        });
+        this.router.navigate(['/users']);
+      }
+    });
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      if (!file.type.startsWith('image/')) {
+        this.snackBar.open('El archivo debe ser una imagen', 'Cerrar', { duration: 3000 });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.snackBar.open('La imagen no puede superar los 5 MB', 'Cerrar', { duration: 3000 });
+        return;
+      }
+      this.selectedPhotoFile = file;
+      this.photoPreviewUrl.set(URL.createObjectURL(file));
     }
   }
 

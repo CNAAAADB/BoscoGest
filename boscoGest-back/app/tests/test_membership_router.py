@@ -29,7 +29,7 @@ def test_create_membership(client, auth_headers, test_user, test_entity, test_ro
         "is_active": True
     }
 
-    response = client.post("/memberships/", json=membership_data, headers=auth_headers)
+    response = client.post("/memberships", json=membership_data, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -47,7 +47,7 @@ def test_create_membership_invalid_user(client, auth_headers, test_role, test_en
         "is_active": True
     }
 
-    response = client.post("/memberships/", json=membership_data, headers=auth_headers)
+    response = client.post("/memberships", json=membership_data, headers=auth_headers)
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
@@ -61,7 +61,7 @@ def test_create_membership_invalid_role(client, auth_headers, test_user, test_en
         "is_active": True
     }
 
-    response = client.post("/memberships/", json=membership_data, headers=auth_headers)
+    response = client.post("/memberships", json=membership_data, headers=auth_headers)
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
@@ -75,13 +75,13 @@ def test_create_membership_unauthorized(client, test_user, test_role, test_entit
         "is_active": True
     }
 
-    response = client.post("/memberships/", json=membership_data)
+    response = client.post("/memberships", json=membership_data)
 
     assert response.status_code == 401
 
 
 def test_get_memberships(client, auth_headers, test_membership):
-    response = client.get("/memberships/", headers=auth_headers)
+    response = client.get("/memberships", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -92,7 +92,7 @@ def test_get_memberships(client, auth_headers, test_membership):
 
 def test_get_memberships_includes_permissions(client, auth_headers, test_membership, test_role):
     """Test that GET /memberships/ includes role permissions in the response"""
-    response = client.get("/memberships/", headers=auth_headers)
+    response = client.get("/memberships", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -163,7 +163,7 @@ def test_get_memberships_only_current_user(client, auth_headers, test_membership
     db_session.commit()
     db_session.refresh(other_membership)
 
-    response = client.get("/memberships/", headers=auth_headers)
+    response = client.get("/memberships", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -177,7 +177,7 @@ def test_get_memberships_only_current_user(client, auth_headers, test_membership
 
 
 def test_get_memberships_unauthorized(client):
-    response = client.get("/memberships/")
+    response = client.get("/memberships")
 
     assert response.status_code == 401
 

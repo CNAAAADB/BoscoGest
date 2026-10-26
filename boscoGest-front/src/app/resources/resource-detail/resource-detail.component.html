@@ -7,25 +7,25 @@
     <mat-card class="detail-card">
       <mat-card-header>
         <div class="header-content">
-          <button mat-icon-button (click)="goBack()" class="back-button">
-            <mat-icon>arrow_back</mat-icon>
+          <button mat-icon-button (click)="goBack()" class="back-button" aria-label="Volver">
+            <mat-icon aria-hidden="true">arrow_back</mat-icon>
           </button>
           <div class="header-info">
             <mat-card-title>{{ resource()!.title }}</mat-card-title>
             <div class="resource-type-label" [class]="'type-' + resource()!.resource_type">
-              <mat-icon>{{ getTypeIcon(resource()!.resource_type) }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ getTypeIcon(resource()!.resource_type) }}</mat-icon>
               {{ getTypeLabel(resource()!.resource_type) }}
             </div>
           </div>
           <div class="header-actions">
             @if (canEdit()) {
-              <button mat-icon-button color="primary" (click)="editResource()" title="Editar">
-                <mat-icon>edit</mat-icon>
+              <button mat-icon-button color="primary" (click)="editResource()" title="Editar" aria-label="Editar recurso">
+                <mat-icon aria-hidden="true">edit</mat-icon>
               </button>
             }
             @if (canDelete()) {
-              <button mat-icon-button color="warn" (click)="deleteResource()" title="Eliminar">
-                <mat-icon>delete</mat-icon>
+              <button mat-icon-button color="warn" (click)="deleteResource()" title="Eliminar" aria-label="Eliminar recurso">
+                <mat-icon aria-hidden="true">delete</mat-icon>
               </button>
             }
           </div>
@@ -37,7 +37,7 @@
         @if (resource()!.url) {
           <div class="url-section">
             <button mat-raised-button color="primary" (click)="openUrl()">
-              <mat-icon>open_in_new</mat-icon>
+              <mat-icon aria-hidden="true">open_in_new</mat-icon>
               Abrir enlace
             </button>
             <span class="url-text">{{ resource()!.url }}</span>
@@ -55,7 +55,7 @@
         @if (resource()!.resource_type === 'document') {
           <div class="document-section">
             <button mat-raised-button color="primary" (click)="downloadFile()">
-              <mat-icon>download</mat-icon>
+              <mat-icon aria-hidden="true">download</mat-icon>
               Descargar {{ resource()!.original_filename || 'archivo' }}
             </button>
             @if (fileUrl() && resource()!.original_filename?.endsWith('.pdf')) {
@@ -77,7 +77,7 @@
 
           @if (resource()!.category) {
             <div class="metadata-item">
-              <mat-icon class="meta-icon">folder</mat-icon>
+              <mat-icon class="meta-icon" aria-hidden="true">folder</mat-icon>
               <span class="meta-label">Categoría:</span>
               <span>{{ resource()!.category!.name }}</span>
             </div>
@@ -85,7 +85,7 @@
 
           @if (resource()!.entity) {
             <div class="metadata-item">
-              <mat-icon class="meta-icon">business</mat-icon>
+              <mat-icon class="meta-icon" aria-hidden="true">business</mat-icon>
               <span class="meta-label">Entidad:</span>
               <span>{{ resource()!.entity!.name }}</span>
             </div>
@@ -93,21 +93,21 @@
 
           @if (resource()!.creator) {
             <div class="metadata-item">
-              <mat-icon class="meta-icon">person</mat-icon>
+              <mat-icon class="meta-icon" aria-hidden="true">person</mat-icon>
               <span class="meta-label">Creado por:</span>
               <span>{{ resource()!.creator!.name }} {{ resource()!.creator!.surname }}</span>
             </div>
           }
 
           <div class="metadata-item">
-            <mat-icon class="meta-icon">calendar_today</mat-icon>
+            <mat-icon class="meta-icon" aria-hidden="true">calendar_today</mat-icon>
             <span class="meta-label">Fecha:</span>
             <span>{{ resource()!.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
 
           @if (getTagsList(resource()!.tags).length > 0) {
             <div class="tags-section">
-              <mat-icon class="meta-icon">label</mat-icon>
+              <mat-icon class="meta-icon" aria-hidden="true">label</mat-icon>
               <span class="meta-label">Etiquetas:</span>
               <div class="tags-list">
                 @for (tag of getTagsList(resource()!.tags); track tag) {

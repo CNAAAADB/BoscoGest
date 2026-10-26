@@ -1,0 +1,133 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Solicitudes de alta</h1>
+    <p class="subtitle">Gestiona las solicitudes de nuevos miembros para tus entidades</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-row">
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Estado</mat-label>
+      <mat-select [value]="statusFilter()" (selectionChange)="onFilterChange($event.value)">
+        <mat-option value="pending">Pendientes</mat-option>
+        <mat-option value="accepted">Aceptadas</mat-option>
+        <mat-option value="rejected">Rechazadas</mat-option>
+        <mat-option value="">Todas</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-icon-button (click)="loadRequests()" matTooltip="Actualizar" aria-label="Actualizar">
+      <mat-icon aria-hidden="true">refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-center">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else if (requests().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon" aria-hidden="true">inbox</mat-icon>
+      <p>No hay solicitudes {{ statusFilter() === 'pending' ? 'pendientes' : '' }}</p>
+    </div>
+  } @else {
+    <mat-card class="table-card">
+      <!-- La tabla no cabe en la pantalla de un móvil en vertical, así que va
+           dentro de un contenedor que se puede desplazar. Sin él, los botones
+           de aceptar y rechazar quedaban fuera y no había forma de llegar a
+           ellos salvo girando el teléfono. -->
+      <div class="table-container">
+      <table mat-table [dataSource]="requests()" class="requests-table">
+
+        <!-- User column -->
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>Solicitante</th>
+          <td mat-cell *matCellDef="let req">
+            <div class="user-cell">
+              <div class="user-avatar">{{ (req.user?.name ?? '?').charAt(0).toUpperCase() }}</div>
+              <div>
+                <div class="user-name">{{ req.user?.name }} {{ req.user?.surname }}</div>
+                <div class="user-email">{{ req.user?.email }}</div>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Entity column -->
+        <ng-container matColumnDef="entity">
+          <th mat-header-cell *matHeaderCellDef>Entidad</th>
+          <td mat-cell *matCellDef="let req">
+            <span class="entity-name">{{ req.entity?.name ?? '—' }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Date column -->
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let req">
+            {{ req.created_at | date:'dd/MM/yyyy HH:mm' }}
+            <div class="status-chip" [class]="'status-' + req.status">
+              {{ statusLabel(req.status) }}
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Message column -->
+        <ng-container matColumnDef="message">
+          <th mat-header-cell *matHeaderCellDef>Mensaje</th>
+          <td mat-cell *matCellDef="let req">
+            @if (req.message) {
+              <span class="message-text" [matTooltip]="req.message">
+                {{ req.message | slice:0:60 }}{{ req.message.length > 60 ? '…' : '' }}
+              </span>
+            } @else {
+              <span class="no-message">—</span>
+            }
+            @if (req.rejection_reason) {
+              <div class="rejection-reason">
+                <mat-icon aria-hidden="true">block</mat-icon> {{ req.rejection_reason }}
+              </div>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Actions column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let req">
+            @if (req.status === 'pending') {
+              <div class="actions-cell">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  matTooltip="Aceptar"
+                  [disabled]="processingId() === req.id"
+                  (click)="accept(req)"
+                 aria-label="Aceptar">
+                  @if (processingId() === req.id) {
+                    <mat-spinner diameter="20"></mat-spinner>
+                  } @else {
+                    <mat-icon aria-hidden="true">check_circle</mat-icon>
+                  }
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  matTooltip="Rechazar"
+                  [disabled]="processingId() === req.id"
+                  (click)="openRejectDialog(req)"
+                 aria-label="Rechazar">
+                  <mat-icon aria-hidden="true">cancel</mat-icon>
+                </button>
+              </div>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+      </div>
+    </mat-card>
+  }
+</div>

@@ -1,0 +1,68 @@
+<h2 mat-dialog-title class="danger-title">
+  <mat-icon aria-hidden="true">warning</mat-icon>
+  Eliminar mi cuenta
+</h2>
+
+<mat-dialog-content>
+  <p class="warning-text">
+    Esta acción es <strong>irreversible</strong>. Al eliminar tu cuenta:
+  </p>
+  <ul class="consequences">
+    <li>Se borrarán tus datos personales (nombre, email, teléfono, dirección, DNI, foto e IBAN).</li>
+    <li>Perderás el acceso a la aplicación y a todas tus asociaciones.</li>
+    <li>
+      Se conservará un registro anónimo de tus cuotas y movimientos, porque la
+      contabilidad de la asociación debe seguir cuadrando.
+    </li>
+  </ul>
+
+  <form [formGroup]="deleteForm" class="delete-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Confirma tu contraseña</mat-label>
+      <input
+        matInput
+        [type]="hidePassword ? 'password' : 'text'"
+        formControlName="password"
+        autocomplete="current-password"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        (click)="hidePassword = !hidePassword"
+        [attr.aria-label]="'Mostrar contraseña'"
+        [attr.aria-pressed]="!hidePassword"
+      >
+        <mat-icon aria-hidden="true">{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+      @if (deleteForm.get('password')?.touched && deleteForm.get('password')?.hasError('required')) {
+        <mat-error>La contraseña es obligatoria</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-checkbox formControlName="understood" color="warn">
+      Entiendo que esta acción no se puede deshacer
+    </mat-checkbox>
+  </form>
+
+  @if (errorMessage()) {
+    <p class="error-text" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      {{ errorMessage() }}
+    </p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">
+    Cancelar
+  </button>
+  <button
+    mat-raised-button
+    color="warn"
+    (click)="onSubmit()"
+    [disabled]="deleteForm.invalid || isSubmitting()"
+  >
+    {{ isSubmitting() ? 'Eliminando...' : 'Eliminar mi cuenta' }}
+  </button>
+</mat-dialog-actions>

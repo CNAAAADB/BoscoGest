@@ -1,4 +1,4 @@
-# Sistema de Notificaciones In-App
+# Sistema de Notificaciones
 
 ## Descripción general
 
@@ -77,6 +77,13 @@ Este mecanismo es thread-safe y permite que los servicios síncronos encolen not
 | Solicitud de alta recibida | `membership_request_created` | Un usuario solicita unirse a una entidad | `MembershipRequestService.create_request()` | Usuarios con `memberships:review` en la entidad |
 | Solicitud de alta aceptada | `membership_request_accepted` | Un admin acepta la solicitud de alta | `MembershipRequestService.accept_request()` | El usuario solicitante |
 | Solicitud de alta rechazada | `membership_request_rejected` | Un admin rechaza la solicitud de alta | `MembershipRequestService.reject_request()` | El usuario solicitante |
+| Cuota asignada | `fee_generated` | Se generan asignaciones de una cuota a socios | `FeeService.generate_assignments()` | Los socios seleccionados a los que se generó la cuota |
+| Cuota pagada | `fee_paid` | Un admin marca una asignación como pagada | `FeeService.update_assignment_status()` | El socio de la cuota |
+| Cuota vencida | `fee_overdue` | El mantenimiento diario marca una cuota pendiente como vencida | `FeeService.run_maintenance()` (sistema) | El socio de la cuota |
+| Recordatorio de cuota | `fee_reminder` | Aviso `reminder_days` antes del vencimiento | `FeeService.run_maintenance()` (sistema) | El socio de la cuota |
+| Cuota renovada | `fee_renewed` | Renovación automática del siguiente período | `FeeService.run_maintenance()` (sistema) | Los socios renovados |
+
+> Las notificaciones de mantenimiento (`fee_overdue`/`fee_reminder`/`fee_renewed`) son **de sistema**: `notify()` se llama con `actor=None` (la columna `actor_id` es nullable).
 
 ---
 
@@ -98,6 +105,8 @@ Cuando se pasa `recipient_ids`, las notificaciones se envían únicamente a esos
 - `membership_created` → el usuario añadido
 - `membership_request_created` → usuarios con `memberships:review` en la entidad (resueltos en `_get_entity_reviewer_ids()`)
 - `membership_request_accepted` / `membership_request_rejected` → el usuario solicitante
+- `fee_generated` → los socios seleccionados al generar las asignaciones
+- `fee_paid` / `fee_overdue` / `fee_reminder` → el socio de la cuota; `fee_renewed` → los socios renovados
 
 ---
 
@@ -287,3 +296,90 @@ El campo `email_enabled` en `NotificationPreference` está preparado para una fu
 ### Chat (implementado)
 
 El módulo de chat usa su propio `ChatManager` (singleton independiente, mismo patrón que `NotificationManager`) para la entrega de mensajes en tiempo real vía WebSocket. Adicionalmente, `ChatService` delega en `NotificationService` para emitir `chat_message_received` a los usuarios que están offline o con la conversación silenciada, de modo que les llegue la notificación in-app cuando no están activos en el chat.
+
+
+---
+
+## Notificaciones push (backend)
+
+Canal adicional al WebSocket, para avisar a quien no tiene la aplicación
+abierta. **Implementado en el servidor; falta la parte del cliente y las
+credenciales.**
+
+### Cómo encaja
+
+`notify()` sigue haciendo lo mismo —resolver destinatarios, filtrar por
+preferencias, persistir y encolar el WebSocket— y al final llama a `_push()`:
+
+```
+notify()
+  ├── bulk_create + commit          (siempre)
+  ├── notification_manager.enqueue  (WebSocket, a los conectados)
+  └── _push()                       (FCM, solo a los desconectados)
+```
+
+Solo a los desconectados a propósito: a quien tiene la aplicación abierta ya le
+ha llegado por WebSocket, y recibir las dos cosas a la vez es lo que hace que la
+gente acabe apagando las notificaciones.
+
+### Componentes
+
+| Componente | Ubicación |
+|-----------|-----------|
+| `DeviceToken` (modelo) | `app/models/notification_model.py` |
+| `DeviceTokenRepository` | `app/repositories/notification_repository.py` |
+| `push_service` | `app/services/push_service.py` |
+| Endpoints de alta/baja | `POST` y `DELETE /notifications/devices` |
+| Preferencia `push_enabled` | `NotificationPreference` |
+| Migración | `a1b2c3d4e5f6_push_notification_devices.py` |
+
+### Por qué FCM y no APNs directamente
+
+En iOS el push lo entrega APNs obligatoriamente y en Android lo entrega FCM, así
+que hacen falta los dos de todas formas. FCM sabe hablar con APNs, de modo que
+usarlo para ambos deja un solo camino de código y un solo juego de credenciales
+en el servidor.
+
+### Sin credenciales no pasa nada
+
+`FCM_PROJECT_ID` y `FCM_CREDENTIALS_FILE` vacíos ⇒ no se envía nada y queda un
+aviso en el log, igual que el correo cuando falta `SES_SENDER_EMAIL`. El
+desarrollo local y los tests no necesitan un proyecto de Firebase.
+
+### Decisiones que conviene no deshacer
+
+- **El aviso no lleva datos personales.** En `data` van solo identificadores, y
+  el título y el cuerpo son genéricos: la notificación se ve en la pantalla
+  bloqueada, a la vista de cualquiera que coja el móvil.
+- **Un fallo de push nunca tumba la operación que lo originó.** La notificación
+  ya está guardada y se verá al abrir la aplicación.
+- **Los tokens que FCM rechaza se borran**, pero solo los que declara muertos
+  (`UNREGISTERED`, `INVALID_ARGUMENT`, 404). Un 500 o un corte de red son
+  transitorios y el dispositivo se conserva.
+- **El token es único, no el usuario.** Un móvil puede cambiar de dueño; el
+  registro se reasigna en vez de duplicarse, o el anterior seguiría recibiendo
+  los avisos de quien usa ahora ese teléfono.
+- **Las rutas `/devices` van declaradas antes que `/{notification_id}`**, o
+  FastAPI las casa por ahí y responde 422.
+
+### Lo que falta
+
+1. **Proyecto de Firebase**: crear, descargar el JSON de la cuenta de servicio
+   y rellenar las dos variables de entorno.
+2. **Clave APNs** (`.p8`) del portal de Apple, subida a Firebase, para iOS.
+3. **`google-services.json`** en `android/app/`, para Android. Sin él, el
+   `register()` del plugin lanza en Java «Default FirebaseApp is not
+   initialized» y **cierra la aplicación**: le pasó a la versión del 29 de
+   septiembre en cada inicio de sesión con las notificaciones permitidas.
+   Desde el 26 de octubre `npm run config` comprueba si el fichero existe y lo
+   anota en `environment.prod.ts` (`androidPush`); sin él, la app no pide
+   token en Android y avisa por consola. Hay que ponerlo **antes** de
+   `npm run cap:sync`, o la compilación saldrá sin push aunque el fichero
+   esté.
+4. **Capacidad Push** en el target de iOS y su entitlement.
+5. **Cliente**: `@capacitor/push-notifications`, permiso, registro del token
+   contra `POST /notifications/devices`, baja al cerrar sesión y navegación al
+   tocar el aviso.
+6. **Política de privacidad**: Apple y Google pasan a ser encargados del
+   tratamiento, con tráfico fuera del EEE. El texto actual dice lo contrario y
+   hay que corregirlo antes de publicar con push activo.

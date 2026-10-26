@@ -1,0 +1,174 @@
+<div class="legal-page">
+  <header class="legal-header">
+    <h1>Política de privacidad</h1>
+    <p class="updated">Última actualización: {{ legal.lastUpdated }}</p>
+  </header>
+
+  <h2>1. Responsable del tratamiento</h2>
+  <p>
+    {{ legal.organisation }}, con NIF {{ legal.taxId }} y domicilio en
+    {{ legal.address }}, es el responsable del tratamiento de los datos
+    personales recogidos a través de la aplicación BoscoGest.
+  </p>
+  <p>Contacto en materia de protección de datos: {{ legal.email }}</p>
+
+  <h2>2. Qué datos tratamos</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Categoría</th>
+        <th>Datos</th>
+        <th>Origen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Identificación</td>
+        <td>Nombre, apellidos, DNI, fecha de nacimiento, fotografía de perfil</td>
+        <td>Los facilita la persona usuaria o su asociación</td>
+      </tr>
+      <tr>
+        <td>Contacto</td>
+        <td>Correo electrónico, teléfono, dirección postal</td>
+        <td>Los facilita la persona usuaria o su asociación</td>
+      </tr>
+      <tr>
+        <td>Datos asociativos</td>
+        <td>Asociaciones a las que pertenece, rol, actividades en las que se inscribe</td>
+        <td>Se generan con el uso de la aplicación</td>
+      </tr>
+      <tr>
+        <td>Datos económicos</td>
+        <td>IBAN y estado de las cuotas</td>
+        <td>Los facilita la persona usuaria o su asociación</td>
+      </tr>
+      <tr>
+        <td>Datos técnicos</td>
+        <td>Dirección IP y registro de accesos y acciones realizadas</td>
+        <td>Se generan automáticamente por motivos de seguridad</td>
+      </tr>
+      <tr>
+        <td>Identificador del dispositivo</td>
+        <td>
+          Un código que identifica el teléfono o la tableta, necesario para
+          enviarle avisos. Solo si se instala la aplicación móvil y se aceptan
+          las notificaciones
+        </td>
+        <td>Lo emite el sistema operativo del dispositivo</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    La aplicación no utiliza servicios de publicidad ni de analítica de
+    terceros, y no comparte datos con fines comerciales.
+  </p>
+
+  <h2>3. Para qué los tratamos y con qué base jurídica</h2>
+  <ul>
+    <li>
+      <strong>Gestión de la pertenencia a la asociación</strong> (altas, roles,
+      actividades, comunicaciones internas): ejecución de la relación asociativa
+      y consentimiento de la persona usuaria.
+    </li>
+    <li>
+      <strong>Gestión de cuotas</strong>: ejecución de la relación asociativa y
+      cumplimiento de obligaciones legales de tipo contable.
+    </li>
+    <li>
+      <strong>Seguridad y registro de actividad</strong>: interés legítimo en
+      proteger las cuentas y poder auditar quién hizo qué.
+    </li>
+    <li>
+      <strong>Envío de avisos al dispositivo</strong> (notificaciones push):
+      consentimiento, que se presta al aceptar la petición de permiso del
+      teléfono y puede retirarse en cualquier momento desde los ajustes del
+      sistema o desde las preferencias de notificación de la aplicación.
+    </li>
+  </ul>
+
+  <h2>4. Durante cuánto tiempo los conservamos</h2>
+  <p>
+    Los datos se conservan mientras dure la relación con la asociación. Al
+    eliminar la cuenta, los datos identificativos se borran de inmediato. Se
+    mantienen únicamente, de forma anonimizada, los registros contables y de
+    auditoría que la normativa obliga a conservar, sin que puedan asociarse ya
+    a una persona identificada.
+  </p>
+  <p>
+    El identificador del dispositivo se borra al cerrar sesión, al desinstalar
+    la aplicación y al eliminar la cuenta.
+  </p>
+
+  <h2>5. Con quién se comparten</h2>
+  <p>
+    Los datos son accesibles para las personas responsables de las asociaciones
+    a las que pertenece la persona usuaria, según el rol que tenga asignado.
+  </p>
+  <p>
+    Como encargado del tratamiento se utiliza Amazon Web Services EMEA SARL,
+    que aloja la aplicación y la base de datos en centros de datos situados en
+    la Unión Europea (región de Irlanda), y su servicio de correo para el envío
+    de avisos.
+  </p>
+  <p>
+    Para entregar las notificaciones al móvil intervienen además Google Ireland
+    Limited (Firebase Cloud Messaging) y, en los dispositivos de Apple, Apple
+    Distribution International (servicio de notificaciones push). No hay
+    alternativa a estos servicios: son los únicos que los sistemas operativos
+    permiten usar para enviar un aviso a un dispositivo. Reciben únicamente el
+    identificador del dispositivo y el texto del aviso, que es genérico y no
+    contiene datos personales: nunca el nombre de quien lo envía ni el
+    contenido de un mensaje.
+  </p>
+  <p>
+    Esos dos servicios pueden tratar los datos en servidores situados fuera del
+    Espacio Económico Europeo, principalmente en los Estados Unidos. La
+    transferencia se ampara en las cláusulas contractuales tipo aprobadas por
+    la Comisión Europea. Quien no quiera que se produzca puede desactivar las
+    notificaciones del móvil desde los ajustes del sistema o desde las
+    preferencias de la aplicación, y seguirá viendo los avisos dentro de
+    BoscoGest.
+  </p>
+
+  <h2>6. Menores de edad</h2>
+  <p>
+    La aplicación está dirigida a personas mayores de edad. Cuando se registran
+    datos de personas menores de 14 años como participantes en actividades, el
+    alta la realiza la asociación con el consentimiento previo de quien ostente
+    la patria potestad o tutela.
+  </p>
+
+  <h2>7. Tus derechos</h2>
+  <p>
+    Puedes ejercer los derechos de acceso, rectificación, supresión, oposición,
+    limitación del tratamiento y portabilidad escribiendo a {{ legal.email }}.
+    También tienes derecho a presentar una reclamación ante la Agencia Española
+    de Protección de Datos (www.aepd.es).
+  </p>
+
+  <div class="callout">
+    <h2>Eliminar tu cuenta</h2>
+    <p>
+      Puedes borrar tu cuenta y tus datos personales tú mismo, desde
+      <em>Mi perfil</em> dentro de la aplicación. Las instrucciones completas,
+      y qué hacer si ya no tienes acceso, están en la
+      <a routerLink="/eliminar-cuenta">página de eliminación de cuenta</a>.
+    </p>
+  </div>
+
+  <h2>8. Seguridad</h2>
+  <p>
+    Las contraseñas se almacenan cifradas con algoritmos de hash diseñados para
+    ese fin, nunca en claro. Todas las comunicaciones entre la aplicación y el
+    servidor viajan cifradas mediante HTTPS, y el acceso a cada dato está
+    limitado por el rol de la persona usuaria dentro de su asociación.
+  </p>
+
+  <h2>9. Cambios en esta política</h2>
+  <p>
+    Si esta política cambia de forma significativa, se avisará dentro de la
+    aplicación antes de que los cambios surtan efecto.
+  </p>
+
+  <a class="back-link" routerLink="/login">Volver al inicio de sesión</a>
+</div>

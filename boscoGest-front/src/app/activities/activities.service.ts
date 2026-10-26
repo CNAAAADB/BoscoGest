@@ -88,4 +88,12 @@ export class ActivitiesService {
       {}
     );
   }
+
+  // Create a chat group with all admitted participants of the activity
+  createChatGroup(activityId: number): Observable<{ conversation_id: number; name: string }> {
+    return this.http.post<{ conversation_id: number; name: string }>(
+      `${this.apiUrl}/${activityId}/chat-group`,
+      {}
+    );
+  }
 }

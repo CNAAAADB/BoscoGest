@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -12,6 +12,7 @@ interface PreferenceRow {
   label: string;
   in_app_enabled: boolean;
   email_enabled: boolean;
+  push_enabled: boolean;
 }
 
 @Component({
@@ -25,6 +26,8 @@ interface PreferenceRow {
   ],
   templateUrl: './notification-preferences.component.html',
   styleUrl: './notification-preferences.component.css',
+
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationPreferencesComponent implements OnInit {
   private notificationService = inject(NotificationService);
@@ -50,6 +53,7 @@ export class NotificationPreferencesComponent implements OnInit {
               label: et.label,
               in_app_enabled: existing ? existing.in_app_enabled : true,
               email_enabled: existing ? existing.email_enabled : true,
+              push_enabled: existing ? existing.push_enabled : true,
             };
           })
         );
@@ -73,12 +77,26 @@ export class NotificationPreferencesComponent implements OnInit {
     this.savePreferences();
   }
 
+  /**
+   * Interruptor aparte del de la aplicación: se puede querer ver el aviso
+   * dentro de BoscoGest pero no que suene el móvil a media tarde.
+   */
+  togglePush(eventType: string, enabled: boolean): void {
+    this.preferences.update((list) =>
+      list.map((p) =>
+        p.event_type === eventType ? { ...p, push_enabled: enabled } : p
+      )
+    );
+    this.savePreferences();
+  }
+
   private savePreferences(): void {
     const data = {
       preferences: this.preferences().map((p) => ({
         event_type: p.event_type,
         in_app_enabled: p.in_app_enabled,
         email_enabled: p.email_enabled,
+        push_enabled: p.push_enabled,
       })),
     };
 

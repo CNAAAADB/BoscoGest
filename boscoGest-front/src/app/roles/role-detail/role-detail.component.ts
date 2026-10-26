@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -35,6 +35,8 @@ interface GroupedPermission {
   ],
   templateUrl: './role-detail.component.html',
   styleUrl: './role-detail.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleDetailComponent implements OnInit {
   role = signal<RoleDetails | null>(null);

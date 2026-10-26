@@ -1,7 +1,13 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal, ChangeDetectionStrategy} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -11,15 +17,20 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../users.service';
-import { UserResponse } from '../../models/user.model';
+import { PaginatedUsers, UserResponse } from '../../models/user.model';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../auth/auth.service';
+import { ChatService } from '../../chat/chat.service';
 
 @Component({
   selector: 'app-users-list',
   imports: [
     CommonModule,
+    FormsModule,
     MatTableModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatPaginatorModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
@@ -30,11 +41,42 @@ import { AuthService } from '../../auth/auth.service';
   ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UsersListComponent implements OnInit {
+  private destroyRef = inject(DestroyRef);
+
   users = signal<UserResponse[]>([]);
+  /** Full server-side count, which is usually far larger than the loaded page. */
+  total = signal<number>(0);
+  pageIndex = signal<number>(0);
+  pageSize = signal<number>(25);
+  searchTerm = signal<string>('');
+
+  /** Only true for the very first load: a spinner on every keystroke flickers. */
   loading = signal<boolean>(true);
-  displayedColumns: string[] = ['id', 'name', 'email', 'dni', 'is_active', 'actions'];
+  /** Subtler indicator while a search or page change is in flight. */
+  refreshing = signal<boolean>(false);
+
+  private searchInput$ = new Subject<string>();
+
+  /**
+   * DNI is hidden entirely from viewers without users:read_sensitive — the
+   * backend redacts it to null for them, so the column would only ever show
+   * blanks and invite the reader to think the data is missing.
+   */
+  canSeeSensitive = computed(() =>
+    this.authService.hasPermission('users', 'read_sensitive')
+  );
+
+  displayedColumns = computed(() => {
+    const columns = ['id', 'name', 'email'];
+    if (this.canSeeSensitive()) {
+      columns.push('dni');
+    }
+    return [...columns, 'is_active', 'actions'];
+  });
 
   // Check if user can create users
   canCreateUsers = computed(() => {
@@ -61,29 +103,75 @@ export class UsersListComponent implements OnInit {
     private router: Router,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private authService: AuthService
+    private authService: AuthService,
+    private chatService: ChatService
   ) {}
 
   ngOnInit(): void {
+    // Debounced so typing does not fire a request per keystroke;
+    // switchMap drops in-flight responses so a slow earlier one cannot land
+    // after a newer search and show stale results.
+    this.searchInput$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+        switchMap((term) => {
+          this.refreshing.set(true);
+          this.pageIndex.set(0);
+          this.searchTerm.set(term);
+          return this.usersService.getManagedUsers(0, this.pageSize(), term);
+        })
+      )
+      .subscribe({
+        next: (page) => this.applyPage(page),
+        error: (error) => this.reportLoadError(error)
+      });
+
+    this.loadUsers();
+  }
+
+  onSearchInput(term: string): void {
+    this.searchInput$.next(term);
+  }
+
+  clearSearch(): void {
+    this.searchInput$.next('');
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
     this.loadUsers();
   }
 
   loadUsers(): void {
-    this.loading.set(true);
-    this.usersService.getManagedUsers().subscribe({
-      next: (users) => {
-        this.users.set(users);
-        this.loading.set(false);
-      },
-      error: (error) => {
-        console.error('Error loading users:', error);
-        this.snackBar.open('Error al cargar los usuarios', 'Cerrar', {
-          duration: 3000,
-          panelClass: 'error-snackbar'
-        });
-        this.loading.set(false);
-      }
+    this.refreshing.set(true);
+    const skip = this.pageIndex() * this.pageSize();
+
+    this.usersService
+      .getManagedUsers(skip, this.pageSize(), this.searchTerm())
+      .subscribe({
+        next: (page) => this.applyPage(page),
+        error: (error) => this.reportLoadError(error)
+      });
+  }
+
+  private applyPage(page: PaginatedUsers): void {
+    this.users.set(page.items);
+    this.total.set(page.total);
+    this.loading.set(false);
+    this.refreshing.set(false);
+  }
+
+  private reportLoadError(error: unknown): void {
+    console.error('Error loading users:', error);
+    this.snackBar.open('Error al cargar los usuarios', 'Cerrar', {
+      duration: 3000,
+      panelClass: 'error-snackbar'
     });
+    this.loading.set(false);
+    this.refreshing.set(false);
   }
 
   createUser(): void {
@@ -100,6 +188,19 @@ export class UsersListComponent implements OnInit {
 
   createMembership(user: UserResponse): void {
     this.router.navigate(['/users', user.id, 'create-membership']);
+  }
+
+  openChat(user: UserResponse): void {
+    this.chatService.getOrCreateDirect(user.id).subscribe({
+      next: (conv) => {
+        this.chatService.upsertConversationInList(conv);
+        this.chatService.pendingConversationId.set(conv.id);
+        this.router.navigate(['/chat']);
+      },
+      error: () => {
+        this.snackBar.open('Error al abrir el chat', 'Cerrar', { duration: 3000 });
+      },
+    });
   }
 
   isCurrentUser(user: UserResponse): boolean {

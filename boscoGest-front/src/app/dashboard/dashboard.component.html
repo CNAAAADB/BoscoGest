@@ -9,7 +9,7 @@
       <mat-card class="news-widget">
         <mat-card-header>
           <mat-card-title class="widget-title">
-            <mat-icon class="title-icon">newspaper</mat-icon>
+            <mat-icon class="title-icon" aria-hidden="true">newspaper</mat-icon>
             Últimas Comunicaciones
           </mat-card-title>
         </mat-card-header>
@@ -26,7 +26,7 @@
                 <div class="news-preview-content">
                   <h3 class="news-preview-title">{{ selectedNews()!.title }}</h3>
                   <p class="news-preview-date">
-                    <mat-icon>calendar_today</mat-icon>
+                    <mat-icon aria-hidden="true">calendar_today</mat-icon>
                     {{ formatNewsDate(selectedNews()!.created_at) }}
                   </p>
                   <p class="news-preview-text">{{ getNewsExcerpt(selectedNews()!.content, 400) }}</p>
@@ -46,7 +46,7 @@
                       <img [src]="getImageUrl(news.image_url)" [alt]="news.title" class="news-list-image">
                     } @else {
                       <div class="news-list-no-image">
-                        <mat-icon>article</mat-icon>
+                        <mat-icon aria-hidden="true">article</mat-icon>
                       </div>
                     }
                     <div class="news-list-content">
@@ -64,8 +64,8 @@
                     mat-icon-button
                     (click)="onNewsPageChange('prev')"
                     [disabled]="!hasPreviousNews"
-                    class="news-pagination-button">
-                    <mat-icon>keyboard_arrow_up</mat-icon>
+                    class="news-pagination-button" aria-label="Noticias anteriores">
+                    <mat-icon aria-hidden="true">keyboard_arrow_up</mat-icon>
                   </button>
                   <span class="news-pagination-info">
                     {{ newsPageIndex() + 1 }} / {{ totalNewsPages }}
@@ -74,8 +74,8 @@
                     mat-icon-button
                     (click)="onNewsPageChange('next')"
                     [disabled]="!hasMoreNews"
-                    class="news-pagination-button">
-                    <mat-icon>keyboard_arrow_down</mat-icon>
+                    class="news-pagination-button" aria-label="Noticias siguientes">
+                    <mat-icon aria-hidden="true">keyboard_arrow_down</mat-icon>
                   </button>
                 </div>
               }
@@ -91,17 +91,17 @@
         <mat-card-header>
           <div class="widget-header">
             <mat-card-title class="widget-title">
-              <mat-icon class="title-icon">event</mat-icon>
+              <mat-icon class="title-icon" aria-hidden="true">event</mat-icon>
               Calendario de Actividades
             </mat-card-title>
             <button mat-raised-button color="primary" (click)="toggleCalendarView()" class="view-toggle-button">
-              <mat-icon>{{ calendarView() === 'dayGridMonth' ? 'view_week' : 'calendar_month' }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ calendarView() === 'dayGridMonth' ? 'view_week' : 'calendar_month' }}</mat-icon>
               {{ getViewButtonText() }}
             </button>
           </div>
         </mat-card-header>
         <mat-card-content class="calendar-content">
-          <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+          <full-calendar #calendar [options]="calendarOptions()"></full-calendar>
         </mat-card-content>
       </mat-card>
 
@@ -109,14 +109,14 @@
       <mat-card class="upcoming-widget">
         <mat-card-header>
           <mat-card-title class="widget-title">
-            <mat-icon class="title-icon">schedule</mat-icon>
+            <mat-icon class="title-icon" aria-hidden="true">schedule</mat-icon>
             Próximas Actividades
           </mat-card-title>
         </mat-card-header>
         <mat-card-content class="upcoming-content">
           @if (upcomingActivities().length === 0) {
             <div class="empty-state">
-              <mat-icon class="empty-icon">event_busy</mat-icon>
+              <mat-icon class="empty-icon" aria-hidden="true">event_busy</mat-icon>
               <p>No hay actividades próximas</p>
             </div>
           } @else {
@@ -126,24 +126,24 @@
                   <div class="activity-item-header">
                     <h4 class="activity-item-title">{{ activity.title }}</h4>
                     <div class="activity-item-date">
-                      <mat-icon>access_time</mat-icon>
-                      <span>{{ formatShortDate(activity.date) }}</span>
+                      <mat-icon aria-hidden="true">access_time</mat-icon>
+                      <span>{{ formatActivityShort(activity) }}</span>
                     </div>
                   </div>
                   <div class="activity-item-details">
                     <div class="activity-item-info">
-                      <mat-icon>people</mat-icon>
+                      <mat-icon aria-hidden="true">people</mat-icon>
                       <span>{{ activity.capacity }} plazas</span>
                     </div>
                     @if (activity.price > 0) {
                       <div class="activity-item-info">
-                        <mat-icon>euro</mat-icon>
+                        <mat-icon aria-hidden="true">euro</mat-icon>
                         <span>{{ activity.price }}€</span>
                       </div>
                     }
                     @if (activity.entity) {
                       <div class="activity-item-info">
-                        <mat-icon>business</mat-icon>
+                        <mat-icon aria-hidden="true">business</mat-icon>
                         <span>{{ activity.entity.name }}</span>
                       </div>
                     }
@@ -153,7 +153,7 @@
                     color="primary"
                     (click)="registerToActivity(activity.id, $event)"
                     class="activity-item-button">
-                    <mat-icon>how_to_reg</mat-icon>
+                    <mat-icon aria-hidden="true">how_to_reg</mat-icon>
                     Inscribirme
                   </button>
                 </div>
@@ -168,16 +168,16 @@
                   (click)="previousActivities()"
                   [disabled]="!hasPreviousActivities"
                   class="carousel-button"
-                  matTooltip="Anteriores">
-                  <mat-icon>keyboard_arrow_left</mat-icon>
+                  matTooltip="Anteriores" aria-label="Anteriores">
+                  <mat-icon aria-hidden="true">keyboard_arrow_left</mat-icon>
                 </button>
                 <button
                   mat-icon-button
                   (click)="nextActivities()"
                   [disabled]="!hasMoreActivities"
                   class="carousel-button"
-                  matTooltip="Siguientes">
-                  <mat-icon>keyboard_arrow_right</mat-icon>
+                  matTooltip="Siguientes" aria-label="Siguientes">
+                  <mat-icon aria-hidden="true">keyboard_arrow_right</mat-icon>
                 </button>
               </div>
             }

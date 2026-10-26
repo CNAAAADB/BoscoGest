@@ -15,7 +15,7 @@ def test_create_activity(client, auth_headers, test_entity):
         "entity_id": test_entity.id
     }
 
-    response = client.post("/activities/", json=activity_data, headers=auth_headers)
+    response = client.post("/activities", json=activity_data, headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -46,7 +46,7 @@ def test_create_activity_without_active_membership(client, db_session, test_enti
     db_session.refresh(user)
 
     # Crear token sin membership_id
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     headers = {"Authorization": f"Bearer {token}"}
 
     activity_data = {
@@ -59,7 +59,7 @@ def test_create_activity_without_active_membership(client, db_session, test_enti
         "entity_id": test_entity.id
     }
 
-    response = client.post("/activities/", json=activity_data, headers=headers)
+    response = client.post("/activities", json=activity_data, headers=headers)
 
     # Sin membership activo con esa entidad, debe fallar con 403
     assert response.status_code == 403
@@ -76,7 +76,7 @@ def test_create_activity_unauthorized(client):
         "allow_waitlist": True
     }
 
-    response = client.post("/activities/", json=activity_data)
+    response = client.post("/activities", json=activity_data)
 
     assert response.status_code == 401
 
@@ -121,7 +121,7 @@ def test_list_activities(client, auth_headers, db_session, test_entity, test_use
     db_session.add(activity_in_other_entity)
     db_session.commit()
 
-    response = client.get("/activities/", headers=auth_headers)
+    response = client.get("/activities", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()

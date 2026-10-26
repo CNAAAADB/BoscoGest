@@ -2,8 +2,8 @@
   <mat-card class="edit-card">
     <mat-card-header>
       <div class="header-content">
-        <button mat-icon-button (click)="onCancel()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
+        <button mat-icon-button (click)="onCancel()" class="back-button" aria-label="Volver">
+          <mat-icon aria-hidden="true">arrow_back</mat-icon>
         </button>
         <mat-card-title>Editar Revista</mat-card-title>
       </div>
@@ -92,7 +92,7 @@
                 <mat-spinner diameter="20" class="spinner"></mat-spinner>
                 <span>Guardando...</span>
               } @else {
-                <mat-icon>save</mat-icon>
+                <mat-icon aria-hidden="true">save</mat-icon>
                 <span>Guardar Cambios</span>
               }
             </button>

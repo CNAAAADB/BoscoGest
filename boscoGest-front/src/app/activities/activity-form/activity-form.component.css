@@ -34,6 +34,36 @@
   flex: 1;
 }
 
+.dates-title {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 1rem;
+  color: #3D4E7C;
+}
+
+.dates-title .optional {
+  font-weight: normal;
+  color: #555;
+}
+
+.dates-hint {
+  margin: -0.25rem 0 0.75rem;
+  color: #555;
+  font-size: 0.875rem;
+}
+
+.dates-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: -0.5rem 0 1rem;
+  color: #b00020;
+  font-size: 0.875rem;
+}
+
+.clear-end {
+  margin: -0.5rem 0 1rem;
+}
+
 .checkbox {
   margin-bottom: 1.5rem;
 }

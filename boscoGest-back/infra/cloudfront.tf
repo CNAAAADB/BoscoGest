@@ -46,34 +46,113 @@ data "aws_s3_bucket" "frontend" {
 # CloudFront Distribution
 # ──────────────────────────────────────────────
 
+# ──────────────────────────────────────────────
+# Origin Access Control
+# ──────────────────────────────────────────────
+#
+# Lets CloudFront sign its requests to S3, so the bucket can stay private and
+# CloudFront becomes the only way in.
+
+resource "aws_cloudfront_origin_access_control" "frontend" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name                              = "${var.project_name}-frontend-oac"
+  description                       = "Signed access from CloudFront to the frontend bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# ──────────────────────────────────────────────
+# Security headers
+# ──────────────────────────────────────────────
+#
+# The nginx image sets some of these, but production serves the SPA from
+# S3+CloudFront and never runs that nginx, so in practice none of them were
+# being sent.
+
+resource "aws_cloudfront_response_headers_policy" "frontend" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name = "${var.project_name}-security-headers"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = false
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+
+    content_security_policy {
+      override = true
+      # Angular needs inline styles for component encapsulation. connect-src
+      # has to name the API host explicitly, including the wss:// origin the
+      # chat and notification sockets use.
+      content_security_policy = join("; ", [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: blob: https://${var.frontend_bucket_name}.s3.${var.aws_region}.amazonaws.com",
+        "connect-src 'self' https://api.${var.domain_name} wss://api.${var.domain_name}",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ])
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   count = var.domain_name != "" ? 1 : 0
 
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = [var.domain_name, "www.${var.domain_name}"]
-  price_class         = "PriceClass_100" # Only US + Europe (cheapest)
+  # The wildcard is what makes REQ-TEN-03 work: each entity is served at
+  # {entity}.<domain>. The ACM certificate already covers *.<domain>, but
+  # without the alias CloudFront rejects those hostnames.
+  aliases     = [var.domain_name, "www.${var.domain_name}", "*.${var.domain_name}"]
+  price_class = "PriceClass_100" # Only US + Europe (cheapest)
 
-  # Origin: S3 website endpoint (HTTP only)
+  # Origin: the S3 REST endpoint, reached with Origin Access Control.
+  #
+  # This previously pointed at the bucket's *website* endpoint over http-only,
+  # which meant the CloudFront-to-origin leg was unencrypted and, worse, the
+  # bucket had to stay publicly readable — so anyone could bypass CloudFront
+  # (and its TLS, headers and caching) by hitting the bucket directly.
+  #
+  # The REST endpoint has no index/error document behaviour, so SPA routing
+  # relies on the custom_error_response rules below mapping 403/404 to
+  # /index.html.
   origin {
-    domain_name = "${var.frontend_bucket_name}.s3-website-${var.aws_region}.amazonaws.com"
-    origin_id   = "S3-frontend"
-
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
+    domain_name              = "${var.frontend_bucket_name}.s3.${var.aws_region}.amazonaws.com"
+    origin_id                = "S3-frontend"
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend[0].id
   }
 
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-frontend"
-    viewer_protocol_policy = "redirect-to-https"
-    compress               = true
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "S3-frontend"
+    viewer_protocol_policy     = "redirect-to-https"
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend[0].id
 
     forwarded_values {
       query_string = false
@@ -119,6 +198,10 @@ resource "aws_cloudfront_distribution" "frontend" {
     Name = "${var.project_name}-frontend-cdn"
   }
 
-  # Wait for certificate validation before creating
-  depends_on = [aws_acm_certificate.frontend]
+  # CloudFront rejects a certificate that is not yet ISSUED, so this must wait
+  # for validation to complete, not merely for the certificate to be requested.
+  depends_on = [
+    aws_acm_certificate.frontend,
+    aws_acm_certificate_validation.frontend,
+  ]
 }

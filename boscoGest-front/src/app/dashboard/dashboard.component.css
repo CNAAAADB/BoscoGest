@@ -207,7 +207,7 @@
 
 .news-list-excerpt {
   font-size: 0.813rem;
-  color: #6c757d;
+  color: #646c74;
   margin: 0;
   line-height: 1.4;
   overflow: hidden;
@@ -243,7 +243,7 @@
 
 .news-pagination-info {
   font-size: 0.875rem;
-  color: #6c757d;
+  color: #646c74;
   font-weight: 500;
   min-width: 60px;
   text-align: center;
@@ -345,7 +345,7 @@
 }
 
 :host ::ng-deep .fc-col-header-cell-cushion {
-  color: #6c757d;
+  color: #646c74;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -380,7 +380,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 1rem;
-  color: #6c757d;
+  color: #646c74;
 }
 
 .empty-icon {
@@ -433,7 +433,7 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: #6c757d;
+  color: #646c74;
   white-space: nowrap;
 }
 
@@ -455,7 +455,7 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: #6c757d;
+  color: #646c74;
 }
 
 .activity-item-info mat-icon {
@@ -521,6 +521,28 @@
   .news-preview {
     border-right: none;
     border-bottom: 1px solid #e9ecef;
+  }
+
+  /* A una columna, el alto fijo de 600px del widget se repartía entre dos
+     filas que seguían pidiendo height:100% cada una. La vista previa quedaba
+     aplastada a 81px con su contenido desbordando sobre la lista. En vertical
+     el widget crece con su contenido y es la lista la que se limita. */
+  .news-widget {
+    height: auto;
+  }
+
+  .news-split,
+  .news-preview,
+  .news-list-container {
+    height: auto;
+  }
+
+  .news-preview {
+    overflow-y: visible;
+  }
+
+  .news-list {
+    max-height: 22rem;
   }
 }
 

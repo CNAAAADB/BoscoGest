@@ -4,7 +4,7 @@
   <mat-card class="form-card">
     <mat-card-header>
       <mat-card-title class="section-title">
-        <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
+        <mat-icon class="title-icon" aria-hidden="true">{{ isEditMode() ? 'edit' : 'add_circle' }}</mat-icon>
         {{ isEditMode() ? 'Información del Rol' : 'Nuevo Rol' }}
       </mat-card-title>
     </mat-card-header>
@@ -25,6 +25,16 @@
               @if (roleForm.get('name')?.hasError('minlength')) {
                 <mat-error>El nombre debe tener al menos 2 caracteres</mat-error>
               }
+              <!-- Roles belong to one association, but their names cannot repeat
+                   across the system. Saying so here avoids the surprise of a
+                   clash with a role in an association you cannot see. -->
+              @if (!isEditMode() && targetEntityName()) {
+                <mat-hint>
+                  El rol se creará en {{ targetEntityName() }}. El nombre no puede
+                  repetirse en el sistema, así que conviene incluir la asociación
+                  (por ejemplo «Tesorero {{ targetEntityName() }}»).
+                </mat-hint>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -40,7 +50,7 @@
 
           <div class="permissions-section">
             <h3 class="subsection-title">
-              <mat-icon class="subsection-icon">security</mat-icon>
+              <mat-icon class="subsection-icon" aria-hidden="true">security</mat-icon>
               Permisos
               @if (isSuperadmin()) {
                 <span class="superadmin-notice">(Superadmin tiene todos los permisos - no modificable)</span>
@@ -55,10 +65,12 @@
                       <mat-list-item (click)="!isSuperadmin() && moveToSelected(permission)"
                                      class="permission-item"
                                      [class.disabled]="isSuperadmin()">
+                        <!-- The description leads; the identifier stays below
+                             it for anyone who needs to match it against the
+                             code. It used to be the other way round, and the
+                             description was always empty. -->
                         <span class="permission-label">{{ getPermissionLabel(permission) }}</span>
-                        @if (permission.description) {
-                          <span class="permission-description">{{ permission.description }}</span>
-                        }
+                        <span class="permission-description">{{ getPermissionCode(permission) }}</span>
                       </mat-list-item>
                     }
                     @if (availablePermissions().length === 0) {
@@ -77,13 +89,13 @@
                 <div class="permissions-controls">
                   <button mat-icon-button type="button" (click)="moveAllToSelected()"
                           [disabled]="isSuperadmin() || availablePermissions().length === 0"
-                          matTooltip="Mover todos a la derecha">
-                    <mat-icon>keyboard_double_arrow_right</mat-icon>
+                          matTooltip="Mover todos a la derecha" aria-label="Mover todos a la derecha">
+                    <mat-icon aria-hidden="true">keyboard_double_arrow_right</mat-icon>
                   </button>
                   <button mat-icon-button type="button" (click)="moveAllToAvailable()"
                           [disabled]="isSuperadmin() || selectedPermissions().length === 0"
-                          matTooltip="Mover todos a la izquierda">
-                    <mat-icon>keyboard_double_arrow_left</mat-icon>
+                          matTooltip="Mover todos a la izquierda" aria-label="Mover todos a la izquierda">
+                    <mat-icon aria-hidden="true">keyboard_double_arrow_left</mat-icon>
                   </button>
                 </div>
 
@@ -95,10 +107,12 @@
                       <mat-list-item (click)="!isSuperadmin() && moveToAvailable(permission)"
                                      class="permission-item selected"
                                      [class.disabled]="isSuperadmin()">
+                        <!-- The description leads; the identifier stays below
+                             it for anyone who needs to match it against the
+                             code. It used to be the other way round, and the
+                             description was always empty. -->
                         <span class="permission-label">{{ getPermissionLabel(permission) }}</span>
-                        @if (permission.description) {
-                          <span class="permission-description">{{ permission.description }}</span>
-                        }
+                        <span class="permission-description">{{ getPermissionCode(permission) }}</span>
                       </mat-list-item>
                     }
                     @if (selectedPermissions().length === 0) {
@@ -111,7 +125,7 @@
 
           <div class="form-actions">
             <button mat-button type="button" (click)="onCancel()" class="cancel-action-button">
-              <mat-icon>arrow_back</mat-icon>
+              <mat-icon aria-hidden="true">arrow_back</mat-icon>
               Cancelar
             </button>
             <button
@@ -121,7 +135,7 @@
               [disabled]="roleForm.invalid || loading() || isSuperadmin()"
               class="submit-action-button"
             >
-              <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+              <mat-icon aria-hidden="true">{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
               {{ isEditMode() ? 'Actualizar' : 'Crear' }}
             </button>
           </div>

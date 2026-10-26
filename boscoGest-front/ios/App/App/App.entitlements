@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Capacidad de notificaciones push.
+
+  aps-environment a "development" para poder probar desde Xcode. Al archivar
+  para App Store, Xcode lo sustituye por "production" según el perfil de
+  aprovisionamiento; no hay que cambiarlo a mano ni mantener dos ficheros.
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

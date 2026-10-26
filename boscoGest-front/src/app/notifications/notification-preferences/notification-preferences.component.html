@@ -4,12 +4,23 @@
   </div>
 } @else {
   <div class="preferences-list">
+    <div class="preferences-header">
+      <span class="preference-label"></span>
+      <span class="toggle-heading">En la app</span>
+      <span class="toggle-heading">En el móvil</span>
+    </div>
     @for (pref of preferences(); track pref.event_type) {
       <div class="preference-row">
         <span class="preference-label">{{ pref.label }}</span>
         <mat-slide-toggle
           [checked]="pref.in_app_enabled"
+          [attr.aria-label]="'Avisos de ' + pref.label + ' dentro de la aplicación'"
           (change)="togglePreference(pref.event_type, $event.checked)"
+        ></mat-slide-toggle>
+        <mat-slide-toggle
+          [checked]="pref.push_enabled"
+          [attr.aria-label]="'Avisos de ' + pref.label + ' en el móvil'"
+          (change)="togglePush(pref.event_type, $event.checked)"
         ></mat-slide-toggle>
       </div>
     }

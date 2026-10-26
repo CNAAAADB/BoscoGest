@@ -11,7 +11,9 @@ class Entity(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     level: Mapped[int] = mapped_column(Integer)
-    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entities.id"))
+    # Every recursive CTE that walks the hierarchy pivots on this column;
+    # without an index each level of recursion was a sequential scan.
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entities.id"), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
@@ -44,4 +46,12 @@ class Entity(Base):
     )
     resource_categories: Mapped[List["ResourceCategory"]] = relationship(
         "ResourceCategory", back_populates="entity", cascade="all, delete-orphan"
+    )
+
+    # Cuotas
+    fees: Mapped[List["Fee"]] = relationship(
+        "Fee", back_populates="entity", cascade="all, delete-orphan"
+    )
+    fee_assignments: Mapped[List["FeeAssignment"]] = relationship(
+        "FeeAssignment", back_populates="entity", cascade="all, delete-orphan"
     )

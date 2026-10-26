@@ -1,11 +1,12 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError, of, map, switchMap } from 'rxjs';
+import { Observable, tap, catchError, of, map, switchMap, forkJoin } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { UserResponse, MembershipDetails, PermissionResponse } from '../models/user.model';
 import { BrandingService } from '../settings/branding.service';
 import { NotificationService } from '../notifications/notification.service';
+import { PushService } from '../notifications/push.service';
 
 interface TokenResponse {
   access_token: string;
@@ -49,26 +50,42 @@ export class AuthService {
     // Check if user is already logged in (from localStorage)
     const token = localStorage.getItem('authToken');
     if (token) {
-      // Validate token by attempting to load user data
       this.validateToken();
     }
   }
 
-  private validateToken(): void {
-    this.http.get<MembershipDetails[]>(`${this.apiUrl}/memberships`).subscribe({
-      next: (memberships) => {
+  /**
+   * What a session needs: the person and their memberships, fetched together.
+   *
+   * The person comes from /users/me, not from the first membership. Someone
+   * who has just signed up has no membership until their request is approved,
+   * and taking the user from there left them with an empty profile — no name,
+   * no DNI, "Invalid Date" — right after typing all of it in.
+   */
+  private loadSession(): Observable<void> {
+    return forkJoin({
+      memberships: this.http.get<MembershipDetails[]>(`${this.apiUrl}/memberships`),
+      me: this.http.get<UserResponse>(`${this.apiUrl}/users/me`),
+    }).pipe(
+      map(({ memberships, me }) => {
+        this.currentUser.set(me);
         if (memberships && memberships.length > 0) {
-          this.isAuthenticated.set(true);
-          this.allMemberships.set(memberships); // Store all memberships
-          this.currentMembership.set(memberships[0]); // Use first membership for entity context
-          if (memberships[0].user) {
-            this.currentUser.set(memberships[0].user);
-          }
-          // Load branding for the current entity
+          this.allMemberships.set(memberships);
+          this.currentMembership.set(memberships[0]);
           this.loadEntityBranding(memberships[0].entity_id);
         } else {
-          this.clearAuthData();
+          // No membership yet = pending approval. Still a valid session.
+          this.allMemberships.set([]);
         }
+      })
+    );
+  }
+
+  private validateToken(): void {
+    this.loadSession().subscribe({
+      next: () => {
+        // Token is valid regardless of whether user has memberships
+        this.isAuthenticated.set(true);
       },
       error: (error) => {
         console.error('Token validation failed:', error);
@@ -83,27 +100,15 @@ export class AuthService {
       return of(false);
     }
 
-    // If already validated and authenticated, return true
     if (this.isAuthenticated()) {
       return of(true);
     }
 
-    // Validate token by attempting to load user data
-    return this.http.get<MembershipDetails[]>(`${this.apiUrl}/memberships`).pipe(
-      map((memberships) => {
-        if (memberships && memberships.length > 0) {
-          this.isAuthenticated.set(true);
-          this.allMemberships.set(memberships); // Store all memberships
-          this.currentMembership.set(memberships[0]); // Use first membership for entity context
-          if (memberships[0].user) {
-            this.currentUser.set(memberships[0].user);
-          }
-          // Load branding for the current entity
-          this.loadEntityBranding(memberships[0].entity_id);
-          return true;
-        }
-        this.clearAuthData();
-        return false;
+    return this.loadSession().pipe(
+      map(() => {
+        // Token valid — authenticate regardless of memberships count
+        this.isAuthenticated.set(true);
+        return true;
       }),
       catchError((error) => {
         console.error('Token validation failed:', error);
@@ -113,42 +118,13 @@ export class AuthService {
     );
   }
 
-  private loadUserData(): void {
-    // Load all user memberships
-    this.http.get<MembershipDetails[]>(`${this.apiUrl}/memberships`).subscribe({
-      next: (memberships) => {
-        if (memberships && memberships.length > 0) {
-          this.allMemberships.set(memberships); // Store all memberships
-          this.currentMembership.set(memberships[0]); // Use first membership for entity context
-          if (memberships[0].user) {
-            this.currentUser.set(memberships[0].user);
-          }
-          // Load branding for the current entity
-          this.loadEntityBranding(memberships[0].entity_id);
-        }
-      },
-      error: (error) => {
-        console.error('Error loading user data:', error);
-      }
-    });
-  }
-
-  login(email: string, password: string): Observable<boolean> {
-    // FastAPI OAuth2 expects form data with 'email' and 'password' fields
+  login(identifier: string, password: string): Observable<boolean> {
     const formData = new FormData();
-    formData.append('email', email);
+    formData.append('identifier', identifier);
     formData.append('password', password);
 
     return this.http.post<TokenResponse>(`${this.apiUrl}/auth/token`, formData).pipe(
-      tap((response) => {
-        localStorage.setItem('authToken', response.access_token);
-        this.isAuthenticated.set(true);
-      }),
-      switchMap(() => {
-        // Load user data after successful login
-        this.loadUserData();
-        return of(true);
-      }),
+      switchMap((response) => this.adoptSession(response.access_token)),
       catchError((error) => {
         console.error('Login error:', error);
         this.isAuthenticated.set(false);
@@ -157,21 +133,82 @@ export class AuthService {
     );
   }
 
+  /**
+   * Exchange a one-shot link from a welcome email for a session.
+   *
+   * People an administrator created never learn their password, so this is how
+   * they get in the first time. What comes back is an ordinary session, and the
+   * account still carries must_change_password, which is what sends them
+   * straight to choosing one.
+   *
+   * Errors are passed through untouched: the reason the link failed decides
+   * what the screen offers next.
+   */
+  activateWithToken(token: string): Observable<boolean> {
+    return this.http
+      .post<TokenResponse>(`${this.apiUrl}/auth/activate`, { token })
+      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+  }
+
+  /** Ask for a fresh link. Always succeeds, whoever the address belongs to. */
+  resendActivation(identifier: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/auth/activate/resend`,
+      { identifier }
+    );
+  }
+
+  /**
+   * Store an access token and load what the session needs from it.
+   *
+   * Shared by the password login and by the activation links, so a session
+   * ends up in the same state however it was opened.
+   */
+  private adoptSession(accessToken: string): Observable<boolean> {
+    localStorage.setItem('authToken', accessToken);
+    this.isAuthenticated.set(true);
+
+    return this.loadSession().pipe(
+      map(() => true),
+      // Aquí, y no en login(), porque el enlace de activación entra por el
+      // mismo sitio: quien estrena cuenta también debe recibir avisos.
+      tap(() => void this.pushService.register())
+    );
+  }
+
   logout(): void {
-    // Call backend logout endpoint
+    // La baja del dispositivo va primero: es una petición autenticada y el
+    // logout revoca el token. Sin esperarla, porque cerrar sesión no puede
+    // quedarse colgado si el servidor no responde; si se pierde, el token se
+    // limpiará solo cuando FCM lo rechace.
+    void this.pushService.unregister();
+
     this.http.post(`${this.apiUrl}/auth/logout`, {}).subscribe({
       next: () => {
         this.clearAuthData();
       },
       error: (error) => {
         console.error('Logout error:', error);
-        // Clear local data even if backend call fails
         this.clearAuthData();
       }
     });
   }
 
+  /**
+   * Cierra la sesión sin pasar por el backend.
+   *
+   * Para cuando el servidor ya ha revocado el token — al eliminar la cuenta,
+   * por ejemplo — y pedirle un logout solo devolvería un 401.
+   */
+  endSession(): void {
+    // Sin dar de baja el dispositivo contra el servidor: el token ya está
+    // revocado y la petición daría 401. Al eliminar la cuenta, el backend
+    // borra sus dispositivos por su cuenta.
+    this.clearAuthData();
+  }
+
   private notificationService = inject(NotificationService);
+  private pushService = inject(PushService);
 
   private clearAuthData(): void {
     this.notificationService.disconnect();
@@ -190,7 +227,6 @@ export class AuthService {
         this.brandingService.applyBrandingToDOM(branding);
       },
       error: (error) => {
-        // If no branding configured (404), use defaults
         if (error.status !== 404) {
           console.error('Error loading branding:', error);
         }
@@ -203,6 +239,10 @@ export class AuthService {
     return this.isAuthenticated();
   }
 
+  hasMemberships(): boolean {
+    return this.allMemberships().length > 0;
+  }
+
   getCurrentUser(): UserResponse | null {
     return this.currentUser();
   }
@@ -211,11 +251,6 @@ export class AuthService {
     return this.currentMembership();
   }
 
-  /**
-   * Check if the current user has a specific permission across all their memberships.
-   * This is a synchronous check that looks at the loaded permissions in memory.
-   * For server-side validation, use checkPermission() instead.
-   */
   hasPermission(resource: string, action: string): boolean {
     const permissions = this.allUniquePermissions();
     return permissions.some(
@@ -223,16 +258,9 @@ export class AuthService {
     );
   }
 
-  /**
-   * Check if the current user has permission to perform an action on a specific entity.
-   * Returns true if:
-   * - User has 'entities:manage_all' permission (can manage any entity), OR
-   * - User has a membership in the specific entity with the required permission
-   */
   hasEntityPermission(entityId: number, action: string): boolean {
     const memberships = this.allMemberships();
 
-    // First check if user has manage_all permission
     const hasManageAll = memberships.some(membership =>
       membership.role?.permissions?.some(
         permission => permission.resource === 'entities' && permission.action === 'manage_all'
@@ -243,7 +271,6 @@ export class AuthService {
       return true;
     }
 
-    // Check if user has membership in this specific entity with the required permission
     return memberships.some(membership =>
       membership.entity_id === entityId &&
       membership.role?.permissions?.some(
@@ -253,8 +280,33 @@ export class AuthService {
   }
 
   /**
-   * Check if the current user has any permission for a specific resource across all their memberships.
+   * Si se tiene un permiso **en una asociación concreta**.
+   *
+   * Para los permisos no heredables —`memberships:*`, `roles:create/update/
+   * delete/assign`, `branding:*`, `views:*`, `entities:create/update/delete`—,
+   * que solo valen en la asociación donde se tienen y no caen hacia los hijos.
+   * `hasPermission()` no sirve aquí: mira todos los permisos juntos y diría que
+   * sí por tenerlo en otra asociación cualquiera.
+   *
+   * Es una pista para la interfaz, no el control de acceso: quien decide es el
+   * backend, con `check_entity_permission`. Sirve para no enseñar un botón que
+   * va a devolver 403.
    */
+  hasPermissionAtEntity(entityId: number, resource: string, action: string): boolean {
+    return this.allMemberships().some((membership) => {
+      if (!membership.is_active) return false;
+      const permisos = membership.role?.permissions ?? [];
+      // manage_all sobre el recurso vale en cualquier asociación.
+      if (permisos.some((p) => p.resource === resource && p.action === 'manage_all')) {
+        return true;
+      }
+      return (
+        membership.entity_id === entityId &&
+        permisos.some((p) => p.resource === resource && p.action === action)
+      );
+    });
+  }
+
   hasAnyPermissionForResource(resource: string): boolean {
     const permissions = this.allUniquePermissions();
     return permissions.some(
@@ -262,9 +314,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Get all unique permissions across all the current user's memberships.
-   */
   getCurrentPermissions(): string[] {
     const permissions = this.allUniquePermissions();
     return permissions.map(
@@ -272,9 +321,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Get all memberships for the current user.
-   */
   getAllMemberships(): MembershipDetails[] {
     return this.allMemberships();
   }
@@ -289,7 +335,6 @@ export class AuthService {
       map(() => true),
       catchError((error) => {
         console.error('Permission check error:', error);
-        // If 401 Unauthorized, clear auth data and redirect to login
         if (error.status === 401) {
           this.clearAuthData();
         }

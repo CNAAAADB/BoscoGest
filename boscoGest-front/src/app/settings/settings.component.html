@@ -10,7 +10,7 @@
   @if (!loading() && adminEntities().length === 0) {
     <mat-card class="no-entities-card">
       <mat-card-content>
-        <mat-icon>info</mat-icon>
+        <mat-icon aria-hidden="true">info</mat-icon>
         <p>No tienes permisos de administrador en ninguna asociación.</p>
       </mat-card-content>
     </mat-card>
@@ -39,7 +39,7 @@
       <!-- Branding Tab -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <mat-icon>palette</mat-icon>
+          <mat-icon aria-hidden="true">palette</mat-icon>
           <span>Branding</span>
         </ng-template>
 
@@ -59,11 +59,11 @@
                     <div class="logo-preview" [class.has-logo]="logoPreview()">
                       @if (logoPreview()) {
                         <img [src]="logoPreview()" alt="Logo preview">
-                        <button mat-icon-button class="remove-logo" (click)="removeLogo()" matTooltip="Eliminar logo">
-                          <mat-icon>close</mat-icon>
+                        <button mat-icon-button class="remove-logo" (click)="removeLogo()" matTooltip="Eliminar logo" aria-label="Eliminar logo">
+                          <mat-icon aria-hidden="true">close</mat-icon>
                         </button>
                       } @else {
-                        <mat-icon>image</mat-icon>
+                        <mat-icon aria-hidden="true">image</mat-icon>
                         <span>Sin logo</span>
                       }
                     </div>
@@ -71,7 +71,7 @@
                       <input type="file" #logoInput accept="image/png,image/jpeg,image/jpg,image/svg+xml"
                              (change)="onLogoSelected($event)" hidden>
                       <button mat-stroked-button (click)="logoInput.click()">
-                        <mat-icon>upload</mat-icon>
+                        <mat-icon aria-hidden="true">upload</mat-icon>
                         Subir logo
                       </button>
                       <span class="hint">PNG, JPG o SVG. Máximo 5MB.</span>
@@ -115,30 +115,33 @@
                   <h3>Colores</h3>
                   <div class="colors-grid">
                     <div class="color-field">
-                      <label>Color primario</label>
+                      <label [attr.for]="'color-primary_color'">Color primario</label>
                       <div class="color-input-wrapper">
-                        <input type="color" formControlName="primary_color">
+                        <input type="color" [attr.id]="'color-primary_color'" formControlName="primary_color">
                         <input type="text" formControlName="primary_color" class="color-text"
+                               aria-label="Color primario en hexadecimal"
                                pattern="^#[0-9A-Fa-f]{6}$">
                       </div>
                       <div class="color-preview" [style.background-color]="colorPreview().primary"></div>
                     </div>
 
                     <div class="color-field">
-                      <label>Color secundario</label>
+                      <label [attr.for]="'color-secondary_color'">Color secundario</label>
                       <div class="color-input-wrapper">
-                        <input type="color" formControlName="secondary_color">
+                        <input type="color" [attr.id]="'color-secondary_color'" formControlName="secondary_color">
                         <input type="text" formControlName="secondary_color" class="color-text"
+                               aria-label="Color secundario en hexadecimal"
                                pattern="^#[0-9A-Fa-f]{6}$">
                       </div>
                       <div class="color-preview" [style.background-color]="colorPreview().secondary"></div>
                     </div>
 
                     <div class="color-field">
-                      <label>Color de acento</label>
+                      <label [attr.for]="'color-accent_color'">Color de acento</label>
                       <div class="color-input-wrapper">
-                        <input type="color" formControlName="accent_color">
+                        <input type="color" [attr.id]="'color-accent_color'" formControlName="accent_color">
                         <input type="text" formControlName="accent_color" class="color-text"
+                               aria-label="Color de acento en hexadecimal"
                                pattern="^#[0-9A-Fa-f]{6}$">
                       </div>
                       <div class="color-preview" [style.background-color]="colorPreview().accent"></div>
@@ -170,7 +173,7 @@
               } @else {
                 <button mat-raised-button color="primary" (click)="saveBranding()"
                         [disabled]="!brandingForm.valid">
-                  <mat-icon>save</mat-icon>
+                  <mat-icon aria-hidden="true">save</mat-icon>
                   Guardar
                 </button>
               }
@@ -182,7 +185,7 @@
       <!-- View Config Tab -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <mat-icon>view_list</mat-icon>
+          <mat-icon aria-hidden="true">view_list</mat-icon>
           <span>Vistas del menú</span>
         </ng-template>
 
@@ -205,10 +208,10 @@
                 @for (config of viewConfigs(); track config.id) {
                   <div class="view-item" cdkDrag [cdkDragDisabled]="savingViews()">
                     <div class="drag-handle" cdkDragHandle>
-                      <mat-icon>drag_indicator</mat-icon>
+                      <mat-icon aria-hidden="true">drag_indicator</mat-icon>
                     </div>
 
-                    <mat-icon class="view-icon">{{ config.icon || 'article' }}</mat-icon>
+                    <mat-icon class="view-icon" aria-hidden="true">{{ config.icon || 'article' }}</mat-icon>
 
                     <div class="view-info">
                       <input type="text" [value]="config.display_name"
@@ -231,7 +234,7 @@
 
             <mat-card-actions align="end">
               <button mat-button (click)="resetViewConfigs()" [disabled]="savingViews()">
-                <mat-icon>restore</mat-icon>
+                <mat-icon aria-hidden="true">restore</mat-icon>
                 Restaurar valores por defecto
               </button>
             </mat-card-actions>
@@ -241,7 +244,7 @@
       <!-- Notification Preferences Tab -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <mat-icon>notifications</mat-icon>
+          <mat-icon aria-hidden="true">notifications</mat-icon>
           <span>Notificaciones</span>
         </ng-template>
 
@@ -258,6 +261,19 @@
           </mat-card>
         </div>
       </mat-tab>
+
+      @if (canManageConsent()) {
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon aria-hidden="true">privacy_tip</mat-icon>
+            <span>Protección de datos</span>
+          </ng-template>
+
+          <div class="tab-content">
+            <app-consent-clauses />
+          </div>
+        </mat-tab>
+      }
     </mat-tab-group>
   }
 </div>

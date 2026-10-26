@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -60,6 +60,8 @@ export interface CategoryDialogData {
       width: 100%;
     }
   `]
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryDialogComponent {
   form: FormGroup;

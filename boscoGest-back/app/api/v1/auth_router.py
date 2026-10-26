@@ -1,11 +1,12 @@
 from datetime import date
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 
-from app.schemas.token import Token
+from app.schemas.token import Token, ActivationRequest, ActivationResendRequest
 from app.schemas.membership_request import RegisterRequest, MembershipRequestResponse
 from app.models.user_model import User
 from app.utils.auth import (
@@ -15,6 +16,9 @@ from app.utils.auth import (
 )
 from app.services.auth_service import AuthService, get_auth_service
 from app.services.membership_request_service import MembershipRequestService
+from app.services.email_service import send_welcome_email
+from app.services import activation_service
+from app.services.activation_service import ActivationError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -23,13 +27,83 @@ auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @auth_router.post("/token", response_model=Token)
 def login_for_access_token(
-    email: str = Form(...),
+    identifier: str = Form(..., description="Email o teléfono del usuario"),
     password: str = Form(...),
     request: Request = None,
     service: AuthService = Depends(get_auth_service),
 ):
     ip_address = request.client.host if request else None
-    return service.login(email, password, ip_address=ip_address)
+    return service.login(identifier, password, ip_address=ip_address)
+
+
+@auth_router.post("/activate", response_model=Token)
+def activate_account(
+    activation_in: ActivationRequest,
+    request: Request = None,
+    db: Session = Depends(get_sync_db),
+    service: AuthService = Depends(get_auth_service),
+):
+    """Sign in with a one-shot link from a welcome email.
+
+    People an administrator created never learn the password generated for
+    them, so this is how they get in the first time. The session it returns is
+    an ordinary one, and the account still carries must_change_password, which
+    is what sends them straight to choosing a password.
+    """
+    ip_address = request.client.host if request else None
+    try:
+        user = activation_service.redeem_token(db, activation_in.token)
+    except ActivationError as exc:
+        # 410 rather than 401: the link was real, it simply cannot be spent any
+        # more, and the screen shows a different way out for each reason.
+        status_code = (
+            status.HTTP_400_BAD_REQUEST
+            if exc.reason == "invalid"
+            else status.HTTP_410_GONE
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail={"reason": exc.reason, "message": exc.message},
+        )
+
+    return service.session_for(user, ip_address=ip_address, method="activation_link")
+
+
+@auth_router.post("/activate/resend", status_code=status.HTTP_202_ACCEPTED)
+def resend_activation(
+    resend_in: ActivationResendRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+):
+    """Send a fresh link to someone whose old one expired or was used.
+
+    Answers the same way whatever happens. Saying "no such account" here would
+    turn the form into a way of testing whether an address belongs to a member,
+    and the accounts in question have not been used yet, so nobody would notice
+    it being probed.
+    """
+    identifier = resend_in.identifier.strip()
+    user = db.execute(
+        select(User).where((User.email == identifier) | (User.phone == identifier))
+    ).scalars().first()
+
+    # Only for accounts still waiting to set a password. Anyone else already
+    # has one and should use it, or reset it the usual way.
+    if user and user.is_active and user.must_change_password and user.email:
+        raw_token = activation_service.issue_token(db, user)
+        background_tasks.add_task(
+            send_welcome_email,
+            user.email,
+            f"{user.name} {user.surname}",
+            activation_service.build_activation_url(raw_token),
+        )
+
+    return {
+        "message": (
+            "Si esa cuenta existe y aún no tiene contraseña, te hemos enviado "
+            "un enlace nuevo."
+        )
+    }
 
 
 @auth_router.get("/check-permission")
@@ -58,6 +132,21 @@ def logout(
     return service.logout(current_user, token, ip_address=ip_address)
 
 
+def _already_registered(field: str) -> str:
+    return (
+        f"Ya existe una cuenta con ese {field}. Si ya te habían dado de alta, "
+        "inicia sesión en lugar de registrarte."
+    )
+
+
+def _clashing_field(exc: IntegrityError) -> str:
+    detail = str(getattr(exc, "orig", exc)).lower()
+    for column, label in (("email", "email"), ("dni", "DNI"), ("phone", "teléfono")):
+        if column in detail:
+            return label
+    return "email, teléfono o DNI"
+
+
 @auth_router.post(
     "/register",
     response_model=MembershipRequestResponse,
@@ -65,21 +154,46 @@ def logout(
 )
 def register(
     register_in: RegisterRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_sync_db),
 ):
     """
     Public endpoint: create a user account and submit a membership request.
     The user can log in immediately but has no permissions until an admin accepts.
     """
-    # Check email uniqueness
-    existing = db.execute(
-        select(User).where(User.email == register_in.email)
-    ).scalars().first()
-    if existing:
+    dni = register_in.dni.strip().upper()
+    phone = register_in.phone.strip()
+
+    try:
+        birthdate = date.fromisoformat(register_in.birthdate)
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya existe una cuenta con ese email",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La fecha de nacimiento no es válida",
         )
+
+    # Email, phone and DNI are all unique. Only the email used to be checked,
+    # so a repeated DNI or phone reached the INSERT and came back as a 500: the
+    # person saw a generic error and no hint of what to change. It happens to
+    # real people — someone already added by a bulk import, or signing up twice.
+    # The DNI is compared ignoring case: 12345678a is the same document.
+    taken = db.execute(
+        select(User).where(or_(
+            User.email == register_in.email,
+            User.phone == phone,
+            func.upper(User.dni) == dni,
+        ))
+    ).scalars().all()
+    for field, clashes in (
+        ("email", any(u.email == register_in.email for u in taken)),
+        ("DNI", any((u.dni or "").upper() == dni for u in taken)),
+        ("teléfono", any(u.phone == phone for u in taken)),
+    ):
+        if clashes:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=_already_registered(field),
+            )
 
     # Create user account
     new_user = User(
@@ -87,15 +201,24 @@ def register(
         surname=register_in.surname,
         email=register_in.email,
         password_hash=get_password_hash(register_in.password),
-        phone=register_in.phone,
-        birthdate=date.fromisoformat(register_in.birthdate),
-        dni=register_in.dni,
+        phone=phone,
+        birthdate=birthdate,
+        dni=dni,
         address=register_in.address,
         is_active=True,
         must_change_password=False,
     )
     db.add(new_user)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        # Two sign-ups racing for the same value: the check above passed for
+        # both, the unique constraint stops the second.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_already_registered(_clashing_field(exc)),
+        )
 
     # Create membership request
     request_service = MembershipRequestService(db)
@@ -103,6 +226,12 @@ def register(
         user_id=new_user.id,
         entity_id=register_in.entity_id,
         message=register_in.message,
+    )
+
+    background_tasks.add_task(
+        send_welcome_email,
+        new_user.email,
+        f"{new_user.name} {new_user.surname}",
     )
 
     return req

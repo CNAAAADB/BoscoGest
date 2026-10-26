@@ -1,0 +1,254 @@
+<div class="conv-view-wrapper">
+  <!-- Header -->
+  <div class="conv-header">
+    <button mat-icon-button class="back-btn" (click)="back.emit()" aria-label="Volver a la lista de conversaciones">
+      <mat-icon aria-hidden="true">arrow_back</mat-icon>
+    </button>
+
+    <div class="conv-header-info">
+      <div class="conv-header-avatar" [class.group]="conversation()?.type === 'group'">
+        @if (conversation()?.type === 'group') {
+          <mat-icon aria-hidden="true">group</mat-icon>
+        } @else {
+          {{ getConversationTitle().charAt(0).toUpperCase() }}
+        }
+      </div>
+      <div class="conv-header-text">
+        <span class="conv-header-name">{{ getConversationTitle() }}</span>
+        @if (conversation()?.type === 'group') {
+          <span class="conv-header-sub">Grupo</span>
+        }
+      </div>
+    </div>
+
+    <div class="conv-header-actions">
+      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="searchMode() ? 'Cerrar búsqueda' : 'Buscar mensajes'" aria-label="Buscar en la conversación">
+        <mat-icon aria-hidden="true">{{ searchMode() ? 'close' : 'search' }}</mat-icon>
+      </button>
+      @if (conversation()?.type === 'group') {
+        <button mat-icon-button (click)="openGroupSettings()" matTooltip="Configuración del grupo" aria-label="Configuración del grupo">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Search panel -->
+  @if (searchMode()) {
+    <div class="search-panel">
+      <input
+        class="search-input"
+        placeholder="Buscar en esta conversación..."
+        [value]="searchQuery()"
+        (input)="onSearchInput($any($event.target).value)"
+        autofocus
+      />
+      @if (searchLoading()) {
+        <span class="search-hint">Buscando…</span>
+      } @else if (searchQuery().length >= 2) {
+        <span class="search-hint">{{ searchResults().length }} resultado(s)</span>
+      }
+    </div>
+  }
+
+  <!-- Messages area -->
+  <div class="messages-area">
+    @if (loading()) {
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+      </div>
+    } @else if (searchMode()) {
+      <!-- Search results -->
+      @if (searchResults().length === 0 && searchQuery().length >= 2 && !searchLoading()) {
+        <div class="no-results">No se encontraron mensajes</div>
+      }
+      @for (msg of searchResults(); track msg.id; let i = $index) {
+        <div class="message-row search-result" [class.own]="isOwn(msg)">
+          @if (!isOwn(msg)) {
+            <div class="msg-avatar">
+              {{ msg.sender ? msg.sender.name.charAt(0).toUpperCase() : '?' }}
+            </div>
+          }
+          <div class="msg-bubble" [class.own]="isOwn(msg)">
+            @if (!isOwn(msg)) {
+              <div class="msg-sender-name">
+                {{ msg.sender ? msg.sender.name + ' ' + msg.sender.surname : 'Usuario' }}
+              </div>
+            }
+            <p class="msg-content">{{ msg.content }}</p>
+            <div class="msg-meta">
+              <span class="msg-time">{{ formatDate(msg.created_at) }} {{ formatTime(msg.created_at) }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
+      <!-- Load more -->
+      @if (hasMore()) {
+        <div class="load-more-row">
+          <button mat-stroked-button (click)="loadMoreMessages()" [disabled]="loadingMore()">
+            @if (loadingMore()) {
+              Cargando…
+            } @else {
+              Cargar mensajes anteriores
+            }
+          </button>
+        </div>
+      }
+
+      <!-- Messages -->
+      @for (msg of messages(); track msg.id; let i = $index) {
+        @if (isDifferentDay(msg, messages()[i - 1])) {
+          <div class="date-separator">
+            <span>{{ formatDate(msg.created_at) }}</span>
+          </div>
+        }
+
+        @if (msg.message_type === 'system') {
+          <!-- System message -->
+          <div class="system-message">
+            <span>{{ msg.content }}</span>
+          </div>
+        } @else {
+          <!-- Regular message -->
+          <div class="message-row" [class.own]="isOwn(msg)">
+            @if (!isOwn(msg)) {
+              <div class="msg-avatar">
+                {{ msg.sender ? msg.sender.name.charAt(0).toUpperCase() : '?' }}
+              </div>
+            }
+            <div class="msg-bubble" [class.own]="isOwn(msg)" [class.deleted]="msg.is_deleted">
+              @if (!isOwn(msg) && conversation()?.type === 'group') {
+                <div class="msg-sender-name">
+                  {{ msg.sender ? msg.sender.name + ' ' + msg.sender.surname : 'Usuario' }}
+                </div>
+              }
+
+              <!-- Reply preview -->
+              @if (msg.reply_to && !msg.is_deleted) {
+                <div class="reply-preview">
+                  <div class="reply-sender">
+                    {{ msg.reply_to.sender ? msg.reply_to.sender.name : 'Usuario' }}
+                  </div>
+                  <div class="reply-text">{{ msg.reply_to.preview }}</div>
+                </div>
+              }
+
+              @if (msg.is_deleted) {
+                <em class="deleted-text">Mensaje eliminado</em>
+              } @else if (msg.message_type === 'file') {
+                <!-- File message -->
+                @if (isImage(msg)) {
+                  <a [href]="msg.file_url" target="_blank" rel="noopener">
+                    <img class="msg-image" [src]="msg.file_url" [alt]="msg.file_name || 'imagen'" />
+                  </a>
+                } @else {
+                  <a class="msg-file-link" [href]="msg.file_url" target="_blank" rel="noopener">
+                    <mat-icon aria-hidden="true">attach_file</mat-icon>
+                    <span>{{ msg.file_name }}</span>
+                  </a>
+                }
+              } @else {
+                <p class="msg-content">{{ msg.content }}</p>
+              }
+
+              <div class="msg-meta">
+                <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
+                @if (!msg.is_deleted) {
+                  <button
+                    mat-icon-button
+                    class="reply-msg-btn"
+                    (click)="startReply(msg)"
+                    matTooltip="Responder"
+                   aria-label="Responder">
+                    <mat-icon aria-hidden="true">reply</mat-icon>
+                  </button>
+                }
+                @if (isOwn(msg) && !msg.is_deleted) {
+                  <button
+                    mat-icon-button
+                    class="delete-msg-btn"
+                    (click)="deleteMessage(msg)"
+                    matTooltip="Eliminar"
+                   aria-label="Eliminar">
+                    <mat-icon aria-hidden="true">delete_outline</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      }
+
+      <!-- Typing indicator -->
+      @if (typingText()) {
+        <div class="typing-indicator">
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="typing-text">{{ typingText() }}</span>
+        </div>
+      }
+
+      <div #messagesEnd></div>
+    }
+  </div>
+
+  <!-- Reply bar -->
+  @if (replyTo() && !searchMode()) {
+    <div class="reply-bar">
+      <div class="reply-bar-content">
+        <mat-icon class="reply-bar-icon" aria-hidden="true">reply</mat-icon>
+        <div class="reply-bar-text">
+          <span class="reply-bar-name">
+            {{ replyTo()!.sender ? replyTo()!.sender!.name : 'Usuario' }}
+          </span>
+          <span class="reply-bar-preview">{{ replyTo()!.content.substring(0, 60) }}</span>
+        </div>
+      </div>
+      <button mat-icon-button (click)="cancelReply()" aria-label="Cancelar respuesta">
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Input area -->
+  @if (!searchMode()) {
+    <div class="input-area">
+      <!-- Hidden file input -->
+      <input
+        #fileInput
+        type="file"
+        style="display:none"
+        (change)="onFileSelected($event)"
+      />
+      <button
+        mat-icon-button
+        class="attach-btn"
+        (click)="openFileChooser()"
+        [disabled]="sending() || uploadingFile()"
+        matTooltip="Adjuntar archivo"
+       aria-label="Adjuntar archivo">
+        <mat-icon aria-hidden="true">{{ uploadingFile() ? 'hourglass_empty' : 'attach_file' }}</mat-icon>
+      </button>
+      <textarea
+        class="msg-input"
+        placeholder="Escribe un mensaje..."
+        [value]="newMessage()"
+        (input)="newMessage.set($any($event.target).value); onInput()"
+        (keydown)="onKeyDown($event)"
+        rows="1"
+        [disabled]="sending() || uploadingFile()"
+      ></textarea>
+      <button
+        mat-icon-button
+        class="send-btn"
+        (click)="sendMessage()"
+        [disabled]="!newMessage().trim() || sending() || uploadingFile()"
+        matTooltip="Enviar"
+       aria-label="Enviar">
+        <mat-icon aria-hidden="true">send</mat-icon>
+      </button>
+    </div>
+  }
+</div>

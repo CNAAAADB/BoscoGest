@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +12,8 @@ import { NotificationResponse } from '../../models/user.model';
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
   templateUrl: './notifications-list.component.html',
   styleUrl: './notifications-list.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationsListComponent implements OnInit {
   private notificationService = inject(NotificationService);

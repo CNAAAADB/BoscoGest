@@ -83,15 +83,14 @@ output "acm_dns_validation_records" {
 
 output "dns_records_to_add" {
   description = "DNS records to configure at your domain registrar"
-  value = var.domain_name != "" ? <<-EOT
-    Add these records at your domain registrar:
-
-    1. Certificate validation (from acm_dns_validation_records output)
-    2. CNAME: www.${var.domain_name} → ${aws_cloudfront_distribution.frontend[0].domain_name}
-    3. ALIAS/ANAME: ${var.domain_name} → ${aws_cloudfront_distribution.frontend[0].domain_name}
-       (If your registrar doesn't support ALIAS, migrate nameservers to Route 53)
-  EOT
-  : "N/A (no domain configured)"
+  value = var.domain_name != "" ? join("\n", [
+    "Add these records at your domain registrar:",
+    "",
+    "1. Certificate validation (from acm_dns_validation_records output)",
+    "2. CNAME: www.${var.domain_name} → ${aws_cloudfront_distribution.frontend[0].domain_name}",
+    "3. ALIAS/ANAME: ${var.domain_name} → ${aws_cloudfront_distribution.frontend[0].domain_name}",
+    "   (If your registrar doesn't support ALIAS, migrate nameservers to Route 53)",
+  ]) : "N/A (no domain configured)"
 }
 
 output "frontend_url_with_domain" {
@@ -110,4 +109,36 @@ output "ecr_push_commands" {
     docker tag ${var.project_name}-back:latest ${aws_ecr_repository.backend.repository_url}:latest
     docker push ${aws_ecr_repository.backend.repository_url}:latest
   EOT
+}
+
+# ──────────────────────────────────────────────
+# DNS / email
+# ──────────────────────────────────────────────
+
+output "route53_nameservers" {
+  description = "Set these four as the domain's nameservers at the registrar."
+  value       = var.create_route53_zone && var.domain_name != "" ? aws_route53_zone.main[0].name_servers : []
+}
+
+output "ses_configuration_set" {
+  description = "Value for the SES_CONFIGURATION_SET environment variable."
+  value       = aws_sesv2_configuration_set.transactional.configuration_set_name
+}
+
+output "ses_events_topic_arn" {
+  description = "SNS topic receiving SES bounce/complaint/reject events."
+  value       = aws_sns_topic.ses_events.arn
+}
+
+output "ses_dkim_tokens" {
+  description = "DKIM CNAME tokens. Only needed when DNS is kept at the registrar."
+  value       = var.domain_name != "" ? aws_sesv2_email_identity.domain[0].dkim_signing_attributes[0].tokens : []
+}
+
+output "cloudfront_distribution_arn" {
+  description = <<-DESC
+    Feed this into the frontend state as cloudfront_distribution_arn so its
+    bucket policy can grant CloudFront (and only CloudFront) read access.
+  DESC
+  value       = var.domain_name != "" ? aws_cloudfront_distribution.frontend[0].arn : ""
 }

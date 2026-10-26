@@ -27,47 +27,47 @@
 
         <mat-card-actions>
           <button mat-button (click)="backToList()">
-            <mat-icon>arrow_back</mat-icon>
+            <mat-icon aria-hidden="true">arrow_back</mat-icon>
             Volver
           </button>
           @if (canEditNews() && (news()!.status === 'draft' || news()!.status === 'review')) {
             <button mat-button color="accent" (click)="editNews()">
-              <mat-icon>edit</mat-icon>
+              <mat-icon aria-hidden="true">edit</mat-icon>
               Editar
             </button>
           }
           <!-- Workflow actions -->
           @if (news()!.status === 'draft') {
             <button mat-button (click)="transitionStatus('review')">
-              <mat-icon>send</mat-icon>
+              <mat-icon aria-hidden="true">send</mat-icon>
               Enviar a revisión
             </button>
             @if (canPublishNews()) {
               <button mat-button color="primary" (click)="transitionStatus('published')">
-                <mat-icon>publish</mat-icon>
+                <mat-icon aria-hidden="true">publish</mat-icon>
                 Publicar
               </button>
             }
           }
           @if (news()!.status === 'review' && (canReviewNews() || canPublishNews())) {
             <button mat-button color="primary" (click)="transitionStatus('published')">
-              <mat-icon>check_circle</mat-icon>
+              <mat-icon aria-hidden="true">check_circle</mat-icon>
               Aprobar
             </button>
             <button mat-button (click)="transitionStatus('draft')">
-              <mat-icon>undo</mat-icon>
+              <mat-icon aria-hidden="true">undo</mat-icon>
               Devolver
             </button>
           }
           @if (news()!.status === 'published' && canPublishNews()) {
             <button mat-button (click)="transitionStatus('archived')">
-              <mat-icon>archive</mat-icon>
+              <mat-icon aria-hidden="true">archive</mat-icon>
               Archivar
             </button>
           }
           @if (canDeleteNews()) {
             <button mat-button color="warn" (click)="deleteNews()">
-              <mat-icon>delete</mat-icon>
+              <mat-icon aria-hidden="true">delete</mat-icon>
               Eliminar
             </button>
           }
@@ -80,7 +80,7 @@
       <mat-card class="comments-card">
         <mat-card-header>
           <mat-card-title>
-            <mat-icon class="comments-icon">comment</mat-icon>
+            <mat-icon class="comments-icon" aria-hidden="true">comment</mat-icon>
             Comentarios ({{ news()!.comments.length }})
           </mat-card-title>
         </mat-card-header>
@@ -108,7 +108,7 @@
                   color="primary"
                   type="submit"
                   [disabled]="commentForm.invalid || submittingComment()">
-                  <mat-icon>send</mat-icon>
+                  <mat-icon aria-hidden="true">send</mat-icon>
                   Publicar
                 </button>
               </div>
@@ -119,7 +119,7 @@
           <!-- Comments List -->
           @if (news()!.comments.length === 0) {
             <div class="empty-comments">
-              <mat-icon>chat_bubble_outline</mat-icon>
+              <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
               <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
             </div>
           } @else {
@@ -128,15 +128,15 @@
                 <div class="comment-item">
                   <div class="comment-header">
                     <div class="comment-avatar">
-                      <mat-icon>account_circle</mat-icon>
+                      <mat-icon aria-hidden="true">account_circle</mat-icon>
                     </div>
                     <div class="comment-meta">
                       <span class="comment-author">{{ comment.user.name }} {{ comment.user.surname }}</span>
                       <span class="comment-date">{{ formatShortDate(comment.created_at) }}</span>
                     </div>
                     @if (canDeleteComment()) {
-                      <button mat-icon-button color="warn" (click)="deleteComment(comment)" class="delete-comment-btn">
-                        <mat-icon>delete</mat-icon>
+                      <button mat-icon-button color="warn" (click)="deleteComment(comment)" class="delete-comment-btn" aria-label="Eliminar comentario">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
                       </button>
                     }
                   </div>

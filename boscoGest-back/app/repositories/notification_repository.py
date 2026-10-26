@@ -1,8 +1,12 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select, update, delete, func
-from app.models.notification_model import Notification, NotificationPreference
+from app.models.notification_model import (
+    DeviceToken,
+    Notification,
+    NotificationPreference,
+)
 from app.repositories.base_repository import BaseRepository
 
 
@@ -130,11 +134,13 @@ class NotificationPreferenceRepository:
         event_type: str,
         in_app_enabled: bool = True,
         email_enabled: bool = False,
+        push_enabled: bool = True,
     ) -> NotificationPreference:
         existing = self.get_by_user_and_event(user_id, event_type)
         if existing:
             existing.in_app_enabled = in_app_enabled
             existing.email_enabled = email_enabled
+            existing.push_enabled = push_enabled
             self.db.flush()
             return existing
 
@@ -143,8 +149,58 @@ class NotificationPreferenceRepository:
             event_type=event_type,
             in_app_enabled=in_app_enabled,
             email_enabled=email_enabled,
+            push_enabled=push_enabled,
         )
         self.db.add(pref)
         self.db.flush()
         self.db.refresh(pref)
         return pref
+
+
+class DeviceTokenRepository:
+    """Dispositivos registrados para recibir push."""
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def register(self, user_id: int, token: str, platform: str) -> DeviceToken:
+        """Da de alta el dispositivo, o lo reasigna si ya existía.
+
+        El mismo token puede reaparecer con otro usuario: un móvil compartido,
+        o alguien que cierra sesión y entra con otra cuenta. Se reasigna en vez
+        de duplicar, porque si no el dueño anterior seguiría recibiendo los
+        avisos de la persona que usa ahora ese teléfono.
+        """
+        existing = self.db.execute(
+            select(DeviceToken).where(DeviceToken.token == token)
+        ).scalars().first()
+
+        if existing:
+            existing.user_id = user_id
+            existing.platform = platform
+            existing.last_seen_at = datetime.now(timezone.utc)
+            self.db.flush()
+            return existing
+
+        device = DeviceToken(user_id=user_id, token=token, platform=platform)
+        self.db.add(device)
+        self.db.flush()
+        self.db.refresh(device)
+        return device
+
+    def unregister(self, token: str, user_id: int) -> bool:
+        """Baja del dispositivo. Acotada al usuario: con el token de otro no
+        se le puede dejar sin notificaciones."""
+        result = self.db.execute(
+            delete(DeviceToken).where(
+                DeviceToken.token == token, DeviceToken.user_id == user_id
+            )
+        )
+        return result.rowcount > 0
+
+    def get_by_user(self, user_id: int) -> List[DeviceToken]:
+        return list(
+            self.db.execute(
+                select(DeviceToken).where(DeviceToken.user_id == user_id)
+            ).scalars().all()
+        )

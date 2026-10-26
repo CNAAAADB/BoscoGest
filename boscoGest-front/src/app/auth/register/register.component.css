@@ -1,0 +1,157 @@
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #C8B89F 0%, #B5A58C 100%);
+  box-sizing: border-box;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 2rem;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  background-color: #F5EFE6 !important;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.register-logo {
+  max-width: 100px;
+  height: auto;
+}
+
+mat-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+mat-card-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #3D4E7C !important;
+}
+
+mat-card-subtitle {
+  font-size: 1rem;
+  color: #646c74 !important;
+}
+
+.step-label {
+  font-size: 0.85rem;
+  color: #646c74;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.half-width {
+  flex: 1;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.success-content {
+  align-items: center;
+  text-align: center;
+  padding: 1rem 0 2rem;
+}
+
+.success-icon {
+  font-size: 4rem;
+  width: 4rem;
+  height: 4rem;
+  color: #4caf50;
+  margin-bottom: 1rem;
+}
+
+.success-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #3D4E7C;
+  margin: 0 0 0.75rem;
+}
+
+.success-content p {
+  color: #555;
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.hint-text {
+  font-size: 0.875rem;
+  color: #646c74;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.login-link {
+  font-size: 0.9rem;
+  color: #646c74;
+}
+
+.login-link a {
+  color: #3D4E7C;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+
+.register-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.privacy-note {
+  font-size: 0.8125rem;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.6);
+}

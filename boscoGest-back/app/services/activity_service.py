@@ -6,7 +6,7 @@ from app.models.activity_model import Activity
 from app.models.activity_registration_model import ActivityRegistration
 from app.models.membership_model import Membership
 from app.models.user_model import User
-from app.schemas.activity import ActivityCreate, ActivityUpdate
+from app.schemas.activity import ActivityCreate, ActivityUpdate, check_end_after_start
 from app.repositories.activity_repository import ActivityRepository
 from app.services.authorization_service import AuthorizationService
 from app.services.audit_service import AuditService
@@ -139,7 +139,18 @@ class ActivityService:
             current_user, activity.entity_id, "activities", "update"
         )
 
-        for field, value in activity_in.model_dump(exclude_unset=True).items():
+        changes = activity_in.model_dump(exclude_unset=True)
+        # Either end may change alone, so the check is against the result: a
+        # new start can overtake the end already stored, and the other way round.
+        try:
+            check_end_after_start(
+                changes.get("date", activity.date),
+                changes.get("end_date", activity.end_date),
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+        for field, value in changes.items():
             setattr(activity, field, value)
 
         self.db.commit()
@@ -240,6 +251,61 @@ class ActivityService:
 
         # Filter only active registrations
         return [r for r in activity.registrations if r.is_active]
+
+    def create_chat_group(self, activity_id: int, current_user: User) -> dict:
+        """Create a chat group with all admitted participants of the activity.
+        Only the activity creator or a user who can manage activities in the
+        entity may do this."""
+        from app.services.chat_service import ChatService
+
+        activity = self.activity_repo.get_by_id(activity_id)
+        if not activity:
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+
+        is_creator = activity.created_by_id == current_user.id
+        can_manage = self.auth_service.has_effective_permission(
+            current_user, activity.entity_id, "activities", "manage"
+        )
+        if not (is_creator or can_manage):
+            raise HTTPException(
+                status_code=403,
+                detail="Solo el responsable de la actividad puede crear el grupo",
+            )
+
+        accepted_user_ids = [
+            r.user_id
+            for r in activity.registrations
+            if r.is_active and r.status == "accepted"
+        ]
+
+        chat_service = ChatService(self.db)
+        conv = chat_service.create_group(
+            current_user,
+            name=activity.title,
+            description=f"Grupo de la actividad «{activity.title}»",
+        )
+
+        # Add every admitted participant (the creator is already the group admin).
+        for uid in accepted_user_ids:
+            if uid == current_user.id:
+                continue
+            if chat_service.repo.get_member(conv.id, uid):
+                continue
+            chat_service.repo.add_member(conv.id, uid)
+        self.db.commit()
+
+        self.audit_service.create_audit_log(
+            user_id=current_user.id,
+            action="create_chat_group",
+            resource_type="activities",
+            resource_id=activity_id,
+            details={
+                "conversation_id": conv.id,
+                "members_added": len(accepted_user_ids),
+            },
+        )
+
+        return {"conversation_id": conv.id, "name": conv.name}
 
     def accept_registration(
         self, activity_id: int, user_id: int, current_user: User

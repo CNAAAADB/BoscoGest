@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from fastapi import Depends
@@ -7,11 +8,15 @@ from app.models.notification_model import Notification, NotificationPreference
 from app.models.membership_model import Membership
 from app.models.user_model import User
 from app.repositories.notification_repository import (
+    DeviceTokenRepository,
     NotificationRepository,
     NotificationPreferenceRepository,
 )
 from app.services.notification_manager import notification_manager
+from app.services import push_service
 from app.utils.auth import get_sync_db
+
+logger = logging.getLogger(__name__)
 
 
 class EventType(str, Enum):
@@ -28,6 +33,13 @@ class EventType(str, Enum):
     MEMBERSHIP_REQUEST_ACCEPTED = "membership_request_accepted"
     MEMBERSHIP_REQUEST_REJECTED = "membership_request_rejected"
     CHAT_MESSAGE_RECEIVED = "chat_message_received"
+    FEE_GENERATED = "fee_generated"
+    FEE_REMINDER = "fee_reminder"
+    FEE_PAID = "fee_paid"
+    FEE_OVERDUE = "fee_overdue"
+    FEE_RENEWED = "fee_renewed"
+    FEE_PROOF_SUBMITTED = "fee_proof_submitted"
+    FEE_PROOF_REJECTED = "fee_proof_rejected"
 
 
 # Human-readable descriptions for preference UI
@@ -45,6 +57,13 @@ EVENT_TYPE_LABELS: Dict[str, str] = {
     EventType.MEMBERSHIP_REQUEST_ACCEPTED: "Solicitud de membresía aceptada",
     EventType.MEMBERSHIP_REQUEST_REJECTED: "Solicitud de membresía rechazada",
     EventType.CHAT_MESSAGE_RECEIVED: "Nuevo mensaje de chat",
+    EventType.FEE_GENERATED: "Nueva cuota asignada",
+    EventType.FEE_REMINDER: "Recordatorio de cuota pendiente",
+    EventType.FEE_PAID: "Cuota pagada",
+    EventType.FEE_PROOF_SUBMITTED: "Justificante de pago recibido",
+    EventType.FEE_PROOF_REJECTED: "Justificante devuelto",
+    EventType.FEE_OVERDUE: "Cuota vencida",
+    EventType.FEE_RENEWED: "Cuota renovada",
 }
 
 
@@ -53,6 +72,7 @@ class NotificationService:
         self.db = db
         self.notification_repo = NotificationRepository(db)
         self.preference_repo = NotificationPreferenceRepository(db)
+        self.device_repo = DeviceTokenRepository(db)
 
     # ── Public API: emit notification ────────────────────────────────
 
@@ -60,7 +80,7 @@ class NotificationService:
         self,
         event_type: str,
         entity_id: int,
-        actor: User,
+        actor: User | None,
         resource_type: str,
         resource_id: int | None = None,
         title: str = "",
@@ -76,10 +96,11 @@ class NotificationService:
             recipient_ids: Explicit list of user IDs.  If None, resolved
                            automatically from entity memberships.
         """
+        actor_id = actor.id if actor else None
         if recipient_ids is None:
-            recipient_ids = self._resolve_entity_members(entity_id, exclude_id=actor.id)
+            recipient_ids = self._resolve_entity_members(entity_id, exclude_id=actor_id)
         else:
-            recipient_ids = [uid for uid in recipient_ids if uid != actor.id]
+            recipient_ids = [uid for uid in recipient_ids if uid != actor_id]
 
         if not recipient_ids:
             return []
@@ -93,7 +114,7 @@ class NotificationService:
             [
                 Notification(
                     recipient_id=uid,
-                    actor_id=actor.id,
+                    actor_id=actor_id,
                     event_type=event_type,
                     resource_type=resource_type,
                     resource_id=resource_id,
@@ -120,17 +141,98 @@ class NotificationService:
                     "title": n.title,
                     "body": n.body,
                     "data": n.data,
-                    "actor": {
-                        "id": actor.id,
-                        "name": actor.name,
-                        "surname": actor.surname,
-                    },
+                    "actor": (
+                        {"id": actor.id, "name": actor.name, "surname": actor.surname}
+                        if actor else None
+                    ),
                     "is_read": False,
                     "created_at": n.created_at.isoformat() if n.created_at else None,
                 },
             )
 
+        self._push(
+            notifications, event_type, title, body, resource_type, resource_id
+        )
+
         return notifications
+
+    def _push(
+        self,
+        notifications: List[Notification],
+        event_type: str,
+        title: str,
+        body: str | None,
+        resource_type: str,
+        resource_id: int | None,
+    ) -> None:
+        """Avisa por push a quien no esté mirando la aplicación.
+
+        Solo a los que están desconectados: a quien tiene la aplicación abierta
+        ya le ha llegado por WebSocket, y recibir las dos cosas a la vez es
+        justo lo que hace que la gente acabe apagando las notificaciones.
+
+        Nunca lanza. La notificación ya está guardada y se verá al abrir la
+        aplicación, así que un fallo aquí no puede tumbar la operación que la
+        originó — publicar una actividad, aceptar una inscripción.
+        """
+        destinatarios = [
+            n.recipient_id
+            for n in notifications
+            if not notification_manager.is_online(n.recipient_id)
+        ]
+        if not destinatarios:
+            return
+
+        destinatarios = self._filter_push_disabled(destinatarios, event_type)
+
+        for uid in destinatarios:
+            try:
+                push_service.send_to_user(
+                    self.db,
+                    uid,
+                    title=title,
+                    body=body,
+                    # Solo identificadores: el aviso se ve en la pantalla
+                    # bloqueada y no debe llevar datos personales. El cliente
+                    # los usa para abrir la pantalla que toca al pulsarlo.
+                    data={
+                        "event_type": event_type,
+                        "resource_type": resource_type,
+                        "resource_id": resource_id,
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "Fallo enviando push al usuario %s", uid, exc_info=True
+                )
+
+    def _filter_push_disabled(
+        self, user_ids: List[int], event_type: str
+    ) -> List[int]:
+        """Quita a quien haya apagado el push para este tipo de evento.
+
+        Aparte del filtro in-app: alguien puede querer ver el aviso dentro de
+        la aplicación pero no que le suene el móvil.
+        """
+        disabled_stmt = select(NotificationPreference.user_id).where(
+            NotificationPreference.user_id.in_(user_ids),
+            NotificationPreference.event_type == event_type,
+            NotificationPreference.push_enabled == False,
+        )
+        disabled_ids = set(self.db.execute(disabled_stmt).scalars().all())
+        return [uid for uid in user_ids if uid not in disabled_ids]
+
+    # ── Dispositivos ─────────────────────────────────────────────────
+
+    def register_device(self, user_id: int, token: str, platform: str):
+        device = self.device_repo.register(user_id, token, platform)
+        self.db.commit()
+        return device
+
+    def unregister_device(self, user_id: int, token: str) -> bool:
+        removed = self.device_repo.unregister(token, user_id)
+        self.db.commit()
+        return removed
 
     # ── Read operations (for router) ─────────────────────────────────
 
@@ -184,6 +286,7 @@ class NotificationService:
                     event_type=pref.event_type,
                     in_app_enabled=pref.in_app_enabled,
                     email_enabled=pref.email_enabled,
+                    push_enabled=pref.push_enabled,
                 )
             )
         self.db.commit()

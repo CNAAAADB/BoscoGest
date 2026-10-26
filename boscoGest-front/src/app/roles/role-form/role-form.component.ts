@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -9,14 +9,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatListModule } from '@angular/material/list';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { RolesService } from '../roles.service';
+import { AuthService } from '../../auth/auth.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { RoleCreate, RoleUpdate, PermissionResponse, RoleDetails } from '../../models/user.model';
 
 @Component({
   selector: 'app-role-form',
   imports: [
+    MatTooltipModule,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -30,6 +33,8 @@ import { RoleCreate, RoleUpdate, PermissionResponse, RoleDetails } from '../../m
   ],
   templateUrl: './role-form.component.html',
   styleUrl: './role-form.component.css'
+,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleFormComponent implements OnInit {
   roleForm: FormGroup;
@@ -42,13 +47,21 @@ export class RoleFormComponent implements OnInit {
   availablePermissions = signal<PermissionResponse[]>([]);
   selectedPermissions = signal<PermissionResponse[]>([]);
 
+  /**
+   * The association a new role will belong to — the one of the cargo in use.
+   * Roles are per-association, so saying which one it is here saves finding
+   * out afterwards that the role landed somewhere unexpected.
+   */
+  targetEntityName = signal<string>('');
+
   constructor(
     private fb: FormBuilder,
     private rolesService: RolesService,
     private permissionsService: PermissionsService,
     private router: Router,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private authService: AuthService
   ) {
     this.roleForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
@@ -58,6 +71,9 @@ export class RoleFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPermissions();
+    this.targetEntityName.set(
+      this.authService.getCurrentMembership()?.entity?.name || ''
+    );
 
     // Check if we're in edit mode
     const id = this.route.snapshot.paramMap.get('id');
@@ -137,8 +153,23 @@ export class RoleFormComponent implements OnInit {
     });
   }
 
+  /**
+   * What to show for a permission in the two lists.
+   *
+   * These read as "fees - manage" and "users - read_sensitive": the identifiers
+   * the code uses, in English, in a Spanish application. Whoever is deciding
+   * what a role can do has 79 of them to choose from, so the description
+   * leads and the identifier sits underneath it. Falls back to the pair when a
+   * permission has no description.
+   */
   getPermissionLabel(permission: PermissionResponse): string {
-    return `${permission.resource} - ${permission.action}`;
+    return permission.description?.trim()
+      || `${permission.resource} - ${permission.action}`;
+  }
+
+  /** The technical identifier, shown on hover. */
+  getPermissionCode(permission: PermissionResponse): string {
+    return `${permission.resource}:${permission.action}`;
   }
 
   moveToSelected(permission: PermissionResponse): void {
@@ -205,8 +236,12 @@ export class RoleFormComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error updating role:', error);
-          this.snackBar.open('Error al actualizar el rol', 'Cerrar', {
-            duration: 3000,
+          // The server explains name clashes — which association holds the
+          // name and what to call this one instead. Swallowing that left the
+          // person staring at a list where nothing by that name appears.
+          const detail = error?.error?.detail;
+          this.snackBar.open(detail || 'Error al actualizar el rol', 'Cerrar', {
+            duration: detail ? 10000 : 3000,
             panelClass: 'error-snackbar'
           });
           this.loading.set(false);
@@ -230,8 +265,12 @@ export class RoleFormComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error creating role:', error);
-          this.snackBar.open('Error al crear el rol', 'Cerrar', {
-            duration: 3000,
+          // The server explains name clashes — which association holds the
+          // name and what to call this one instead. Swallowing that left the
+          // person staring at a list where nothing by that name appears.
+          const detail = error?.error?.detail;
+          this.snackBar.open(detail || 'Error al crear el rol', 'Cerrar', {
+            duration: detail ? 10000 : 3000,
             panelClass: 'error-snackbar'
           });
           this.loading.set(false);

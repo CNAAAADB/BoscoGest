@@ -4,7 +4,7 @@
   <mat-card class="form-card">
     <mat-card-header>
       <mat-card-title class="section-title">
-        <mat-icon class="title-icon">card_membership</mat-icon>
+        <mat-icon class="title-icon" aria-hidden="true">card_membership</mat-icon>
         Nueva Membresía
       </mat-card-title>
     </mat-card-header>
@@ -29,7 +29,7 @@
                   }
                 }
               </mat-select>
-              <mat-icon matPrefix>business</mat-icon>
+              <mat-icon matPrefix aria-hidden="true">business</mat-icon>
               <mat-hint>Selecciona la entidad para la membresía</mat-hint>
               @if (membershipForm.get('entity_id')?.hasError('required')) {
                 <mat-error>La entidad es obligatoria</mat-error>
@@ -49,7 +49,7 @@
                   }
                 }
               </mat-select>
-              <mat-icon matPrefix>assignment_ind</mat-icon>
+              <mat-icon matPrefix aria-hidden="true">assignment_ind</mat-icon>
               <mat-hint>Primero selecciona una entidad</mat-hint>
               @if (membershipForm.get('role_id')?.hasError('required')) {
                 <mat-error>El rol es obligatorio</mat-error>
@@ -64,7 +64,7 @@
               (click)="onCancel()"
               class="cancel-button"
             >
-              <mat-icon>close</mat-icon>
+              <mat-icon aria-hidden="true">close</mat-icon>
               Cancelar
             </button>
             <button
@@ -74,7 +74,7 @@
               [disabled]="membershipForm.invalid || loading()"
               class="submit-button"
             >
-              <mat-icon>add</mat-icon>
+              <mat-icon aria-hidden="true">add</mat-icon>
               Crear Membresía
             </button>
           </div>

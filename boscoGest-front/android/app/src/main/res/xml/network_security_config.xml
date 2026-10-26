@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sin tráfico en claro: la API de producción es HTTPS y una app que acepta HTTP
+  en cualquier dominio expone las credenciales y el JWT a la red en la que esté
+  el móvil.
+
+  El desarrollo local sigue funcionando: app/src/debug/res/xml/ tiene una
+  versión de este mismo fichero que permite HTTP solo contra localhost y el
+  emulador, y solo se aplica a los builds de debug.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

@@ -1,4 +1,4 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,8 @@ import { NotificationResponse } from '../../models/user.model';
   imports: [CommonModule, MatIconModule, MatButtonModule],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
+
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationBellComponent {
   private notificationService = inject(NotificationService);
