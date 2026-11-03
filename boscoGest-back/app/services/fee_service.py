@@ -978,14 +978,14 @@ class FeeService:
         return run
 
     def trigger_maintenance(self, current_user: User) -> FeeMaintenanceRun:
-        if not self.auth_service.has_global_permission(current_user, "fees", "maintenance"):
+        if not self.auth_service.has_root_permission(current_user, "fees", "maintenance"):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
         return self.run_maintenance(trigger="manual", triggered_by=current_user)
 
     def list_maintenance_runs(
         self, current_user: User, skip: int = 0, limit: int = 50
     ) -> List[FeeMaintenanceRun]:
-        if not self.auth_service.has_global_permission(current_user, "fees", "maintenance"):
+        if not self.auth_service.has_root_permission(current_user, "fees", "maintenance"):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
         return self.run_repo.list(skip=skip, limit=limit)
 

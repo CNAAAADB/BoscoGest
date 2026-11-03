@@ -336,6 +336,20 @@ class UserService:
             raise HTTPException(status_code=404, detail="User not found")
         return db_user
 
+    def ensure_reachable(
+        self, current_user: User, db_user: User, action: str, detail: str = "User not found"
+    ) -> User:
+        """404 unless `db_user` is within `current_user`'s reach for `action`.
+
+        The routes by id only required the permission somewhere, so any member
+        could read the name, email and phone of anyone by trying ids. Not
+        found rather than forbidden, so that trying ids does not reveal which
+        ones exist either.
+        """
+        if not self.auth_service.can_reach_user(current_user, db_user, action):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+        return db_user
+
     def set_user_photo(
         self,
         user_id: int,
@@ -349,6 +363,7 @@ class UserService:
         db_user = self.user_repo.get_by_id(user_id)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
+        self.ensure_reachable(current_user, db_user, "update")
 
         if not content_type or not content_type.startswith("image/"):
             raise HTTPException(
@@ -408,6 +423,7 @@ class UserService:
         db_user = self.user_repo.get_by_id(user_id)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
+        self.ensure_reachable(current_user, db_user, "update")
 
         update_data = user_update.model_dump(exclude_unset=True)
         # JSON-safe copy for the audit log (datetime.date is not JSON-serialisable)
@@ -467,6 +483,7 @@ class UserService:
         db_user = self.user_repo.get_by_id(user_id)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
+        self.ensure_reachable(current_user, db_user, "delete")
 
         email = db_user.email
         self.user_repo.soft_delete(user_id)
@@ -884,6 +901,13 @@ class UserService:
             .values(password_hash=new_hashed_password)
         )
         self.db.execute(stmt)
+        # A reset link asked for and then not needed after all must not stay
+        # usable once the password has changed.
+        from app.services import activation_service
+
+        activation_service.invalidate_tokens_for_user(
+            self.db, current_user.id, commit=False
+        )
         self.db.commit()
 
         self.audit_service.create_audit_log(
@@ -955,6 +979,41 @@ class UserService:
             "email": current_user.email,
             "must_change_password": False,
         }
+
+    def reset_password(
+        self,
+        user: User,
+        new_password: str,
+        ip_address: str | None = None,
+    ) -> None:
+        """Set the password chosen through a forgotten-password link.
+
+        The link has already been spent by the caller; that is what proves
+        who this is. It also counts as choosing a password of their own, so
+        someone who never got round to it is no longer asked to.
+        """
+        from app.services import activation_service
+
+        self.db.execute(
+            update(User)
+            .where(User.id == user.id)
+            .values(
+                password_hash=get_password_hash(new_password),
+                must_change_password=False,
+            )
+        )
+        # Every other link still in an inbox, of either kind, stops working.
+        activation_service.invalidate_tokens_for_user(self.db, user.id, commit=False)
+        self.db.commit()
+
+        self.audit_service.create_audit_log(
+            user_id=user.id,
+            action="password_reset",
+            resource_type="users",
+            resource_id=user.id,
+            details={"email": user.email},
+            ip_address=ip_address,
+        )
 
 
     def validate_bulk_csv(

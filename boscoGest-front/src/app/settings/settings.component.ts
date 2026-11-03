@@ -61,7 +61,7 @@ export class SettingsComponent implements OnInit {
    * a superadmin concern and is not tied to the entity selected above.
    */
   canManageConsent = computed(() =>
-    this.authService.hasPermission('consent', 'manage')
+    this.authService.hasRootPermission('consent', 'manage')
   );
 
   // Estado de carga

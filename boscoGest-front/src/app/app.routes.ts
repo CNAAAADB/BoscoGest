@@ -10,6 +10,10 @@ export const routes: Routes = [
   // Where the one-shot link in a welcome email lands. Outside the auth guard:
   // the whole point is that whoever follows it has no session yet.
   { path: 'activar', loadComponent: () => import('./auth/activate/activate.component').then(m => m.ActivateComponent) },
+  // Forgotten password: asking for the link, and where the link lands. Outside
+  // the guard for the same reason.
+  { path: 'recuperar', loadComponent: () => import('./auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },
+  { path: 'restablecer', loadComponent: () => import('./auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },
   // Páginas legales públicas. Fuera del authGuard a propósito: Google Play
   // comprueba la política de privacidad y la página de eliminación de cuenta
   // sin instalar la app ni iniciar sesión, y una redirección al login es
@@ -84,7 +88,7 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () => import('./entities/entities-list/entities-list.component').then(m => m.EntitiesListComponent),
-            canActivate: [permissionGuard('entities', 'manage')]
+            canActivate: [permissionGuard('entities', 'update')]
           },
           {
             path: 'new',
@@ -95,7 +99,7 @@ export const routes: Routes = [
           {
             path: ':id',
             loadComponent: () => import('./entities/entity-detail/entity-detail.component').then(m => m.EntityDetailComponent),
-            canActivate: [permissionGuard('entities', 'manage')],
+            canActivate: [permissionGuard('entities', 'update')],
             data: { breadcrumb: 'Detalle' }
           },
           {
@@ -296,7 +300,7 @@ export const routes: Routes = [
       },
       {
         path: 'fees/maintenance',
-        canActivate: [permissionGuard('fees', 'maintenance')],
+        canActivate: [permissionGuard('fees', 'maintenance', 'root')],
         loadComponent: () => import('./fees/fee-maintenance/fee-maintenance.component').then(m => m.FeeMaintenanceComponent),
         data: { breadcrumb: 'Mantenimiento de cuotas' }
       },

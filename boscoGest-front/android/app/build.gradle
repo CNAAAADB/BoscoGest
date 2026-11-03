@@ -12,17 +12,17 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "es.urjc.boscogest"
+    namespace = "com.boscogest.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "es.urjc.boscogest"
+        applicationId "com.boscogest.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode tiene que subir en cada subida a Google Play: la Consola
         // rechaza un AAB cuyo código ya se haya publicado, y no se puede
         // reutilizar ni aunque se elimine la versión anterior.
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "1.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

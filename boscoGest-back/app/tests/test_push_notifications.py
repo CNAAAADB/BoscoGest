@@ -397,3 +397,10 @@ def test_un_fallo_de_push_no_rompe_la_notificacion(
         )
 
     assert len(notificaciones) == 1
+
+
+def test_the_transport_google_auth_needs_is_installed():
+    """push_service refreshes its token through google.auth.transport.requests,
+    which needs the `requests` package. It was not in requirements.txt, so in
+    production every push would have failed as soon as it was configured."""
+    from google.auth.transport.requests import Request  # noqa: F401

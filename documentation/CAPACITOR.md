@@ -66,7 +66,7 @@ Capacitor es un **runtime nativo** que envuelve la aplicación web Angular compi
 
 ```typescript
 const config: CapacitorConfig = {
-  appId: 'es.urjc.boscogest',
+  appId: 'com.boscogest.app',
   appName: 'BoscoGest',
   webDir: 'dist/boscoGest-front/browser',
   plugins: {

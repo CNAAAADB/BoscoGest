@@ -99,7 +99,11 @@ def search_user_by_email(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    return redact_user(service.auth_service, current_user, service.search_by_email(email))
+    found = service.ensure_reachable(
+        current_user, service.search_by_email(email), "read",
+        detail=f"User with email '{email}' not found",
+    )
+    return redact_user(service.auth_service, current_user, found)
 
 
 @user_router.get("/search/dni/{dni}", response_model=UserResponse)
@@ -108,7 +112,11 @@ def search_user_by_dni(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    return redact_user(service.auth_service, current_user, service.search_by_dni(dni))
+    found = service.ensure_reachable(
+        current_user, service.search_by_dni(dni), "read",
+        detail=f"User with DNI '{dni}' not found",
+    )
+    return redact_user(service.auth_service, current_user, found)
 
 
 @user_router.get("/creatable-entities", response_model=List[Dict[str, Any]])
@@ -255,7 +263,7 @@ def get_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "read")),
 ):
-    db_user = service.get_user(user_id)
+    db_user = service.ensure_reachable(current_user, service.get_user(user_id), "read")
     return redact_user_details(service.auth_service, current_user, db_user)
 
 

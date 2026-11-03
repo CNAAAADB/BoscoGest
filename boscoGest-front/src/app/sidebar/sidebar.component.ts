@@ -13,6 +13,8 @@ export interface MenuItem extends ViewMenuItem {
   separator?: boolean;
   separatorTitle?: string;
   requiresPermission?: { resource: string; action: string };
+  /** Platform-wide: the permission has to be held at the root entity. */
+  requiresRootPermission?: boolean;
 }
 
 @Component({
@@ -163,7 +165,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
       routeLink: 'fees/maintenance',
       icon: 'autorenew',
       label: 'Mantenimiento de cuotas',
-      requiresPermission: { resource: 'fees', action: 'maintenance' }
+      requiresPermission: { resource: 'fees', action: 'maintenance' },
+      requiresRootPermission: true
     },
     {
       routeLink: 'settings',
@@ -204,7 +207,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const adminItemsFiltered = this.adminItems.filter(item => {
       if (!item.requiresPermission) return true;
       const { resource, action } = item.requiresPermission;
-      return this.authService.hasPermission(resource, action);
+      return item.requiresRootPermission
+        ? this.authService.hasRootPermission(resource, action)
+        : this.authService.hasPermission(resource, action);
     });
 
     // Check if any admin items are visible (excluding separator)

@@ -212,6 +212,26 @@ def require_permission(resource: str, action: str):
     return dependency
 
 
+def require_root_permission(resource: str, action: str):
+    """Like require_permission, but the permission must hold at the root.
+
+    For platform-wide configuration — the permission catalogue, groups, the
+    consent clause — where having the permission in any one association used
+    to be enough to change it for everyone.
+    """
+    def dependency(
+        db: Session = Depends(get_sync_db),
+        current_user: User = Depends(get_current_active_user),
+    ):
+        # Imported here: authorization_service imports from this module.
+        from app.services.authorization_service import AuthorizationService
+
+        if not AuthorizationService(db).has_root_permission(current_user, resource, action):
+            raise HTTPException(status_code=403, detail="Permission denied")
+        return current_user
+    return dependency
+
+
 # Audit logging utility — delegates to AuditService
 def create_audit_log(
     db: Session,

@@ -16,7 +16,7 @@ from app.schemas.user import (
     ConsentClauseUpdate,
 )
 from app.services.consent_service import ConsentService
-from app.utils.auth import get_sync_db, require_permission
+from app.utils.auth import get_sync_db, require_root_permission
 
 consent_router = APIRouter(prefix="/consent-clauses", tags=["GDPR Consent"])
 
@@ -24,7 +24,7 @@ consent_router = APIRouter(prefix="/consent-clauses", tags=["GDPR Consent"])
 @consent_router.get("", response_model=List[ConsentClauseResponse])
 def list_clauses(
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """Every version, newest first — the audit trail of what was in force when."""
     return ConsentService(db).list_clauses()
@@ -33,7 +33,7 @@ def list_clauses(
 @consent_router.get("/pending-count")
 def pending_acceptance_count(
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """How many active members have not yet accepted the clause in force.
 
@@ -52,7 +52,7 @@ def pending_acceptance_count(
 def create_clause(
     payload: ConsentClauseCreate,
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """Create a new version, optionally publishing it straight away."""
     return ConsentService(db).create_clause(
@@ -68,7 +68,7 @@ def update_draft(
     clause_id: int,
     payload: ConsentClauseUpdate,
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """Edit a draft. Published versions are immutable and answer 409."""
     return ConsentService(db).update_draft(clause_id, payload.text)
@@ -78,7 +78,7 @@ def update_draft(
 def publish_clause(
     clause_id: int,
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """Put this version in force. Every member reaccepts on their next login."""
     return ConsentService(db).publish_clause(clause_id)
@@ -88,7 +88,7 @@ def publish_clause(
 def delete_draft(
     clause_id: int,
     db=Depends(get_sync_db),
-    current_user: User = Depends(require_permission("consent", "manage")),
+    current_user: User = Depends(require_root_permission("consent", "manage")),
 ):
     """Discard a draft that was never published."""
     ConsentService(db).delete_draft(clause_id)

@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
-from app.schemas.token import Token, ActivationRequest, ActivationResendRequest
+from app.schemas.token import (
+    Token,
+    ActivationRequest,
+    ActivationResendRequest,
+    PasswordForgotRequest,
+)
+from app.schemas.user import PasswordResetConfirm
 from app.schemas.membership_request import RegisterRequest, MembershipRequestResponse
 from app.models.user_model import User
 from app.utils.auth import (
@@ -16,7 +22,8 @@ from app.utils.auth import (
 )
 from app.services.auth_service import AuthService, get_auth_service
 from app.services.membership_request_service import MembershipRequestService
-from app.services.email_service import send_welcome_email
+from app.services.user_service import UserService, get_user_service
+from app.services.email_service import send_password_reset_email, send_welcome_email
 from app.services import activation_service
 from app.services.activation_service import ActivationError
 
@@ -104,6 +111,90 @@ def resend_activation(
             "un enlace nuevo."
         )
     }
+
+
+@auth_router.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED)
+def forgot_password(
+    forgot_in: PasswordForgotRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db),
+):
+    """Email a link to choose a new password.
+
+    Answers the same way whatever happens, like the activation resend, so the
+    form cannot be used to find out whether an address belongs to a member.
+    The answer also says what to do without email, because that is the one
+    case the link cannot cover and the person would otherwise just wait.
+    """
+    identifier = forgot_in.identifier.strip()
+    user = db.execute(
+        select(User).where(
+            (func.lower(User.email) == identifier.lower()) | (User.phone == identifier)
+        )
+    ).scalars().first()
+
+    if (
+        user
+        and user.is_active
+        and user.email
+        # One link at a time. Asking again straight away sends nothing new,
+        # so the form cannot be used to flood someone's inbox.
+        and not activation_service.issued_recently(
+            db, user.id, activation_service.PURPOSE_RESET, activation_service.RESET_COOLDOWN
+        )
+    ):
+        raw_token = activation_service.issue_token(
+            db, user, purpose=activation_service.PURPOSE_RESET
+        )
+        background_tasks.add_task(
+            send_password_reset_email,
+            user.email,
+            f"{user.name} {user.surname}",
+            activation_service.build_reset_url(raw_token),
+        )
+
+    return {
+        "message": (
+            "Si esa cuenta existe y tiene un correo electrónico, te hemos "
+            "enviado un enlace para elegir una contraseña nueva. Si te diste "
+            "de alta solo con el teléfono, pide ayuda a la persona que "
+            "gestiona tu asociación."
+        )
+    }
+
+
+@auth_router.post("/password/reset", response_model=Token)
+def reset_password(
+    reset_in: PasswordResetConfirm,
+    request: Request = None,
+    db: Session = Depends(get_sync_db),
+    auth: AuthService = Depends(get_auth_service),
+    users: UserService = Depends(get_user_service),
+):
+    """Choose a new password with the link from the email, and sign in.
+
+    The password comes in the same request as the link, so the link alone
+    never opens a session: someone who finds it in an inbox still has to
+    replace the password, which the owner will notice the next time.
+    """
+    ip_address = request.client.host if request else None
+    try:
+        user = activation_service.redeem_token(
+            db, reset_in.token, purpose=activation_service.PURPOSE_RESET
+        )
+    except ActivationError as exc:
+        status_code = (
+            status.HTTP_400_BAD_REQUEST
+            if exc.reason == "invalid"
+            else status.HTTP_410_GONE
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail={"reason": exc.reason, "message": exc.message},
+        )
+
+    users.reset_password(user, reset_in.new_password, ip_address=ip_address)
+    return auth.session_for(user, ip_address=ip_address, method="password_reset")
 
 
 @auth_router.get("/check-permission")

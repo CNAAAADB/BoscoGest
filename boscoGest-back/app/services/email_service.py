@@ -17,7 +17,10 @@ from botocore.exceptions import BotoCoreError, ClientError
 from app import config
 # The wording of the email has to state the same lifetime the service enforces,
 # so it comes from there rather than being repeated here.
-from app.services.activation_service import TOKEN_TTL_HOURS as ACTIVATION_TTL_HOURS
+from app.services.activation_service import (
+    RESET_TTL_HOURS,
+    TOKEN_TTL_HOURS as ACTIVATION_TTL_HOURS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +208,11 @@ def send_welcome_email(
             },
         },
     }
+    _deliver(request, recipient_email, "welcome")
+
+
+def _deliver(request: dict, recipient_email: str, kind: str) -> None:
+    """Hand a built message to SES, logging instead of raising."""
     # Lets SES report bounces and complaints, which is a prerequisite for
     # keeping production sending access.
     if config.SES_CONFIGURATION_SET:
@@ -213,7 +221,8 @@ def send_welcome_email(
     try:
         response = _get_client().send_email(**request)
         logger.info(
-            "Welcome email sent to %s (MessageId=%s)",
+            "%s email sent to %s (MessageId=%s)",
+            kind.capitalize(),
             recipient_email,
             response.get("MessageId"),
         )
@@ -232,10 +241,96 @@ def send_welcome_email(
             )
         else:
             logger.error(
-                "Failed to send welcome email to %s (%s): %s",
+                "Failed to send %s email to %s (%s): %s",
+                kind,
                 recipient_email,
                 code or "unknown",
                 exc,
             )
     except BotoCoreError as exc:
-        logger.error("Failed to send welcome email to %s: %s", recipient_email, exc)
+        logger.error("Failed to send %s email to %s: %s", kind, recipient_email, exc)
+
+
+def _build_reset_html(name: str, reset_url: str) -> str:
+    safe_name = escape(name)
+    safe_reset = escape(reset_url, quote=True)
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:32px;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0"
+               style="background:#ffffff;border-radius:8px;padding:40px;">
+          <tr>
+            <td>
+              <h2 style="color:#1a237e;margin-top:0;">Hola, {safe_name}</h2>
+              <p style="color:#333;line-height:1.6;">
+                Hemos recibido una petición para cambiar la contraseña de tu
+                cuenta de BoscoGest. Para elegir una nueva, usa este botón:
+              </p>
+              <p style="text-align:center;margin:32px 0;">
+                <a href="{safe_reset}"
+                   style="background:#1a237e;color:#ffffff;padding:12px 28px;
+                          border-radius:4px;text-decoration:none;font-weight:bold;">
+                  Cambiar mi contraseña
+                </a>
+              </p>
+              <p style="color:#777;font-size:12px;word-break:break-all;">
+                Si el botón no funciona, copia esta dirección en tu navegador:<br>
+                {safe_reset}
+              </p>
+              <p style="color:#777;font-size:13px;line-height:1.6;">
+                El enlace caduca en {RESET_TTL_HOURS} horas y solo se puede usar
+                una vez. No lo reenvíes a nadie.
+              </p>
+              <p style="color:#777;font-size:13px;line-height:1.6;">
+                Si no has sido tú, no hagas nada: tu contraseña sigue siendo la
+                misma.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def _build_reset_text(name: str, reset_url: str) -> str:
+    return (
+        f"Hola, {name}:\n\n"
+        "Hemos recibido una petición para cambiar la contraseña de tu cuenta "
+        "de BoscoGest. Para elegir una nueva, abre esta dirección:\n\n"
+        f"{reset_url}\n\n"
+        f"El enlace caduca en {RESET_TTL_HOURS} horas y solo se puede usar una "
+        "vez. No lo reenvíes a nadie.\n\n"
+        "Si no has sido tú, no hagas nada: tu contraseña sigue siendo la misma."
+    )
+
+
+def send_password_reset_email(
+    recipient_email: str, recipient_name: str, reset_url: str
+) -> None:
+    """Send the forgotten-password link via AWS SES. Logs errors without raising."""
+    if not config.SES_SENDER_EMAIL:
+        logger.warning(
+            "SES_SENDER_EMAIL not configured — skipping password reset email to %s",
+            recipient_email,
+        )
+        return
+
+    request = {
+        "Source": config.SES_SENDER_EMAIL,
+        "Destination": {"ToAddresses": [recipient_email]},
+        "Message": {
+            "Subject": {"Data": "Cambia tu contraseña de BoscoGest", "Charset": "UTF-8"},
+            "Body": {
+                "Html": {"Data": _build_reset_html(recipient_name, reset_url), "Charset": "UTF-8"},
+                "Text": {"Data": _build_reset_text(recipient_name, reset_url), "Charset": "UTF-8"},
+            },
+        },
+    }
+    _deliver(request, recipient_email, "password reset")

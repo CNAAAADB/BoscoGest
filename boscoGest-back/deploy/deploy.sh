@@ -72,6 +72,15 @@ scp -i "$SSH_KEY" \
   "${EC2_HOST}:${REMOTE_DIR}/"
 scp -i "$SSH_KEY" deploy/.env.prod "${EC2_HOST}:${REMOTE_DIR}/.env"
 
+# The Firebase service account for push. Through /tmp and `install` because the
+# copy in place belongs to the container's user (uid 999) and is read-only, so
+# scp cannot overwrite it.
+if [[ -f deploy/firebase-service-account.json ]]; then
+  echo "==> Copying the Firebase service account"
+  scp -i "$SSH_KEY" deploy/firebase-service-account.json "${EC2_HOST}:/tmp/firebase-service-account.json"
+  ssh -i "$SSH_KEY" "$EC2_HOST" "sudo install -o 999 -g 999 -m 400 /tmp/firebase-service-account.json ${REMOTE_DIR}/firebase-service-account.json && rm -f /tmp/firebase-service-account.json"
+fi
+
 # ── Restart ─────────────────────────────────────────────────────────────────
 echo "==> Pulling and restarting"
 ssh -i "$SSH_KEY" "$EC2_HOST" bash -s <<REMOTE

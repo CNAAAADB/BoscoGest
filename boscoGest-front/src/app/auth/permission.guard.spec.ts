@@ -10,6 +10,7 @@ import { Observable, of, throwError } from 'rxjs';
 
 import { permissionGuard } from './permission.guard';
 import { AuthService } from './auth.service';
+import { provideAppTesting } from '../testing/test-providers';
 
 /**
  * permissionGuard no es un CanActivateFn: es una factoría que devuelve uno a
@@ -18,70 +19,97 @@ import { AuthService } from './auth.service';
  * de la suite.
  */
 describe('permissionGuard', () => {
-  let authService: jasmine.SpyObj<AuthService>;
+  let authService: AuthService;
   let router: Router;
 
+  function conMembresias(memberships: unknown[]) {
+    (authService as unknown as { allMemberships: { set: (v: unknown) => void } })
+      .allMemberships.set(memberships);
+  }
+
+  function membresia(permisos: [string, string][], nivel = 4, activa = true) {
+    return {
+      entity_id: nivel,
+      entity: { id: nivel, level: nivel },
+      is_active: activa,
+      role: { permissions: permisos.map(([resource, action]) => ({ resource, action })) },
+    };
+  }
+
   beforeEach(() => {
-    authService = jasmine.createSpyObj<AuthService>('AuthService', [
-      'isLoggedIn',
-      'checkPermission',
-    ]);
-
-    TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: AuthService, useValue: authService }],
-    });
-
+    TestBed.configureTestingModule({ providers: [provideAppTesting(), provideRouter([])] });
+    authService = TestBed.inject(AuthService);
     router = TestBed.inject(Router);
+    spyOn(authService, 'isLoggedIn').and.returnValue(true);
+    spyOn(authService, 'checkAuth').and.returnValue(of(true));
   });
 
   /** Ejecuta el guard dentro de un contexto de inyección, como hace el router. */
-  function runGuard(resource = 'users', action = 'list') {
-    const guard = permissionGuard(resource, action);
+  function runGuard(resource = 'users', action = 'list', scope: 'any' | 'root' = 'any') {
+    const guard = permissionGuard(resource, action, scope);
     return TestBed.runInInjectionContext(() =>
       guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
-    );
+    ) as Observable<boolean | UrlTree> | UrlTree;
+  }
+
+  function resultado(r: Observable<boolean | UrlTree> | UrlTree, done: (v: string | boolean) => void) {
+    if (r instanceof UrlTree) return done(router.serializeUrl(r));
+    r.subscribe((v) => done(v instanceof UrlTree ? router.serializeUrl(v) : v));
   }
 
   it('redirige al login cuando no hay sesión', () => {
-    authService.isLoggedIn.and.returnValue(false);
+    (authService.isLoggedIn as jasmine.Spy).and.returnValue(false);
 
-    const result = runGuard();
+    const r = runGuard() as UrlTree;
 
-    expect(router.serializeUrl(result as UrlTree)).toBe('/login');
-    // Sin sesión no tiene sentido preguntar al backend: la llamada daría 401.
-    expect(authService.checkPermission).not.toHaveBeenCalled();
+    expect(router.serializeUrl(r)).toBe('/login');
+    expect(authService.checkAuth).not.toHaveBeenCalled();
   });
 
-  it('deja pasar cuando el backend concede el permiso', (done) => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.checkPermission.and.returnValue(of(true));
+  it('deja pasar a quien tiene el permiso', (done) => {
+    conMembresias([membresia([['roles', 'manage']])]);
 
-    (runGuard('roles', 'manage') as Observable<boolean | UrlTree>).subscribe((result) => {
-      expect(result).toBeTrue();
-      expect(authService.checkPermission).toHaveBeenCalledWith('roles', 'manage');
-      done();
+    resultado(runGuard('roles', 'manage'), (v) => { expect(v).toBeTrue(); done(); });
+  });
+
+  it('redirige al dashboard a quien no lo tiene', (done) => {
+    // Antes pasaba: el backend responde siempre 200 y cualquier 200 era un sí.
+    conMembresias([membresia([['users', 'read'], ['users', 'list']])]);
+
+    resultado(runGuard('users', 'manage'), (v) => { expect(v).toBe('/dashboard'); done(); });
+  });
+
+  it('cuenta manage_all como cualquier acción de su recurso', (done) => {
+    conMembresias([membresia([['users', 'manage_all']])]);
+
+    resultado(runGuard('users', 'update'), (v) => { expect(v).toBeTrue(); done(); });
+  });
+
+  it('ignora las membresías inactivas', (done) => {
+    conMembresias([membresia([['users', 'manage']], 4, false)]);
+
+    resultado(runGuard('users', 'manage'), (v) => { expect(v).toBe('/dashboard'); done(); });
+  });
+
+  it('con scope root exige el permiso en la raíz', (done) => {
+    conMembresias([membresia([['fees', 'maintenance']], 4)]);
+
+    resultado(runGuard('fees', 'maintenance', 'root'), (v) => {
+      expect(v).toBe('/dashboard');
+      conMembresias([membresia([['fees', 'maintenance']], 1)]);
+      resultado(runGuard('fees', 'maintenance', 'root'), (w) => { expect(w).toBeTrue(); done(); });
     });
   });
 
-  it('redirige al dashboard cuando el permiso se deniega', (done) => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.checkPermission.and.returnValue(of(false));
+  it('espera a la sesión: sin ella, al login', (done) => {
+    (authService.checkAuth as jasmine.Spy).and.returnValue(of(false));
 
-    (runGuard() as Observable<boolean | UrlTree>).subscribe((result) => {
-      expect(router.serializeUrl(result as UrlTree)).toBe('/dashboard');
-      done();
-    });
+    resultado(runGuard(), (v) => { expect(v).toBe('/login'); done(); });
   });
 
-  it('redirige al dashboard cuando la comprobación falla', (done) => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.checkPermission.and.returnValue(throwError(() => new Error('network')));
+  it('un error al cargar la sesión no deja la navegación colgada', (done) => {
+    (authService.checkAuth as jasmine.Spy).and.returnValue(throwError(() => new Error('network')));
 
-    // Un error de red no debe dejar la navegación colgada ni propagar la
-    // excepción al router: cae al dashboard, como una denegación.
-    (runGuard() as Observable<boolean | UrlTree>).subscribe((result) => {
-      expect(router.serializeUrl(result as UrlTree)).toBe('/dashboard');
-      done();
-    });
+    resultado(runGuard(), (v) => { expect(v).toBe('/dashboard'); done(); });
   });
 });

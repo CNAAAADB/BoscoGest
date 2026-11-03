@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from typing import List
 from app.models.user_model import User
 from app.schemas.group import GroupCreate, GroupResponse
-from app.utils.auth import require_permission
+from app.utils.auth import require_root_permission
 from app.services.group_service import GroupService, get_group_service
 
 group_router = APIRouter(prefix="/groups", tags=["Group Management"])
@@ -15,7 +15,7 @@ def create_group(
     group: GroupCreate,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "create")),
+    current_user: User = Depends(require_root_permission("groups", "create")),
 ):
     return service.create_group(
         group, current_user, ip_address=request.client.host if request else None
@@ -27,7 +27,7 @@ def get_groups(
     skip: int = 0,
     limit: int = 100,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "list")),
+    current_user: User = Depends(require_root_permission("groups", "list")),
 ):
     return service.list_groups(skip=skip, limit=limit)
 
@@ -36,7 +36,7 @@ def get_groups(
 def get_group(
     group_id: int,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "read")),
+    current_user: User = Depends(require_root_permission("groups", "read")),
 ):
     return service.get_group(group_id)
 
@@ -47,7 +47,7 @@ def update_group(
     group_update: GroupCreate,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "update")),
+    current_user: User = Depends(require_root_permission("groups", "update")),
 ):
     return service.update_group(
         group_id,
@@ -62,7 +62,7 @@ def delete_group(
     group_id: int,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "delete")),
+    current_user: User = Depends(require_root_permission("groups", "delete")),
 ):
     service.delete_group(
         group_id,
@@ -80,7 +80,7 @@ def add_user_to_group(
     user_id: int,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "assign")),
+    current_user: User = Depends(require_root_permission("groups", "assign")),
 ):
     return service.add_user_to_group(
         group_id,
@@ -98,7 +98,7 @@ def remove_user_from_group(
     user_id: int,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "assign")),
+    current_user: User = Depends(require_root_permission("groups", "assign")),
 ):
     return service.remove_user_from_group(
         group_id,
@@ -116,7 +116,7 @@ def assign_role_to_group(
     role_id: int,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "assign")),
+    current_user: User = Depends(require_root_permission("groups", "assign")),
 ):
     return service.assign_role_to_group(
         group_id,
@@ -134,7 +134,7 @@ def remove_role_from_group(
     role_id: int,
     request: Request,
     service: GroupService = Depends(get_group_service),
-    current_user: User = Depends(require_permission("groups", "assign")),
+    current_user: User = Depends(require_root_permission("groups", "assign")),
 ):
     return service.remove_role_from_group(
         group_id,

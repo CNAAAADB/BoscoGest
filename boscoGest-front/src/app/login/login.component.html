@@ -31,6 +31,13 @@
           />
         </mat-form-field>
 
+        <a
+          class="forgot-link"
+          routerLink="/recuperar"
+          [state]="{ identifier: identifier() }">
+          ¿Has olvidado tu contraseña?
+        </a>
+
         @if (errorMessage()) {
           <div class="error-message">{{ errorMessage() }}</div>
         }

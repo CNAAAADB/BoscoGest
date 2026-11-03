@@ -245,3 +245,12 @@ from app.schemas.membership import MembershipDetails
 
 # Resuelve referencias forward
 UserDetails.model_rebuild()
+
+class PasswordResetConfirm(FirstTimePasswordChange):
+    """The secret from a forgotten-password email, with the new password.
+
+    Same rules as choosing a password for the first time: it is the same
+    moment for whoever is doing it.
+    """
+
+    token: str = Field(..., min_length=16, max_length=256)

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'es.urjc.boscogest',
+  appId: 'com.boscogest.app',
   appName: 'BoscoGest',
   webDir: 'dist/boscoGest-front/browser',
   plugins: {

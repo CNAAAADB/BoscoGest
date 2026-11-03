@@ -32,6 +32,12 @@ class ActivationToken(Base):
     )
     # SHA-256 of the secret handed out in the email, hex-encoded.
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # 'activation' (welcome email, first sign-in) or 'reset' (forgotten
+    # password). Each endpoint only spends its own kind: a reset link must not
+    # open a session without a new password, and the two have different lives.
+    purpose: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="activation"
+    )
     expires_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     # Set the moment the link is followed. Its presence is what makes the link
     # single-use, and it is written with a conditional update so two

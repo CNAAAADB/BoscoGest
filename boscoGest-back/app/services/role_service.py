@@ -187,6 +187,32 @@ class RoleService:
                 detail="Cannot modify superadmin role - it always has all permissions",
             )
 
+        # A role is shared by every association it is linked to — admin and
+        # socio by all of them — so changing it changes it for all. The route
+        # only asked for roles:update somewhere, and any local administrator
+        # could rewrite what every member of the confederation may do. Now it
+        # takes roles:update in each of those associations, or at the root.
+        entity_ids = [e.id for e in db_role.entities]
+        allowed = self.auth_service.has_root_permission(
+            current_user, "roles", "update"
+        ) or (
+            bool(entity_ids)
+            and all(
+                self.auth_service.has_effective_permission(
+                    current_user, entity_id, "roles", "update"
+                )
+                for entity_id in entity_ids
+            )
+        )
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Este rol también se usa en asociaciones que no administras, "
+                    "así que no puedes cambiarlo."
+                ),
+            )
+
         update_data = role_update.model_dump(exclude_unset=True)
 
         # Extract permission_ids before removing from update_data

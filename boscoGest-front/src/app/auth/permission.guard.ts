@@ -3,8 +3,26 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { map, catchError, of } from 'rxjs';
 
-export const permissionGuard = (resource: string, action: string): CanActivateFn => {
-  return (route, state) => {
+/**
+ * Lets a route open only for whoever holds `resource:action`.
+ *
+ * It used to ask the backend (/auth/check-permission) and took any 200 as a
+ * yes — but that endpoint always answers 200, with the verdict in the body, so
+ * every signed-in user got through every guarded route and found out at the
+ * first request. It now decides from the session's own permissions, the same
+ * ones the sidebar uses to show the entry, so the menu and the route agree.
+ *
+ * `scope: 'root'` is for platform-wide pages (fee maintenance), which the
+ * backend only allows to whoever holds the permission at the root entity.
+ *
+ * Still only a hint for the interface: the backend checks every request.
+ */
+export const permissionGuard = (
+  resource: string,
+  action: string,
+  scope: 'any' | 'root' = 'any',
+): CanActivateFn => {
+  return () => {
     const authService = inject(AuthService);
     const router = inject(Router);
 
@@ -12,18 +30,20 @@ export const permissionGuard = (resource: string, action: string): CanActivateFn
       return router.createUrlTree(['/login']);
     }
 
-    return authService.checkPermission(resource, action).pipe(
-      map(hasPermission => {
-        if (hasPermission) {
-          return true;
+    // After a reload the memberships may not be in yet; checkAuth waits for
+    // them (and returns at once if they already are).
+    return authService.checkAuth().pipe(
+      map((authenticated) => {
+        if (!authenticated) {
+          return router.createUrlTree(['/login']);
         }
-        // Redirect to dashboard if user doesn't have permission
-        return router.createUrlTree(['/dashboard']);
+        const allowed = scope === 'root'
+          ? authService.hasRootPermission(resource, action)
+          : authService.canPerform(resource, action);
+        return allowed ? true : router.createUrlTree(['/dashboard']);
       }),
-      catchError(() => {
-        // On error, redirect to dashboard
-        return of(router.createUrlTree(['/dashboard']));
-      })
+      // A network error must not leave the navigation hanging.
+      catchError(() => of(router.createUrlTree(['/dashboard'])))
     );
   };
 };

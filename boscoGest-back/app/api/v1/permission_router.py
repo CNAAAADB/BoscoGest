@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from typing import List
 from app.models.user_model import User
 from app.schemas.permission import PermissionCreate, PermissionUpdate, PermissionResponse
-from app.utils.auth import require_permission
+from app.utils.auth import require_permission, require_root_permission
 from app.services.permission_service import PermissionService, get_permission_service
 
 permission_router = APIRouter(prefix="/permissions", tags=["Permission Management"])
@@ -15,7 +15,7 @@ def create_permission(
     permission: PermissionCreate,
     request: Request,
     service: PermissionService = Depends(get_permission_service),
-    current_user: User = Depends(require_permission("permissions", "create")),
+    current_user: User = Depends(require_root_permission("permissions", "create")),
 ):
     return service.create_permission(
         permission, current_user, ip_address=request.client.host if request else None
@@ -47,7 +47,7 @@ def update_permission(
     permission_update: PermissionUpdate,
     request: Request,
     service: PermissionService = Depends(get_permission_service),
-    current_user: User = Depends(require_permission("permissions", "update")),
+    current_user: User = Depends(require_root_permission("permissions", "update")),
 ):
     return service.update_permission(
         permission_id,
@@ -62,7 +62,7 @@ def delete_permission(
     permission_id: int,
     request: Request,
     service: PermissionService = Depends(get_permission_service),
-    current_user: User = Depends(require_permission("permissions", "delete")),
+    current_user: User = Depends(require_root_permission("permissions", "delete")),
 ):
     service.delete_permission(
         permission_id, current_user, ip_address=request.client.host if request else None
@@ -78,7 +78,7 @@ def assign_permission_to_role(
     role_id: int,
     request: Request,
     service: PermissionService = Depends(get_permission_service),
-    current_user: User = Depends(require_permission("permissions", "assign")),
+    current_user: User = Depends(require_root_permission("permissions", "assign")),
 ):
     return service.assign_to_role(
         permission_id,

@@ -25,3 +25,14 @@ class ActivationResendRequest(BaseModel):
         max_length=255,
         description="Email o teléfono con el que se dio de alta la cuenta",
     )
+
+
+class PasswordForgotRequest(BaseModel):
+    """Ask for a link to choose a new password."""
+
+    identifier: str = Field(
+        ...,
+        min_length=3,
+        max_length=255,
+        description="Email o teléfono con el que se dio de alta la cuenta",
+    )

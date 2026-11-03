@@ -23,6 +23,11 @@ services:
     # made plain HTTP possible.
     expose:
       - "8000"
+    volumes:
+      # Firebase service account for push (FCM_CREDENTIALS_FILE in .env).
+      # Neither in the image nor in git: deploy.sh copies it next to this file,
+      # owned by the container's user (uid 999) and readable only by it.
+      - ./firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=5).status == 200 else 1)"]
       interval: 30s

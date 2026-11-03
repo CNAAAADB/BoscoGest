@@ -22,9 +22,10 @@ describe('AuthService.hasPermissionAtEntity', () => {
       .allMemberships.set(memberships);
   }
 
-  function membresia(entityId: number, permisos: [string, string][], activa = true) {
+  function membresia(entityId: number, permisos: [string, string][], activa = true, nivel = 4) {
     return {
       entity_id: entityId,
+      entity: { id: entityId, level: nivel },
       is_active: activa,
       role: {
         permissions: permisos.map(([resource, action]) => ({ resource, action })),
@@ -51,10 +52,39 @@ describe('AuthService.hasPermissionAtEntity', () => {
     expect(service.hasPermissionAtEntity(SEVILLA, 'memberships', 'update')).toBeFalse();
   });
 
-  it('manage_all vale en cualquier asociación', () => {
+  it('manage_all vale en su propia asociación', () => {
     conMembresias([membresia(CADIZ, [['memberships', 'manage_all']])]);
 
+    expect(service.hasPermissionAtEntity(CADIZ, 'memberships', 'update')).toBeTrue();
+  });
+
+  it('manage_all de una asociación local no vale en otra', () => {
+    // El backend dejó de aceptarlo fuera de su jerarquía.
+    conMembresias([membresia(CADIZ, [['memberships', 'manage_all']])]);
+
+    expect(service.hasPermissionAtEntity(SEVILLA, 'memberships', 'update')).toBeFalse();
+  });
+
+  it('manage_all desde la raíz vale en todas', () => {
+    conMembresias([membresia(1, [['memberships', 'manage_all']], true, 1)]);
+
     expect(service.hasPermissionAtEntity(SEVILLA, 'memberships', 'update')).toBeTrue();
+  });
+
+  describe('hasRootPermission', () => {
+    it('solo con el permiso en una membresía de la raíz', () => {
+      conMembresias([membresia(CADIZ, [['consent', 'manage']])]);
+      expect(service.hasRootPermission('consent', 'manage')).toBeFalse();
+
+      conMembresias([membresia(1, [['consent', 'manage']], true, 1)]);
+      expect(service.hasRootPermission('consent', 'manage')).toBeTrue();
+    });
+
+    it('ignora la membresía de la raíz si está inactiva', () => {
+      conMembresias([membresia(1, [['fees', 'maintenance']], false, 1)]);
+
+      expect(service.hasRootPermission('fees', 'maintenance')).toBeFalse();
+    });
   });
 
   it('ignora las membresías inactivas', () => {

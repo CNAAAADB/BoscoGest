@@ -1,4 +1,4 @@
-package es.urjc.boscogest;
+package com.boscogest.app;
 
 import com.getcapacitor.BridgeActivity;
 

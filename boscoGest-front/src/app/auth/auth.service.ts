@@ -158,6 +158,28 @@ export class AuthService {
     );
   }
 
+  /** Ask for a link to choose a new password. Same answer whoever the address belongs to. */
+  forgotPassword(identifier: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/auth/password/forgot`,
+      { identifier }
+    );
+  }
+
+  /**
+   * Set a new password with the link from the email. The link alone opens no
+   * session: it has to come with the password, and then it signs them in.
+   */
+  resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<boolean> {
+    return this.http
+      .post<TokenResponse>(`${this.apiUrl}/auth/password/reset`, {
+        token,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      })
+      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+  }
+
   /**
    * Store an access token and load what the session needs from it.
    *
@@ -261,7 +283,10 @@ export class AuthService {
   hasEntityPermission(entityId: number, action: string): boolean {
     const memberships = this.allMemberships();
 
+    // manage_all only from the root: the backend no longer lets one held in a
+    // local association reach other associations.
     const hasManageAll = memberships.some(membership =>
+      membership.entity?.level === 1 &&
       membership.role?.permissions?.some(
         permission => permission.resource === 'entities' && permission.action === 'manage_all'
       )
@@ -296,8 +321,10 @@ export class AuthService {
     return this.allMemberships().some((membership) => {
       if (!membership.is_active) return false;
       const permisos = membership.role?.permissions ?? [];
-      // manage_all sobre el recurso vale en cualquier asociación.
-      if (permisos.some((p) => p.resource === resource && p.action === 'manage_all')) {
+      // manage_all vale en su propia asociación o, desde la raíz, en todas. Ya
+      // no en cualquiera: el backend dejó de aceptarlo fuera de su jerarquía.
+      const enAlcance = membership.entity_id === entityId || membership.entity?.level === 1;
+      if (enAlcance && permisos.some((p) => p.resource === resource && p.action === 'manage_all')) {
         return true;
       }
       return (
@@ -305,6 +332,25 @@ export class AuthService {
         permisos.some((p) => p.resource === resource && p.action === action)
       );
     });
+  }
+
+  /**
+   * Si se tiene un permiso en la entidad raíz, es decir, sobre toda la
+   * plataforma.
+   *
+   * Para lo que no pertenece a ninguna asociación —la cláusula de
+   * consentimiento, el mantenimiento de cuotas—, que el backend solo acepta
+   * desde la raíz. Como `hasPermissionAtEntity`, es una pista para no enseñar
+   * lo que va a devolver 403.
+   */
+  hasRootPermission(resource: string, action: string): boolean {
+    return this.allMemberships().some((membership) =>
+      membership.is_active &&
+      membership.entity?.level === 1 &&
+      (membership.role?.permissions ?? []).some(
+        (p) => p.resource === resource && (p.action === action || p.action === 'manage_all')
+      )
+    );
   }
 
   hasAnyPermissionForResource(resource: string): boolean {
@@ -325,21 +371,18 @@ export class AuthService {
     return this.allMemberships();
   }
 
-  checkPermission(resource: string, action: string, resourceId?: number): Observable<boolean> {
-    const params: any = { resource, action };
-    if (resourceId !== undefined) {
-      params.resource_id = resourceId;
-    }
-
-    return this.http.get<any>(`${this.apiUrl}/auth/check-permission`, { params }).pipe(
-      map(() => true),
-      catchError((error) => {
-        console.error('Permission check error:', error);
-        if (error.status === 401) {
-          this.clearAuthData();
-        }
-        return of(false);
-      })
+  /**
+   * Si se puede hacer `resource:action` en alguna asociación: lo que decide
+   * si una pantalla se abre (permissionGuard). Como el backend, `manage_all`
+   * sobre el recurso cuenta como cualquier acción; dónde se puede usar ya lo
+   * comprueba el backend en cada petición.
+   */
+  canPerform(resource: string, action: string): boolean {
+    return this.allMemberships().some((membership) =>
+      membership.is_active &&
+      (membership.role?.permissions ?? []).some(
+        (p) => p.resource === resource && (p.action === action || p.action === 'manage_all')
+      )
     );
   }
 }
