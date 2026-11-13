@@ -872,6 +872,17 @@ class UserService:
                 ),
             )
 
+        # An activation link is not useful if the member has no way to log in
+        # after choosing their password. Add a unique email or phone first.
+        if not (db_user.email or db_user.phone):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Antes de activar esta cuenta, añade un correo o teléfono "
+                    "al socio para que pueda iniciar sesión después."
+                ),
+            )
+
         raw_token = activation_service.issue_token(self.db, db_user)
 
         self.audit_service.create_audit_log(
