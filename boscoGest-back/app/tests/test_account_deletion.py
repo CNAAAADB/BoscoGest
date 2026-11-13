@@ -111,8 +111,8 @@ def test_deletes_and_anonymises_the_account(
     assert deleted.job_position is None
     assert deleted.name == "Cuenta"
     assert deleted.surname == "eliminada"
-    # dni is unique and NOT NULL, so it takes a tombstone rather than a null.
-    assert deleted.dni == f"DEL-{user_id}"
+    # Deleting a member removes the identifier entirely.
+    assert deleted.dni is None
     assert deleted.birthdate.year == 1900
 
 
