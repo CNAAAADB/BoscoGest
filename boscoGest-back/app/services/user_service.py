@@ -579,10 +579,8 @@ class UserService:
         db_user.size = None
         db_user.hobbies = None
         db_user.job_position = None
-        # dni is unique and NOT NULL, so it takes a tombstone rather than being
-        # cleared. Keyed by id so two deletions never collide, and short enough
-        # for the column's 20 characters.
-        db_user.dni = f"DEL-{db_user.id}"
+        # DNI is nullable: deletion can remove it completely.
+        db_user.dni = None
         db_user.birthdate = date(1900, 1, 1)
         # A hash of a secret nobody holds: the account can no longer be signed
         # into, and the old hash is gone with it.
@@ -753,7 +751,7 @@ class UserService:
                 detail=str(e),
             )
 
-        # email y phone no son obligatorios como columna: basta uno de los dos por fila.
+        # DNI, email y teléfono son opcionales para las fichas de socios.
         # entity_id y role_id ya no se leen del CSV: vienen de los selectores
         # de asociación y rol.
         # password tampoco: se genera una por fila y nadie llega a conocerla,
@@ -761,7 +759,7 @@ class UserService:
         # Así el fichero deja de contener contraseñas en claro.
         required_columns = [
             "name", "surname",
-            "birthdate", "dni",
+            "birthdate",
         ]
         csv_columns = file_columns
         missing_columns = [
@@ -1290,12 +1288,9 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
 
                     if not all([
                         name, surname,
-                        birthdate_str, dni,
+                        birthdate_str,
                     ]):
                         raise ValueError("All required fields must be filled")
-
-                    if not (email or phone):
-                        raise ValueError("Each row must have an email or a phone")
 
                     # Whatever lands here is read back through UserResponse,
                     # whose `email` is an EmailStr. A value that is not an
@@ -1345,7 +1340,7 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
                         phone=phone or None,
                         address=address,
                         birthdate=birthdate,
-                        dni=dni,
+                        dni=dni or None,
                         photo=photo,
                         iban=iban,
                         size=size,
@@ -1414,7 +1409,8 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
                         activation_url = activation_service.build_activation_url(
                             raw_token
                         )
-                    send_welcome_email(email, f"{name} {surname}", activation_url)
+                    if email:
+                        send_welcome_email(email, f"{name} {surname}", activation_url)
 
                 except IntegrityError as e:
                     db.rollback()
