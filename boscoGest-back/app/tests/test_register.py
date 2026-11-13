@@ -90,3 +90,15 @@ def test_a_birthdate_that_is_not_a_date_is_a_clear_error(client, datos):
 
     assert r.status_code == 422
     assert "fecha de nacimiento" in r.json()["detail"]
+
+
+def test_self_registration_allows_no_phone_or_dni(client, datos):
+    data = {key: value for key, value in datos.items() if key not in ("phone", "dni")}
+    r = client.post("/auth/register", json=data)
+    assert r.status_code == 201, r.json()
+
+
+def test_self_registration_still_requires_email_for_login(client, datos):
+    data = {key: value for key, value in datos.items() if key != "email"}
+    r = client.post("/auth/register", json=data)
+    assert r.status_code == 422
