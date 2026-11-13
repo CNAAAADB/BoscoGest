@@ -19,6 +19,12 @@ class UserBase(BaseModel):
     hobbies: Optional[str] = None
     job_position: Optional[str] = None
 
+    @field_validator('email', 'phone', 'dni', mode='before')
+    @classmethod
+    def normalize_optional_identity(cls, value):
+        # Empty strings from forms must be SQL NULL, not a shared unique value.
+        return value.strip() or None if isinstance(value, str) else value
+
     @field_validator('size')
     @classmethod
     def validate_size(cls, v: Optional[str]) -> Optional[str]:
@@ -64,6 +70,11 @@ class UserUpdate(BaseModel):
     hobbies: Optional[str] = None
     job_position: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator('email', 'phone', 'dni', mode='before')
+    @classmethod
+    def normalize_optional_identity(cls, value):
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator('size')
     @classmethod
