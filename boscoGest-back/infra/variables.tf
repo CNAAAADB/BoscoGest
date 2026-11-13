@@ -187,3 +187,9 @@ variable "db_apply_immediately" {
   type        = bool
   default     = false
 }
+
+variable "db_enable_slow_query_logging" {
+  description = "Opt in to PostgreSQL slow-query logging (500 ms). Attaching the custom parameter group may require an RDS reboot; schedule an apply deliberately. Query parameters are excluded from logs."
+  type        = bool
+  default     = false
+}
