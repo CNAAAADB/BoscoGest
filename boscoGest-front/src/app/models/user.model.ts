@@ -121,7 +121,7 @@ export interface UserDetails {
   phone: string | null;
   address: string | null;
   birthdate: string;
-  dni: string;
+  dni: string | null;
   photo: string | null;
   iban: string | null;
   size: UserSize | null;
@@ -830,9 +830,9 @@ export interface RegisterRequest {
   surname: string;
   email: string;
   password: string;
-  phone: string;
+  phone: string | null;
   birthdate: string;
-  dni: string;
+  dni: string | null;
   address?: string | null;
   entity_id: number;
   message?: string | null;
