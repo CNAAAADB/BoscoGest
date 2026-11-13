@@ -61,7 +61,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    environment: production
     steps:
       - uses: actions/download-artifact@v4
         with:
