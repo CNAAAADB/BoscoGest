@@ -3,6 +3,7 @@ import re
 import secrets
 from datetime import date, datetime, timezone
 import logging
+import time
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -271,28 +272,54 @@ class UserService:
         get_managed_users and get_users had identical bodies; this is the single
         implementation both now delegate to.
         """
+        # Diagnostic timings contain only aggregate durations and row counts:
+        # never log search strings or member-identifying data.
+        started = time.perf_counter()
         accessible_entity_ids = self.auth_service.get_accessible_entity_ids(
             current_user
         )
+        scope_end = time.perf_counter()
         if not accessible_entity_ids:
             return PaginatedUsers(items=[], total=0, skip=skip, limit=limit)
 
         users = self.user_repo.get_by_entity_ids(
             accessible_entity_ids, skip=skip, limit=limit, search=search
         )
+        list_end = time.perf_counter()
         total = self.user_repo.count_by_entity_ids(
             accessible_entity_ids, search=search
         )
+        count_end = time.perf_counter()
 
         # Resolved once for the whole page rather than per row: it walks
         # memberships, groups and direct permissions.
         visibility = UserVisibility.for_viewer(self.auth_service, current_user)
-        return PaginatedUsers(
+        response = PaginatedUsers(
             items=[visibility.serialize(u, viewer_id=current_user.id) for u in users],
             total=total,
             skip=skip,
             limit=limit,
         )
+        finished = time.perf_counter()
+        elapsed_ms = (finished - started) * 1000
+        if elapsed_ms >= 500:
+            logger.warning(
+                "Slow user listing: total_ms=%.1f scope_ms=%.1f "
+                "list_ms=%.1f count_ms=%.1f serialize_ms=%.1f "
+                "page_size=%d returned=%d matching_total=%d scope_entities=%d "
+                "has_search=%s",
+                elapsed_ms,
+                (scope_end - started) * 1000,
+                (list_end - scope_end) * 1000,
+                (count_end - list_end) * 1000,
+                (finished - count_end) * 1000,
+                limit,
+                len(users),
+                total,
+                len(accessible_entity_ids),
+                bool(search),
+            )
+        return response
 
     def get_managed_users(
         self,
