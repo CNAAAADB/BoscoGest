@@ -51,7 +51,9 @@ export class NotificationService {
       return;
     }
 
-    if (this.ws?.readyState === WebSocket.OPEN) return;
+    // Constructor and session validation may both call connect while the
+    // handshake is in flight. Reuse the same socket in that case.
+    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) return;
 
     this.intentionalClose = false;
     this.ws = new WebSocket(`${this.wsUrl}?token=${token}`);
