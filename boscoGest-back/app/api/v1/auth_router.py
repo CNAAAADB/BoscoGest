@@ -268,12 +268,15 @@ def register(
     # person saw a generic error and no hint of what to change. It happens to
     # real people — someone already added by a bulk import, or signing up twice.
     # The DNI is compared ignoring case: 12345678a is the same document.
+    # NULL is not an identifier: never compare blank optional fields against
+    # other accounts. Duplicate checks apply only to supplied values.
+    duplicate_checks = [User.email == register_in.email]
+    if phone:
+        duplicate_checks.append(User.phone == phone)
+    if dni:
+        duplicate_checks.append(func.upper(User.dni) == dni)
     taken = db.execute(
-        select(User).where(or_(
-            User.email == register_in.email,
-            *( [User.phone == phone] if phone else [] ),
-            *( [func.upper(User.dni) == dni] if dni else [] ),
-        ))
+        select(User).where(or_(*duplicate_checks))
     ).scalars().all()
     for field, clashes in (
         ("email", any(u.email == register_in.email for u in taken)),
