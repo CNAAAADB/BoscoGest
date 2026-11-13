@@ -34,9 +34,15 @@ def test_user_create_with_both_is_valid():
     assert user.phone == "600123456"
 
 
-def test_user_create_without_email_or_phone_fails():
-    with pytest.raises(ValidationError, match="email o teléfono"):
-        UserCreate(**_base_kwargs())
+def test_user_create_without_any_identifiers_is_valid():
+    user = UserCreate(**_base_kwargs(dni=None))
+    assert user.email is None
+    assert user.phone is None
+    assert user.dni is None
+
+
+def test_user_create_accepts_omitted_dni():
+    assert UserCreate(name="Ana", surname="García", birthdate="1990-01-01").dni is None
 
 
 def test_user_create_rejects_invalid_size():
