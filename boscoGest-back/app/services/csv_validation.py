@@ -18,11 +18,11 @@ from typing import Dict, List, Optional
 from app.schemas.user import ALLOWED_SIZES
 
 # Columns a row cannot do without.
-REQUIRED_COLUMNS = ["name", "surname", "birthdate", "dni"]
+REQUIRED_COLUMNS = ["name", "surname", "birthdate"]
 
 # Read when present, ignored when absent.
 OPTIONAL_COLUMNS = [
-    "email", "phone", "address", "photo", "iban", "size", "hobbies",
+    "email", "phone", "dni", "address", "photo", "iban", "size", "hobbies",
     "job_position",
 ]
 
@@ -96,7 +96,7 @@ class ParsedRow:
     name: str
     surname: str
     birthdate: date
-    dni: str
+    dni: Optional[str]
     address: Optional[str] = None
     photo: Optional[str] = None
     iban: Optional[str] = None
@@ -161,14 +161,11 @@ def check_row(row: Dict[str, str], row_number: int) -> ParsedRow:
     birthdate_str = g("birthdate")
 
     for key, value in (
-        ("name", name), ("surname", surname), ("dni", dni),
+        ("name", name), ("surname", surname),
         ("birthdate", birthdate_str),
     ):
         if not value:
             fail(key, "required_empty", "Campo obligatorio vacío")
-
-    if not (email or phone):
-        fail("email", "no_contact", "Cada fila necesita al menos un email o un teléfono")
 
     if email and not EMAIL_RE.match(email):
         fail(
@@ -213,7 +210,7 @@ def check_row(row: Dict[str, str], row_number: int) -> ParsedRow:
         name=name,
         surname=surname,
         birthdate=birthdate or date(1900, 1, 1),
-        dni=dni,
+        dni=dni or None,
         address=g("address") or None,
         photo=g("photo") or None,
         iban=g("iban") or None,
