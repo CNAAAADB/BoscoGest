@@ -456,18 +456,9 @@ class UserService:
         # JSON-safe copy for the audit log (datetime.date is not JSON-serialisable)
         audit_data = user_update.model_dump(exclude_unset=True, mode="json")
 
-        # El usuario debe conservar al menos un medio de contacto (email o teléfono)
-        resulting_email = (
-            update_data.get("email") if "email" in update_data else db_user.email
-        )
-        resulting_phone = (
-            update_data.get("phone") if "phone" in update_data else db_user.phone
-        )
-        if not (resulting_email or resulting_phone):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Debe indicar email o teléfono",
-            )
+        # La ficha de un socio puede existir sin medios de contacto.
+        # Su contraseña inicial es aleatoria y desconocida: sin un
+        # identificador no se puede iniciar sesión ni recuperar el acceso.
         try:
             if update_data:
                 self.user_repo.update(user_id, update_data)
