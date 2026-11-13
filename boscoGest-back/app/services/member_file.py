@@ -270,7 +270,7 @@ def _add_instructions_sheet(wb) -> None:
         ("", False),
         ("1. Escribe los datos en la hoja «Usuarios» (abajo, en las pestañas): una fila por persona.", False),
         ("2. No cambies ni borres la primera fila: el programa la usa para saber qué es cada columna.", False),
-        ("3. Las columnas en azul oscuro son obligatorias: name (nombre), surname (apellidos), birthdate (fecha de nacimiento) y dni.", False),
+        ("3. Las columnas en azul oscuro son obligatorias: name (nombre), surname (apellidos), birthdate (fecha de nacimiento). DNI, email y teléfono son opcionales.", False),
         ("4. Cada persona necesita un correo (email) o un teléfono (phone). Si no tiene correo, deja la celda vacía.", False),
         ("5. Escribe la fecha de nacimiento como 15/01/1950, con el año completo (1950, no 50).", False),
         ("6. La talla (size) se elige de la lista desplegable.", False),
