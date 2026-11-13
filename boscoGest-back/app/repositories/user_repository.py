@@ -126,13 +126,18 @@ class UserRepository:
         limit: int = 100,
         search: Optional[str] = None,
     ) -> List[User]:
-        """Return distinct active users who hold a membership in any of the
-        given entity IDs, with base eager loading applied."""
+        """Return a page of active users within the accessible entities.
+
+        The list is serialized as UserResponse, which contains only User columns.
+        Eager-loading groups, direct permissions and memberships multiplies
+        rows through joined collections for every page, despite none of those
+        collections appearing in UserResponse. Keep relationship loading for
+        detail/authentication queries instead.
+        """
         stmt = (
             select(User)
             .join(User.memberships)
             .where(*self._entity_scope_filters(entity_ids, search))
-            .options(*self._base_eager_options())
             .order_by(User.surname, User.name, User.id)
             .offset(skip)
             .limit(limit)
