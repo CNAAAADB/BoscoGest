@@ -11,6 +11,29 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
+# Optional slow-query diagnostics. Disabled by default to avoid changing
+# production RDS until a maintenance window has been selected.
+resource "aws_db_parameter_group" "slow_queries" {
+  count  = var.db_enable_slow_query_logging ? 1 : 0
+  name   = "${var.project_name}-postgres15-slow-queries"
+  family = "postgres15"
+
+  parameter {
+    name         = "log_min_duration_statement"
+    value        = "500"
+    apply_method = "immediate"
+  }
+
+  # Prepared-statement bind values can contain member data and search terms.
+  parameter {
+    name         = "log_parameter_max_length"
+    value        = "0"
+    apply_method = "immediate"
+  }
+
+  tags = { Name = "${var.project_name}-postgres15-slow-queries" }
+}
+
 # ──────────────────────────────────────────────
 # RDS PostgreSQL (Free Tier)
 # ──────────────────────────────────────────────
@@ -37,6 +60,10 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds.id]
 
   publicly_accessible = false
+
+  # Changing the parameter group of a live RDS instance may require a reboot.
+  # Apply this only during a planned maintenance window.
+  parameter_group_name = var.db_enable_slow_query_logging ? aws_db_parameter_group.slow_queries[0].name : null
 
   # Always keep a snapshot when the instance is destroyed. Combined with
   # deletion_protection, this makes an accidental `terraform destroy` recoverable.
