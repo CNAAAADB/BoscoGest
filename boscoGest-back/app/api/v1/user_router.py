@@ -52,12 +52,13 @@ def create_user(
         raw_token = activation_service.issue_token(service.db, db_user)
         activation_url = activation_service.build_activation_url(raw_token)
 
-    background_tasks.add_task(
-        send_welcome_email,
-        db_user.email,
-        f"{db_user.name} {db_user.surname}",
-        activation_url,
-    )
+    if db_user.email:
+        background_tasks.add_task(
+            send_welcome_email,
+            db_user.email,
+            f"{db_user.name} {db_user.surname}",
+            activation_url,
+        )
     return db_user
 
 
