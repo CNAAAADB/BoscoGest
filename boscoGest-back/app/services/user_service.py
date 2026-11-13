@@ -435,6 +435,18 @@ class UserService:
         status; that field is stripped before delegating to update_user."""
         data = user_update.model_dump(exclude_unset=True)
         data.pop("is_active", None)
+        # Unlike an administrative member record, an active self-service
+        # account needs a login identifier. Prevent accidental lockout.
+        email = data.get("email", current_user.email)
+        phone = data.get("phone", current_user.phone)
+        if not (email or phone):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Para mantener el acceso a tu cuenta, conserva al menos "
+                    "un correo electrónico o un teléfono."
+                ),
+            )
         clean = UserUpdate(**data)
         return self.update_user(
             current_user.id, clean, current_user, ip_address=ip_address
