@@ -77,6 +77,13 @@ jobs:
       contents: read
       id-token: write
     steps:
+      # The trusted deployment script comes from the workflow's main commit.
+      # The source_ref may be a pre-merge feature branch without this script.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: release-ops
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.verify.outputs.sha }}
@@ -125,7 +132,7 @@ jobs:
           from pathlib import Path
 
           image = "909186483504.dkr.ecr.eu-west-1.amazonaws.com/boscogest-back:" + os.environ["IMAGE_TAG"]
-          script = Path("boscoGest-back/deploy/ssm-rollout.sh").read_text()
+          script = Path("release-ops/boscoGest-back/deploy/ssm-rollout.sh").read_text()
           command = "export NEW_IMAGE=" + shlex.quote(image) + "\n" + script
           Path("/tmp/boscogest-ssm-parameters.json").write_text(json.dumps({"commands": [command]}))
           PY
