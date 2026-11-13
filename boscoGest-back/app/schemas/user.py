@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
 from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 
@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     birthdate: date
-    dni: str
+    dni: Optional[str] = None
     photo: Optional[str] = None
     iban: Optional[str] = None
     size: Optional[str] = None
@@ -27,12 +27,6 @@ class UserBase(BaseModel):
         if v not in ALLOWED_SIZES:
             raise ValueError(f'Talla no válida. Valores permitidos: {", ".join(sorted(ALLOWED_SIZES))}')
         return v
-
-    @model_validator(mode='after')
-    def email_or_phone_required(self):
-        if not (self.email or self.phone):
-            raise ValueError('Debe indicar email o teléfono')
-        return self
 
 class UserCreate(UserBase):
     """Creating a member on someone else's behalf.
