@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { EMPTY, Subject, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -60,6 +60,8 @@ export class UsersListComponent implements OnInit {
   refreshing = signal<boolean>(false);
 
   private searchInput$ = new Subject<string>();
+  /** All page and search requests pass through this stream so older HTTP calls are cancelled. */
+  private pageRequests$ = new Subject<{ skip: number; limit: number; search: string }>();
 
   /**
    * DNI is hidden entirely from viewers without users:read_sensitive — the
@@ -108,24 +110,32 @@ export class UsersListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Debounced so typing does not fire a request per keystroke;
-    // switchMap drops in-flight responses so a slow earlier one cannot land
-    // after a newer search and show stale results.
+    // One request pipeline handles initial load, page changes, search and
+    // post-deletion refreshes. switchMap cancels stale HTTP requests.
+    this.pageRequests$
+      .pipe(
+        switchMap(({ skip, limit, search }) =>
+          this.usersService.getManagedUsers(skip, limit, search).pipe(
+            catchError((error) => {
+              this.reportLoadError(error);
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((page) => this.applyPage(page));
+
     this.searchInput$
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        takeUntilDestroyed(this.destroyRef),
-        switchMap((term) => {
-          this.refreshing.set(true);
-          this.pageIndex.set(0);
-          this.searchTerm.set(term);
-          return this.usersService.getManagedUsers(0, this.pageSize(), term);
-        })
+        takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe({
-        next: (page) => this.applyPage(page),
-        error: (error) => this.reportLoadError(error)
+      .subscribe((term) => {
+        this.pageIndex.set(0);
+        this.searchTerm.set(term);
+        this.loadUsers();
       });
 
     this.loadUsers();
@@ -149,12 +159,11 @@ export class UsersListComponent implements OnInit {
     this.refreshing.set(true);
     const skip = this.pageIndex() * this.pageSize();
 
-    this.usersService
-      .getManagedUsers(skip, this.pageSize(), this.searchTerm())
-      .subscribe({
-        next: (page) => this.applyPage(page),
-        error: (error) => this.reportLoadError(error)
-      });
+    this.pageRequests$.next({
+      skip,
+      limit: this.pageSize(),
+      search: this.searchTerm()
+    });
   }
 
   private applyPage(page: PaginatedUsers): void {
