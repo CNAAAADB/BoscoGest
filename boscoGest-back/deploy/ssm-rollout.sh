@@ -51,6 +51,8 @@ done
 
 if [[ "$healthy" != "1" ]]; then
   echo "New container failed its health check." >&2
+  rollback
+  trap - ERR
   exit 1
 fi
 trap - ERR
