@@ -85,7 +85,7 @@ export interface UserCreate {
   phone: string | null;
   address?: string | null;
   birthdate: string;
-  dni: string;
+  dni: string | null;
   photo?: string | null;
   iban?: string | null;
   size?: UserSize | null;
