@@ -1,0 +1,169 @@
+name: Backend - verify and release via SSM
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/backend-release.yml'
+      - 'boscoGest-back/deploy/ssm-rollout.sh'
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Git branch or commit SHA to release (use tested PR #7 branch for backend-first rollout)'
+        required: true
+        default: 'main'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boscogest-backend-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify backend against PostgreSQL
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: bg
+          POSTGRES_PASSWORD: bg
+          POSTGRES_DB: boscogest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: boscoGest-back
+    env:
+      DATABASE_URL: postgresql+psycopg2://bg:bg@localhost:5432/boscogest
+      SECRET_KEY: ci-secret-key-of-at-least-thirty-two-characters
+      CORS_ORIGINS: http://localhost:4200
+      STORAGE_BACKEND: local
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+      - name: Record exact commit to deploy
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: boscoGest-back/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: ruff check app/
+      - run: pytest app/tests/ -q
+      - name: Verify migrations against PostgreSQL 15
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
+  deploy:
+    name: Snapshot RDS, publish image, and deploy backend
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The trusted deployment script comes from the workflow's main commit.
+      # The source_ref may be a pre-merge feature branch without this script.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: release-ops
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - name: Configure AWS with short-lived GitHub OIDC identity
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-1
+          role-to-assume: arn:aws:iam::909186483504:role/BoscoGest-GitHub-Backend-Deployer
+          role-session-name: boscogest-back-${{ github.run_id }}
+      - name: Verify that EC2 is available through SSM
+        run: |
+          PING="$(aws ssm describe-instance-information \
+            --filters Key=InstanceIds,Values=i-0255523213e09540c \
+            --query 'InstanceInformationList[0].PingStatus' --output text)"
+          if [[ "$PING" != "Online" ]]; then
+            echo "EC2 is not Online in AWS Systems Manager; no deployment attempted." >&2
+            exit 1
+          fi
+      - name: Snapshot RDS before release
+        run: |
+          SNAPSHOT="boscogest-pre-backend-${{ github.run_id }}"
+          aws rds create-db-snapshot \
+            --db-instance-identifier boscogest-db \
+            --db-snapshot-identifier "$SNAPSHOT" >/dev/null
+          aws rds wait db-snapshot-available --db-snapshot-identifier "$SNAPSHOT"
+          echo "RDS snapshot available: $SNAPSHOT"
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: Publish immutable Docker image to ECR
+        env:
+          IMAGE_TAG: ${{ needs.verify.outputs.sha }}
+        run: |
+          docker buildx build --platform linux/amd64 --push \
+            -t "909186483504.dkr.ecr.eu-west-1.amazonaws.com/boscogest-back:$IMAGE_TAG" \
+            boscoGest-back/
+      - name: Send rollout through AWS Systems Manager
+        id: rollout
+        env:
+          IMAGE_TAG: ${{ needs.verify.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import shlex
+          from pathlib import Path
+
+          image = "909186483504.dkr.ecr.eu-west-1.amazonaws.com/boscogest-back:" + os.environ["IMAGE_TAG"]
+          script = Path("release-ops/boscoGest-back/deploy/ssm-rollout.sh").read_text()
+          command = "export NEW_IMAGE=" + shlex.quote(image) + "\n" + script
+          Path("/tmp/boscogest-ssm-parameters.json").write_text(json.dumps({"commands": [command]}))
+          PY
+          COMMAND_ID="$(aws ssm send-command \
+            --instance-ids i-0255523213e09540c \
+            --document-name AWS-RunShellScript \
+            --comment "BoscoGest backend deployment ${{ needs.verify.outputs.sha }}" \
+            --timeout-seconds 900 \
+            --parameters file:///tmp/boscogest-ssm-parameters.json \
+            --query 'Command.CommandId' --output text)"
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+      - name: Verify deployment command succeeded
+        env:
+          COMMAND_ID: ${{ steps.rollout.outputs.command_id }}
+        run: |
+          for i in $(seq 1 90); do
+            STATE="$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id i-0255523213e09540c \
+              --query 'Status' --output text 2>/dev/null || echo Pending)"
+            case "$STATE" in
+              Success) echo "SSM backend rollout succeeded."; exit 0 ;;
+              Failed|Cancelled|TimedOut|Cancelling)
+                echo "SSM backend rollout ended with status: $STATE" >&2
+                exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Timeout waiting for SSM rollout verification." >&2
+          exit 1
+      - name: Check the public API
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 \
+            --max-time 20 https://api.boscogest.com/healthz
