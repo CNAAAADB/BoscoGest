@@ -84,8 +84,10 @@ export class AuthService {
   private validateToken(): void {
     this.loadSession().subscribe({
       next: () => {
-        // Token is valid regardless of whether user has memberships
+        // Token is valid regardless of whether user has memberships.
         this.isAuthenticated.set(true);
+        this.notificationService.connect();
+        this.notificationService.loadUnreadCount();
       },
       error: (error) => {
         console.error('Token validation failed:', error);
@@ -108,6 +110,8 @@ export class AuthService {
       map(() => {
         // Token valid — authenticate regardless of memberships count
         this.isAuthenticated.set(true);
+        this.notificationService.connect();
+        this.notificationService.loadUnreadCount();
         return true;
       }),
       catchError((error) => {
@@ -194,7 +198,13 @@ export class AuthService {
       map(() => true),
       // Aquí, y no en login(), porque el enlace de activación entra por el
       // mismo sitio: quien estrena cuenta también debe recibir avisos.
-      tap(() => void this.pushService.register())
+      tap(() => {
+        // NotificationService is constructed before the token is saved on a
+        // fresh login, so its constructor cannot connect the live channel.
+        this.notificationService.connect();
+        this.notificationService.loadUnreadCount();
+        void this.pushService.register();
+      })
     );
   }
 
