@@ -525,3 +525,29 @@ def test_search_user_by_dni_unauthorized(client, test_user):
     response = client.get(f"/users/search/dni/{test_user.dni}")
 
     assert response.status_code == 401
+
+
+def test_admin_can_create_member_without_dni_email_or_phone(
+    client, auth_headers, test_membership, test_permissions
+):
+    payload = {
+        "name": "Socio",
+        "surname": "Sin contacto",
+        "birthdate": "1950-05-15",
+    }
+    r = client.post("/users", json=payload, headers=auth_headers)
+    assert r.status_code == 201, r.json()
+    user = r.json()
+    assert user["dni"] is None
+    assert user["email"] is None
+    assert user["phone"] is None
+
+    update = client.put(
+        f"/users/{user['id']}",
+        json={"email": None, "phone": None, "dni": None},
+        headers=auth_headers,
+    )
+    assert update.status_code == 200, update.json()
+    assert update.json()["email"] is None
+    assert update.json()["phone"] is None
+    assert update.json()["dni"] is None
