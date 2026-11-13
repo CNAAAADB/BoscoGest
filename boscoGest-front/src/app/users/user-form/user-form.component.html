@@ -48,7 +48,7 @@
             <div class="form-row">
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>DNI</mat-label>
-                <input matInput formControlName="dni" placeholder="12345678A" required>
+                <input matInput formControlName="dni" placeholder="12345678A">
                 <mat-icon matPrefix aria-hidden="true">badge</mat-icon>
                 @if (userForm.get('dni')?.hasError('required')) {
                   <mat-error>El DNI es obligatorio</mat-error>
@@ -85,9 +85,7 @@
                 <mat-icon matPrefix aria-hidden="true">phone</mat-icon>
               </mat-form-field>
             </div>
-            @if (userForm.hasError('contactRequired') && (userForm.get('email')?.touched || userForm.get('phone')?.touched)) {
-              <p class="contact-required-hint">Indica al menos un email o un teléfono.</p>
-            }
+            <p class="contact-required-hint">DNI, correo y teléfono son opcionales. Para poder entrar en la aplicación más adelante, el socio necesitará un correo o teléfono y activar su cuenta.</p>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Dirección</mat-label>
