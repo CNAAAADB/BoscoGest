@@ -8,9 +8,9 @@ class RegisterRequest(BaseModel):
     surname: str
     email: EmailStr
     password: str
-    phone: str
+    phone: Optional[str] = None
     birthdate: str  # ISO date string: YYYY-MM-DD
-    dni: str
+    dni: Optional[str] = None
     address: Optional[str] = None
     entity_id: int
     message: Optional[str] = None
