@@ -13,8 +13,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 
 import { ChatService } from '../chat.service';
 import { EntitiesService } from '../../entities/entities.service';
@@ -59,7 +57,6 @@ export class NewConversationDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<NewConversationDialogComponent>,
     private chatService: ChatService,
     private snackBar: MatSnackBar,
-    private http: HttpClient,
     private entitiesService: EntitiesService
   ) {}
 
