@@ -1,4 +1,5 @@
 import { UserResponse } from '../../models/user.model';
+import { isValidSpanishDniOrNie } from './spanish-id.utils';
 
 /** Field visibility matters: a privacy-redacted null is NOT missing data. */
 export interface MemberReviewPermissions {
@@ -62,6 +63,7 @@ export function memberReviewReasons(
   if (permissions.canReadSensitive) {
     if (!hasValue(user.dni)) reasons.push('Falta el DNI');
     else if (suspiciousDni(user.dni)) reasons.push('DNI aparentemente de prueba');
+    else if (!isValidSpanishDniOrNie(user.dni!)) reasons.push('DNI/NIE inválido: comprueba el formato y la letra de control');
 
     if (!hasValue(user.birthdate)) reasons.push('Falta la fecha de nacimiento');
     else if (/^(?:1900|1901|1970)-01-01$/.test(user.birthdate!))

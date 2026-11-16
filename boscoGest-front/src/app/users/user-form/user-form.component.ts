@@ -15,6 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { UsersService } from '../users.service';
 import { UserCreate, UserUpdate, EntityResponse, RoleResponse, USER_SIZE_OPTIONS, UserSize } from '../../models/user.model';
 import { EntitiesService } from '../../entities/entities.service';
+import { isValidSpanishDniOrNie } from '../users-list/spanish-id.utils';
 
 @Component({
   selector: 'app-user-form',
@@ -198,6 +199,12 @@ export class UserFormComponent implements OnInit {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  dniReviewWarning(): string | null {
+    const value = String(this.userForm.get('dni')?.value ?? '').trim();
+    if (!value || isValidSpanishDniOrNie(value)) return null;
+    return 'Revisa el DNI/NIE: formato o letra de control incorrectos.';
   }
 
   private emptyToNull(value: any): string | null {

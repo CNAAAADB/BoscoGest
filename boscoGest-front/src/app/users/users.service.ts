@@ -54,9 +54,11 @@ export class UsersService {
     });
   }
 
-  getManagedUsers(skip = 0, limit = 50, search?: string): Observable<PaginatedUsers> {
+  getManagedUsers(skip = 0, limit = 50, search?: string, reviewOnly = false): Observable<PaginatedUsers> {
+    let params = this.listParams(skip, limit, search);
+    if (reviewOnly) params = params.set('review_only', 'true');
     return this.http.get<PaginatedUsers>(`${this.apiUrl}/managed`, {
-      params: this.listParams(skip, limit, search)
+      params
     });
   }
 

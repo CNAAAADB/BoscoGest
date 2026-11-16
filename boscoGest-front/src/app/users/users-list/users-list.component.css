@@ -264,3 +264,31 @@ mat-card-header {
   font-size: 0.875rem;
   white-space: nowrap;
 }
+
+/* Scoped review queue filter; clearly labelled for administrators. */
+.review-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3d4e7c;
+}
+
+.review-filter-toggle input {
+  width: 19px;
+  height: 19px;
+  accent-color: #c62828;
+  cursor: pointer;
+}
+
+.review-filter-icon {
+  color: #c62828;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}

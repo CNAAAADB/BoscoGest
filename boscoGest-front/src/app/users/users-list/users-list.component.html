@@ -46,6 +46,17 @@
             <mat-hint>Se ignoran mayúsculas y tildes</mat-hint>
           </mat-form-field>
 
+          @if (canReviewData()) {
+            <label class="review-filter-toggle">
+              <input
+                type="checkbox"
+                [checked]="reviewOnly()"
+                (change)="toggleReviewOnly($any($event.target).checked)">
+              <mat-icon aria-hidden="true" class="review-filter-icon">error</mat-icon>
+              Solo pendientes de revisión
+            </label>
+          }
+
           <span class="result-count" aria-live="polite">
             @if (searchTerm()) {
               {{ total() }} {{ total() === 1 ? 'resultado' : 'resultados' }}
@@ -152,7 +163,9 @@
             aria-label="Seleccionar página de usuarios">
           </mat-paginator>
         } @else {
-          @if (searchTerm()) {
+          @if (reviewOnly()) {
+            <p class="empty-state">No hay usuarios pendientes de revisión con estos criterios.</p>
+          } @else if (searchTerm()) {
             <p class="empty-state">No se han encontrado usuarios que coincidan con «{{ searchTerm() }}»</p>
           } @else {
             <p class="empty-state">No hay usuarios disponibles</p>
