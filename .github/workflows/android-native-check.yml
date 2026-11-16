@@ -33,7 +33,9 @@ jobs:
         run: npm ci
         working-directory: boscoGest-front
       - name: Sync native Android plugin and web bundle
-        run: npm run cap:sync
+        run: |
+          npm run build
+          npx cap sync android
         working-directory: boscoGest-front
         env:
           APP_DOMAIN: boscogest.com
