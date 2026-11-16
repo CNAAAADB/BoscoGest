@@ -76,12 +76,15 @@ def get_managed_users(
         False,
         description="Only member records requiring administrative data review.",
     ),
+    entity_id: Optional[int] = Query(
+        None, ge=1, description="Exact local association (level 4).",
+    ),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "manage")),
 ):
     return service.get_managed_users(
         current_user, skip=skip, limit=limit, search=search,
-        review_only=review_only,
+        review_only=review_only, entity_id=entity_id,
     )
 
 
@@ -95,10 +98,13 @@ def get_users(
         max_length=100,
         description="Case-insensitive match on name, surname, email, DNI or phone.",
     ),
+    entity_id: Optional[int] = Query(None, ge=1),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "list")),
 ):
-    return service.get_users(current_user, skip=skip, limit=limit, search=search)
+    return service.get_users(
+        current_user, skip=skip, limit=limit, search=search, entity_id=entity_id
+    )
 
 
 @user_router.get("/search/email/{email}", response_model=UserResponse)
