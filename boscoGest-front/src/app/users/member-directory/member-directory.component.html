@@ -1,0 +1,63 @@
+<div class="directory-container">
+  <h1>Directorio de socios</h1>
+  <p class="intro">Busca socios de cualquier asociación para contactar con ellos a través del chat de BoscoGest.</p>
+
+  <mat-card class="directory-card">
+    <mat-card-content>
+      <div class="directory-filters">
+        <mat-form-field appearance="outline" class="search-filter">
+          <mat-label>Buscar socio</mat-label>
+          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+          <input matInput type="search"
+            [ngModel]="searchTerm()"
+            (ngModelChange)="onSearch($event)"
+            placeholder="Nombre o apellidos" autocomplete="off">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="association-filter">
+          <mat-label>Asociación</mat-label>
+          <mat-select [value]="selectedAssociation()"
+            (selectionChange)="onAssociationChange($event.value)">
+            <mat-option [value]="null">Todas las asociaciones</mat-option>
+            @for (association of associations(); track association.id) {
+              <mat-option [value]="association.id">{{ association.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <p class="result-count" aria-live="polite">
+        {{ total() }} {{ total() === 1 ? 'socio encontrado' : 'socios encontrados' }}
+      </p>
+
+      @if (loading()) {
+        <div class="loading"><mat-progress-spinner mode="indeterminate" diameter="36"/></div>
+      } @else if (members().length === 0) {
+        <p class="empty-state">No hay socios que coincidan con estos criterios.</p>
+      } @else {
+        <div class="member-list">
+          @for (member of members(); track member.id) {
+            <div class="member-row">
+              <div class="member-avatar" aria-hidden="true">
+                {{ member.name.charAt(0).toUpperCase() }}
+              </div>
+              <span class="member-name">{{ member.name }} {{ member.surname }}</span>
+              <button mat-stroked-button type="button"
+                (click)="contact(member)"
+                [disabled]="contactingId() !== null"
+                [attr.aria-label]="'Contactar con ' + member.name + ' ' + member.surname">
+                <mat-icon aria-hidden="true">chat</mat-icon>
+                <span>Contactar</span>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <mat-paginator [length]="total()" [pageSize]="pageSize()"
+        [pageIndex]="pageIndex()" [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPageChange($event)"
+        aria-label="Páginas del directorio de socios"/>
+    </mat-card-content>
+  </mat-card>
+</div>
