@@ -48,15 +48,18 @@ export class UsersService {
     );
   }
 
-  getUsers(skip = 0, limit = 50, search?: string): Observable<PaginatedUsers> {
+  getUsers(skip = 0, limit = 50, search?: string, entityId?: number | null): Observable<PaginatedUsers> {
     return this.http.get<PaginatedUsers>(this.apiUrl, {
-      params: this.listParams(skip, limit, search)
+      params: entityId != null
+        ? this.listParams(skip, limit, search).set('entity_id', String(entityId))
+        : this.listParams(skip, limit, search)
     });
   }
 
-  getManagedUsers(skip = 0, limit = 50, search?: string, reviewOnly = false): Observable<PaginatedUsers> {
+  getManagedUsers(skip = 0, limit = 50, search?: string, reviewOnly = false, entityId?: number | null): Observable<PaginatedUsers> {
     let params = this.listParams(skip, limit, search);
     if (reviewOnly) params = params.set('review_only', 'true');
+    if (entityId != null) params = params.set('entity_id', String(entityId));
     return this.http.get<PaginatedUsers>(`${this.apiUrl}/managed`, {
       params
     });
