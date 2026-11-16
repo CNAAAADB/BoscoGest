@@ -28,7 +28,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
       - name: Install exact packages
         run: npm ci
         working-directory: boscoGest-front
