@@ -54,6 +54,7 @@ export class UsersListComponent implements OnInit {
   pageIndex = signal<number>(0);
   pageSize = signal<number>(25);
   searchTerm = signal<string>('');
+  reviewOnly = signal<boolean>(false);
 
   /** Only true for the very first load: a spinner on every keystroke flickers. */
   loading = signal<boolean>(true);
@@ -62,7 +63,7 @@ export class UsersListComponent implements OnInit {
 
   private searchInput$ = new Subject<string>();
   /** All page and search requests pass through this stream so older HTTP calls are cancelled. */
-  private pageRequests$ = new Subject<{ skip: number; limit: number; search: string }>();
+  private pageRequests$ = new Subject<{ skip: number; limit: number; search: string; reviewOnly: boolean }>();
 
   /**
    * DNI is hidden entirely from viewers without users:read_sensitive — the
@@ -132,8 +133,8 @@ export class UsersListComponent implements OnInit {
     // post-deletion refreshes. switchMap cancels stale HTTP requests.
     this.pageRequests$
       .pipe(
-        switchMap(({ skip, limit, search }) =>
-          this.usersService.getManagedUsers(skip, limit, search).pipe(
+        switchMap(({ skip, limit, search, reviewOnly }) =>
+          this.usersService.getManagedUsers(skip, limit, search, reviewOnly).pipe(
             catchError((error) => {
               this.reportLoadError(error);
               return EMPTY;
@@ -167,6 +168,12 @@ export class UsersListComponent implements OnInit {
     this.searchInput$.next('');
   }
 
+  toggleReviewOnly(checked: boolean): void {
+    this.reviewOnly.set(checked);
+    this.pageIndex.set(0);
+    this.loadUsers();
+  }
+
   onPageChange(event: PageEvent): void {
     this.pageIndex.set(event.pageIndex);
     this.pageSize.set(event.pageSize);
@@ -180,7 +187,8 @@ export class UsersListComponent implements OnInit {
     this.pageRequests$.next({
       skip,
       limit: this.pageSize(),
-      search: this.searchTerm()
+      search: this.searchTerm(),
+      reviewOnly: this.reviewOnly()
     });
   }
 
