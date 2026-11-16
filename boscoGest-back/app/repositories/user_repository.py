@@ -82,6 +82,7 @@ class UserRepository:
         """Shared WHERE clauses for the scoped listing and its count."""
         filters = [
             Membership.entity_id.in_(entity_ids),
+            Membership.is_active == True,
             User.is_active == True,
         ]
         if entity_id is not None:
