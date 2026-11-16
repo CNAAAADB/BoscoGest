@@ -78,12 +78,16 @@ class UserRepository:
             stmt = stmt.where(User.is_active == True)
         return self.db.execute(stmt).scalars().first()
 
-    def _entity_scope_filters(self, entity_ids: List[int], search: Optional[str]):
+    def _entity_scope_filters(self, entity_ids: List[int], search: Optional[str], entity_id: Optional[int] = None):
         """Shared WHERE clauses for the scoped listing and its count."""
         filters = [
             Membership.entity_id.in_(entity_ids),
             User.is_active == True,
         ]
+        if entity_id is not None:
+            # Limit to direct membership in the selected local association.
+            # The authorized entity IDs still constrain the query.
+            filters.append(Membership.entity_id == entity_id)
         if search:
             # Matched case- and accent-insensitively across the fields someone
             # would plausibly type. DNI is included because administrators look
@@ -125,6 +129,7 @@ class UserRepository:
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = None,
+        entity_id: Optional[int] = None,
     ) -> List[User]:
         """Return a page of active users within the accessible entities.
 
@@ -137,7 +142,7 @@ class UserRepository:
         stmt = (
             select(User)
             .join(User.memberships)
-            .where(*self._entity_scope_filters(entity_ids, search))
+            .where(*self._entity_scope_filters(entity_ids, search, entity_id))
             .order_by(User.surname, User.name, User.id)
             .offset(skip)
             .limit(limit)
@@ -146,7 +151,8 @@ class UserRepository:
         return list(self.db.execute(stmt).scalars().unique().all())
 
     def count_by_entity_ids(
-        self, entity_ids: List[int], search: Optional[str] = None
+        self, entity_ids: List[int], search: Optional[str] = None,
+        entity_id: Optional[int] = None,
     ) -> int:
         """Total matching the same filters, so callers can paginate.
 
@@ -157,7 +163,7 @@ class UserRepository:
             select(func.count(func.distinct(User.id)))
             .select_from(User)
             .join(User.memberships)
-            .where(*self._entity_scope_filters(entity_ids, search))
+            .where(*self._entity_scope_filters(entity_ids, search, entity_id))
         )
         return self.db.execute(stmt).scalar_one()
 
