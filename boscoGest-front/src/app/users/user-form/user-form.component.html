@@ -48,11 +48,8 @@
             <div class="form-row">
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>DNI</mat-label>
-                <input matInput formControlName="dni" placeholder="12345678A" required>
+                <input matInput formControlName="dni" placeholder="12345678A">
                 <mat-icon matPrefix aria-hidden="true">badge</mat-icon>
-                @if (userForm.get('dni')?.hasError('required')) {
-                  <mat-error>El DNI es obligatorio</mat-error>
-                }
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="half-width">
@@ -85,9 +82,7 @@
                 <mat-icon matPrefix aria-hidden="true">phone</mat-icon>
               </mat-form-field>
             </div>
-            @if (userForm.hasError('contactRequired') && (userForm.get('email')?.touched || userForm.get('phone')?.touched)) {
-              <p class="contact-required-hint">Indica al menos un email o un teléfono.</p>
-            }
+            <p class="contact-required-hint">DNI, correo y teléfono son opcionales. Para poder entrar en la aplicación más adelante, el socio necesitará un correo o teléfono y activar su cuenta.</p>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Dirección</mat-label>
@@ -156,9 +151,10 @@
               <div class="access-note">
                 <mat-icon aria-hidden="true">mail</mat-icon>
                 <span>
-                  No hace falta contraseña. Si indicas un email, recibirá un
-                  enlace para entrar y elegir la suya. Si no, podrás generar ese
-                  enlace desde su ficha y dárselo tú.
+                  No hace falta contraseña. Con un correo electrónico recibirá
+                  un enlace de activación. Si todavía no tiene correo ni teléfono,
+                  podrás crear su ficha igualmente; para acceder más adelante,
+                  añade un contacto y genera el enlace desde su ficha.
                 </span>
               </div>
 

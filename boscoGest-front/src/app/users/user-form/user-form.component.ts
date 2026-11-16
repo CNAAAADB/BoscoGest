@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -66,7 +66,7 @@ export class UserFormComponent implements OnInit {
       phone: [''],
       address: [''],
       birthdate: ['', Validators.required],
-      dni: ['', Validators.required],
+      dni: [''],
       photo: [''],
       iban: [''],
       size: [''],
@@ -75,14 +75,7 @@ export class UserFormComponent implements OnInit {
       is_active: [true],
       entity_id: [null],
       role_id: [null]
-    }, { validators: UserFormComponent.atLeastOneContactValidator });
-  }
-
-  /** Requires at least one of email or phone to be provided. */
-  static atLeastOneContactValidator(group: AbstractControl): ValidationErrors | null {
-    const email = (group.get('email')?.value || '').trim();
-    const phone = (group.get('phone')?.value || '').trim();
-    return email || phone ? null : { contactRequired: true };
+    });
   }
 
   ngOnInit(): void {
@@ -228,7 +221,7 @@ export class UserFormComponent implements OnInit {
         phone: this.emptyToNull(formValue.phone),
         address: this.emptyToNull(formValue.address),
         birthdate: this.formatDate(formValue.birthdate) || null,
-        dni: formValue.dni,
+        dni: this.emptyToNull(formValue.dni),
         iban: this.emptyToNull(formValue.iban),
         size: this.emptyToNull(formValue.size) as UserSize | null,
         hobbies: this.emptyToNull(formValue.hobbies),

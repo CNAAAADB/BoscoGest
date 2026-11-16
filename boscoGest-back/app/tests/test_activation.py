@@ -257,7 +257,7 @@ def test_the_csv_no_longer_requires_a_password_column():
     required = source[source.index("required_columns"):source.index("csv_columns")]
 
     assert "password" not in required
-    for column in ("name", "surname", "birthdate", "dni"):
+    for column in ("name", "surname", "birthdate"):
         assert column in required
 
 

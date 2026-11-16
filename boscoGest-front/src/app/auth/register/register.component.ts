@@ -124,16 +124,8 @@ export class RegisterComponent implements OnInit {
       this.errorMessage.set('Las contraseñas no coinciden');
       return false;
     }
-    if (!this.phone().trim()) {
-      this.errorMessage.set('El teléfono es obligatorio');
-      return false;
-    }
     if (!this.birthdate()) {
       this.errorMessage.set('La fecha de nacimiento es obligatoria');
-      return false;
-    }
-    if (!this.dni().trim()) {
-      this.errorMessage.set('El DNI es obligatorio');
       return false;
     }
     return true;
@@ -163,9 +155,9 @@ export class RegisterComponent implements OnInit {
         surname: this.surname().trim(),
         email: this.email().trim(),
         password: this.password(),
-        phone: this.phone().trim(),
+        phone: this.phone().trim() || null,
         birthdate: this.birthdate(),
-        dni: this.dni().trim(),
+        dni: this.dni().trim() || null,
         address: this.address().trim() || null,
         entity_id: this.selectedEntityId()!,
         message: this.message().trim() || null,

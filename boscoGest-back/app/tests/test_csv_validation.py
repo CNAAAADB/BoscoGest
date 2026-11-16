@@ -116,7 +116,16 @@ def test_it_names_the_columns_that_are_missing(
     d = _subir(client, auth_headers, '"email","name"\n"a@b.es","Ana"\n', test_entity.id).json()
 
     assert d["valid"] is False
-    assert set(d["missing_columns"]) == {"surname", "birthdate", "dni"}
+    assert set(d["missing_columns"]) == {"surname", "birthdate"}
+
+
+def test_member_without_contact_or_dni_is_valid(
+    client, auth_headers, test_entity, test_membership, test_permissions
+):
+    file = '"name","surname","birthdate"\n"Ana","Ruiz","1990-01-01"\n'
+    d = _subir(client, auth_headers, file, test_entity.id).json()
+    assert d["valid"] is True, d["problems"]
+    assert d["missing_columns"] == []
 
 
 def test_it_flags_the_columns_it_will_ignore(

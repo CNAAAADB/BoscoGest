@@ -252,8 +252,8 @@ def register(
     Public endpoint: create a user account and submit a membership request.
     The user can log in immediately but has no permissions until an admin accepts.
     """
-    dni = register_in.dni.strip().upper()
-    phone = register_in.phone.strip()
+    dni = register_in.dni.strip().upper() if register_in.dni else None
+    phone = register_in.phone.strip() if register_in.phone else None
 
     try:
         birthdate = date.fromisoformat(register_in.birthdate)
@@ -268,17 +268,20 @@ def register(
     # person saw a generic error and no hint of what to change. It happens to
     # real people — someone already added by a bulk import, or signing up twice.
     # The DNI is compared ignoring case: 12345678a is the same document.
+    # NULL is not an identifier: never compare blank optional fields against
+    # other accounts. Duplicate checks apply only to supplied values.
+    duplicate_checks = [User.email == register_in.email]
+    if phone:
+        duplicate_checks.append(User.phone == phone)
+    if dni:
+        duplicate_checks.append(func.upper(User.dni) == dni)
     taken = db.execute(
-        select(User).where(or_(
-            User.email == register_in.email,
-            User.phone == phone,
-            func.upper(User.dni) == dni,
-        ))
+        select(User).where(or_(*duplicate_checks))
     ).scalars().all()
     for field, clashes in (
         ("email", any(u.email == register_in.email for u in taken)),
-        ("DNI", any((u.dni or "").upper() == dni for u in taken)),
-        ("teléfono", any(u.phone == phone for u in taken)),
+        ("DNI", bool(dni) and any((u.dni or "").upper() == dni for u in taken)),
+        ("teléfono", bool(phone) and any(u.phone == phone for u in taken)),
     ):
         if clashes:
             raise HTTPException(

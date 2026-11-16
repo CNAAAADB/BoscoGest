@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
 from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 
@@ -12,12 +12,18 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     birthdate: date
-    dni: str
+    dni: Optional[str] = None
     photo: Optional[str] = None
     iban: Optional[str] = None
     size: Optional[str] = None
     hobbies: Optional[str] = None
     job_position: Optional[str] = None
+
+    @field_validator('email', 'phone', 'dni', mode='before')
+    @classmethod
+    def normalize_optional_identity(cls, value):
+        # Empty strings from forms must be SQL NULL, not a shared unique value.
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator('size')
     @classmethod
@@ -27,12 +33,6 @@ class UserBase(BaseModel):
         if v not in ALLOWED_SIZES:
             raise ValueError(f'Talla no válida. Valores permitidos: {", ".join(sorted(ALLOWED_SIZES))}')
         return v
-
-    @model_validator(mode='after')
-    def email_or_phone_required(self):
-        if not (self.email or self.phone):
-            raise ValueError('Debe indicar email o teléfono')
-        return self
 
 class UserCreate(UserBase):
     """Creating a member on someone else's behalf.
@@ -70,6 +70,11 @@ class UserUpdate(BaseModel):
     hobbies: Optional[str] = None
     job_position: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator('email', 'phone', 'dni', mode='before')
+    @classmethod
+    def normalize_optional_identity(cls, value):
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator('size')
     @classmethod

@@ -435,6 +435,18 @@ class UserService:
         status; that field is stripped before delegating to update_user."""
         data = user_update.model_dump(exclude_unset=True)
         data.pop("is_active", None)
+        # Unlike an administrative member record, an active self-service
+        # account needs a login identifier. Prevent accidental lockout.
+        email = data.get("email", current_user.email)
+        phone = data.get("phone", current_user.phone)
+        if not (email or phone):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Para mantener el acceso a tu cuenta, conserva al menos "
+                    "un correo electrónico o un teléfono."
+                ),
+            )
         clean = UserUpdate(**data)
         return self.update_user(
             current_user.id, clean, current_user, ip_address=ip_address
@@ -456,18 +468,9 @@ class UserService:
         # JSON-safe copy for the audit log (datetime.date is not JSON-serialisable)
         audit_data = user_update.model_dump(exclude_unset=True, mode="json")
 
-        # El usuario debe conservar al menos un medio de contacto (email o teléfono)
-        resulting_email = (
-            update_data.get("email") if "email" in update_data else db_user.email
-        )
-        resulting_phone = (
-            update_data.get("phone") if "phone" in update_data else db_user.phone
-        )
-        if not (resulting_email or resulting_phone):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Debe indicar email o teléfono",
-            )
+        # La ficha de un socio puede existir sin medios de contacto.
+        # Su contraseña inicial es aleatoria y desconocida: sin un
+        # identificador no se puede iniciar sesión ni recuperar el acceso.
         try:
             if update_data:
                 self.user_repo.update(user_id, update_data)
@@ -588,10 +591,8 @@ class UserService:
         db_user.size = None
         db_user.hobbies = None
         db_user.job_position = None
-        # dni is unique and NOT NULL, so it takes a tombstone rather than being
-        # cleared. Keyed by id so two deletions never collide, and short enough
-        # for the column's 20 characters.
-        db_user.dni = f"DEL-{db_user.id}"
+        # DNI is nullable: deletion can remove it completely.
+        db_user.dni = None
         db_user.birthdate = date(1900, 1, 1)
         # A hash of a secret nobody holds: the account can no longer be signed
         # into, and the old hash is gone with it.
@@ -762,7 +763,7 @@ class UserService:
                 detail=str(e),
             )
 
-        # email y phone no son obligatorios como columna: basta uno de los dos por fila.
+        # DNI, email y teléfono son opcionales para las fichas de socios.
         # entity_id y role_id ya no se leen del CSV: vienen de los selectores
         # de asociación y rol.
         # password tampoco: se genera una por fila y nadie llega a conocerla,
@@ -770,7 +771,7 @@ class UserService:
         # Así el fichero deja de contener contraseñas en claro.
         required_columns = [
             "name", "surname",
-            "birthdate", "dni",
+            "birthdate",
         ]
         csv_columns = file_columns
         missing_columns = [
@@ -880,6 +881,17 @@ class UserService:
                     "Este usuario ya eligió su contraseña, así que debe entrar "
                     "con ella. Si la ha olvidado, tendrá que restablecerla él "
                     "mismo."
+                ),
+            )
+
+        # An activation link is not useful if the member has no way to log in
+        # after choosing their password. Add a unique email or phone first.
+        if not (db_user.email or db_user.phone):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Antes de activar esta cuenta, añade un correo o teléfono "
+                    "al socio para que pueda iniciar sesión después."
                 ),
             )
 
@@ -1299,12 +1311,9 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
 
                     if not all([
                         name, surname,
-                        birthdate_str, dni,
+                        birthdate_str,
                     ]):
                         raise ValueError("All required fields must be filled")
-
-                    if not (email or phone):
-                        raise ValueError("Each row must have an email or a phone")
 
                     # Whatever lands here is read back through UserResponse,
                     # whose `email` is an EmailStr. A value that is not an
@@ -1354,7 +1363,7 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
                         phone=phone or None,
                         address=address,
                         birthdate=birthdate,
-                        dni=dni,
+                        dni=dni or None,
                         photo=photo,
                         iban=iban,
                         size=size,
@@ -1423,7 +1432,8 @@ def process_bulk_upload_job(job_id: int, current_user_id: int, ip_address: Optio
                         activation_url = activation_service.build_activation_url(
                             raw_token
                         )
-                    send_welcome_email(email, f"{name} {surname}", activation_url)
+                    if email:
+                        send_welcome_email(email, f"{name} {surname}", activation_url)
 
                 except IntegrityError as e:
                     db.rollback()

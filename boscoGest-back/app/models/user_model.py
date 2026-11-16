@@ -19,7 +19,7 @@ class User(Base):
     phone: Mapped[Optional[str]] = mapped_column(String(20), unique=True, index=True, nullable=True)
     address: Mapped[Optional[str]] = mapped_column(Text)
     birthdate: Mapped[datetime] = mapped_column(Date)
-    dni: Mapped[str] = mapped_column(String(20), unique=True)
+    dni: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
     photo: Mapped[Optional[str]] = mapped_column(Text)
     iban: Mapped[Optional[str]] = mapped_column(String(34))
     size: Mapped[Optional[str]] = mapped_column(String(10))
