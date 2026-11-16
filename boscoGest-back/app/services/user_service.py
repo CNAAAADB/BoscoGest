@@ -341,6 +341,7 @@ class UserService:
         search: Optional[str] = None,
         review_only: bool = False,
         entity_id: int | None = None,
+        managed_only: bool = False,
     ) -> PaginatedUsers:
         """A page of the users the caller can reach, redacted to their tier.
 
@@ -353,6 +354,15 @@ class UserService:
         accessible_entity_ids = self.auth_service.get_accessible_entity_ids(
             current_user
         )
+        if managed_only:
+            # Scope ADMIN users to associations where management is actually
+            # granted; merely belonging to an association is not sufficient.
+            accessible_entity_ids = [
+                eid for eid in accessible_entity_ids
+                if self.auth_service.has_effective_permission(
+                    current_user, eid, "users", "manage"
+                )
+            ]
         # A selected association must both be reachable and be a local
         # association (level 4); parent/federation IDs cannot broaden scope.
         if entity_id is not None:
@@ -441,7 +451,8 @@ class UserService:
         entity_id: int | None = None,
     ) -> PaginatedUsers:
         return self.list_users_in_scope(
-            current_user, skip, limit, search, review_only=review_only, entity_id=entity_id
+            current_user, skip, limit, search, review_only=review_only,
+            entity_id=entity_id, managed_only=True
         )
 
     def get_users(
