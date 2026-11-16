@@ -42,6 +42,13 @@
           <div class="error-message">{{ errorMessage() }}</div>
         }
 
+        @if (mobileApp) {
+          <mat-checkbox [checked]="enableBiometric()"
+                        (change)="enableBiometric.set($event.checked)">
+            Usar huella o reconocimiento facial en próximos accesos
+          </mat-checkbox>
+        }
+
         <button mat-raised-button color="primary" type="submit" class="full-width login-button">
           Iniciar Sesión
         </button>
