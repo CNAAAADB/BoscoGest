@@ -1,5 +1,6 @@
 import { UserResponse } from '../../models/user.model';
 import { memberReviewReasons } from './member-review.utils';
+import { isValidSpanishDniOrNie } from './spanish-id.utils';
 
 const complete: UserResponse = {
   id: 1, name: 'María', surname: 'López', email: 'maria@correo.es',
@@ -56,5 +57,33 @@ describe('Aviso de datos de socios', () => {
   it('no etiqueta como ficticios nombres reales que contienen prueba o test', () => {
     const user = { ...complete, name: 'Testa', surname: 'Del Prado' };
     expect(memberReviewReasons(user, fullPermissions)).toEqual([]);
+  });
+});
+
+describe('Validación DNI/NIE español', () => {
+  it('acepta letras de control correctas y separadores habituales', () => {
+    expect(isValidSpanishDniOrNie('12345678Z')).toBeTrue();
+    expect(isValidSpanishDniOrNie('12 345 678-z')).toBeTrue();
+    expect(isValidSpanishDniOrNie('X1234567L')).toBeTrue();
+  });
+
+  it('detecta formato y letra de control incorrectos', () => {
+    expect(isValidSpanishDniOrNie('12345678A')).toBeFalse();
+    expect(isValidSpanishDniOrNie('X1234567A')).toBeFalse();
+    expect(isValidSpanishDniOrNie('1234567Z')).toBeFalse();
+  });
+
+  it('avisa de DNI incorrecto sin afirmar que sea una identidad falsa', () => {
+    const reasons = memberReviewReasons({ ...complete, dni: '12345678A' }, {
+      canReadContact: true, canReadSensitive: true,
+    });
+    expect(reasons).toContain('DNI/NIE inválido: comprueba el formato y la letra de control');
+  });
+
+  it('no inspecciona DNI sin autorización sensible', () => {
+    const reasons = memberReviewReasons({ ...complete, dni: '12345678A' }, {
+      canReadContact: true, canReadSensitive: false,
+    });
+    expect(reasons).toEqual([]);
   });
 });
