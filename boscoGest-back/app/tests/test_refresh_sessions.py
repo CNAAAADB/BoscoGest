@@ -35,8 +35,13 @@ def test_refresh_rotates_secret_and_issues_new_access_token(client, test_user):
 
 
 def test_refresh_works_with_httponly_cookie(client, test_user):
-    _login(client)
-    response = client.post("/auth/refresh", json={})
+    session = _login(client)
+    # Production uses HTTPS, whereas the test client defaults to plain HTTP.
+    # Send the Secure cookie explicitly to exercise the cookie contract.
+    response = client.post(
+        "/auth/refresh", json={},
+        headers={"Cookie": f"boscogest_refresh={session['refresh_token']}"},
+    )
     assert response.status_code == 200, response.json()
 
 
