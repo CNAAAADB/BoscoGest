@@ -1,0 +1,23 @@
+.directory-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 8px; }
+.intro { margin: 0 0 24px; color: #586174; line-height: 1.6; }
+.directory-card { border-radius: 14px; }
+.directory-filters { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; }
+.search-filter { flex: 2 1 240px; }
+.association-filter { flex: 1 1 250px; }
+.result-count { font-size: 0.9rem; color: #626a78; padding: 0 4px; }
+.loading { display: flex; justify-content: center; padding: 44px; }
+.empty-state { text-align: center; padding: 36px 12px; color: #626a78; }
+.member-list { display: flex; flex-direction: column; }
+.member-row { display: flex; gap: 15px; align-items: center; padding: 13px 8px; border-bottom: 1px solid #e4e7ed; }
+.member-row:last-child { border-bottom: none; }
+.member-avatar { width: 42px; height: 42px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 50%; background: #ebe3d3; color: #344e85; font-weight: 700; }
+.member-name { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.member-row button { flex-shrink: 0; }
+.member-row mat-icon { margin-right: 6px; }
+@media (max-width: 600px) {
+  .directory-container { padding: 14px; }
+  .member-row { gap: 9px; }
+  .member-avatar { width: 34px; height: 34px; }
+  .member-row button { padding: 0 8px; }
+}

@@ -18,8 +18,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { UsersService } from '../users.service';
-import { PaginatedUsers, UserResponse, EntityResponse } from '../../models/user.model';
-import { EntitiesService } from '../../entities/entities.service';
+import { PaginatedUsers, UserResponse } from '../../models/user.model';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../auth/auth.service';
 import { ChatService } from '../../chat/chat.service';
@@ -59,7 +58,7 @@ export class UsersListComponent implements OnInit {
   searchTerm = signal<string>('');
   reviewOnly = signal<boolean>(false);
   associationId = signal<number | null>(null);
-  availableAssociations = signal<EntityResponse[]>([]);
+  availableAssociations = signal<{ id: number; name: string }[]>([]);
 
   /** Only true for the very first load: a spinner on every keystroke flickers. */
   loading = signal<boolean>(true);
@@ -126,7 +125,6 @@ export class UsersListComponent implements OnInit {
 
   constructor(
     private usersService: UsersService,
-    private entitiesService: EntitiesService,
     private router: Router,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
@@ -163,7 +161,7 @@ export class UsersListComponent implements OnInit {
         this.loadUsers();
       });
 
-    this.entitiesService.getAccessibleLocalAssociations()
+    this.usersService.getManageableAssociations()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: associations => this.availableAssociations.set(associations),
