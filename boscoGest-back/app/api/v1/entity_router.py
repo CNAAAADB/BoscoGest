@@ -28,6 +28,23 @@ def get_public_entities(
     return list(db.execute(stmt).scalars().all())
 
 
+@entity_router.get("/associations", response_model=List[EntityResponse])
+def get_all_local_associations(
+    db: Session = Depends(get_sync_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """All active local associations, never federations or higher entities.
+
+    Names and hierarchy are directory metadata; member search permissions
+    are enforced independently by each user-search endpoint.
+    """
+    return list(db.execute(
+        select(Entity)
+        .where(Entity.is_active == True, Entity.level == 4)
+        .order_by(Entity.name, Entity.id)
+    ).scalars().all())
+
+
 @entity_router.get("/accessible", response_model=List[EntityResponse])
 def get_accessible_entities(
     service: EntityService = Depends(get_entity_service),
