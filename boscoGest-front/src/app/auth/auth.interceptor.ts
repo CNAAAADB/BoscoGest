@@ -4,7 +4,12 @@ import { catchError, switchMap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SessionRefreshService } from './session-refresh.service';
 
-const NO_REFRESH = ['/auth/token', '/auth/refresh', '/auth/session/revoke'];
+// Public login/activation endpoints must not trigger another credential exchange
+// when they reject a request; only authenticated API calls are retryable.
+const NO_REFRESH = [
+  '/auth/token', '/auth/refresh', '/auth/session/revoke',
+  '/auth/activate', '/auth/password/reset', '/auth/password/forgot',
+];
 
 /** Attach the short-lived JWT and retry an expired token only once. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
