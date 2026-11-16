@@ -56,6 +56,27 @@ export class UsersService {
     });
   }
 
+  /** General directory deliberately returns no email, phone or DNI. */
+  getMemberDirectory(
+    skip = 0, limit = 25, search?: string, entityId?: number | null
+  ): Observable<{
+    items: { id: number; name: string; surname: string }[];
+    total: number; skip: number; limit: number;
+  }> {
+    let params = this.listParams(skip, limit, search);
+    if (entityId != null) params = params.set('entity_id', String(entityId));
+    return this.http.get<{
+      items: { id: number; name: string; surname: string }[];
+      total: number; skip: number; limit: number;
+    }>(`${this.apiUrl}/directory`, { params });
+  }
+
+  getManageableAssociations(): Observable<{ id: number; name: string }[]> {
+    return this.http.get<{ id: number; name: string }[]>(
+      `${this.apiUrl}/manageable-associations`
+    );
+  }
+
   getManagedUsers(skip = 0, limit = 50, search?: string, reviewOnly = false, entityId?: number | null): Observable<PaginatedUsers> {
     let params = this.listParams(skip, limit, search);
     if (reviewOnly) params = params.set('review_only', 'true');
