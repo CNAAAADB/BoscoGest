@@ -35,6 +35,19 @@ auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 _REFRESH_COOKIE = "boscogest_refresh"
 
+# Native WebViews require the refresh secret in their encrypted OS vault.
+# Browser JavaScript must never receive the persistent secret; it uses a
+# HttpOnly cookie. Browsers cannot forge the Origin header.
+_NATIVE_ORIGINS = {"capacitor://localhost", "https://localhost"}
+
+
+def _tokens_for_origin(request: Request | None, tokens: dict) -> dict:
+    origin = (request.headers.get("origin") if request else None)
+    if origin and origin not in _NATIVE_ORIGINS:
+        return {**tokens, "refresh_token": None}
+    return tokens
+
+
 
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response.set_cookie(
@@ -59,7 +72,10 @@ def refresh_login(
     raw = (credentials.refresh_token if credentials else None) or request.cookies.get(_REFRESH_COOKIE)
     access, fresh = rotate_session(db, raw or "")
     _set_refresh_cookie(response, fresh)
-    return {"access_token": access, "refresh_token": fresh, "token_type": "bearer"}
+    return _tokens_for_origin(
+        request,
+        {"access_token": access, "refresh_token": fresh, "token_type": "bearer"},
+    )
 
 
 @auth_router.post("/session/revoke", status_code=204)
@@ -87,7 +103,7 @@ def login_for_access_token(
     ip_address = request.client.host if request else None
     tokens = service.login(identifier, password, ip_address=ip_address)
     _set_refresh_cookie(response, tokens["refresh_token"])
-    return tokens
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.post("/activate", response_model=Token)
@@ -123,7 +139,7 @@ def activate_account(
 
     tokens = service.session_for(user, ip_address=ip_address, method="activation_link")
     _set_refresh_cookie(response, tokens["refresh_token"])
-    return tokens
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.post("/activate/resend", status_code=status.HTTP_202_ACCEPTED)
@@ -247,7 +263,7 @@ def reset_password(
     users.reset_password(user, reset_in.new_password, ip_address=ip_address)
     tokens = auth.session_for(user, ip_address=ip_address, method="password_reset")
     _set_refresh_cookie(response, tokens["refresh_token"])
-    return tokens
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.get("/check-permission")
