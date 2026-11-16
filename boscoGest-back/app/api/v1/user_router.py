@@ -62,6 +62,35 @@ def create_user(
     return db_user
 
 
+@user_router.get("/directory")
+def get_member_directory(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    search: Optional[str] = Query(None, max_length=100),
+    entity_id: Optional[int] = Query(None, ge=1),
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Public member directory for signed-in members.
+
+    Only name and surname are exposed, never DNI, email, telephone, dates,
+    account status or administrator-only review flags. Users can contact
+    another member through the application's internal chat.
+    """
+    return service.get_member_directory(
+        skip=skip, limit=limit, search=search, entity_id=entity_id
+    )
+
+
+@user_router.get("/manageable-associations")
+def get_manageable_associations(
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(require_permission("users", "manage")),
+):
+    """Only local associations whose members the caller may manage."""
+    return service.get_manageable_local_associations(current_user)
+
+
 @user_router.get("/managed", response_model=PaginatedUsers)
 def get_managed_users(
     skip: int = 0,
