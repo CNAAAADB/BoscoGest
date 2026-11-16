@@ -163,7 +163,7 @@ export class AuthService {
   activateWithToken(token: string): Observable<boolean> {
     return this.http
       .post<SessionTokens>(`${this.apiUrl}/auth/activate`, { token }, { withCredentials: true })
-      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+      .pipe(switchMap((response) => this.adoptSession(response)));
   }
 
   /** Ask for a fresh link. Always succeeds, whoever the address belongs to. */
@@ -193,7 +193,7 @@ export class AuthService {
         new_password: newPassword,
         confirm_password: confirmPassword,
       }, { withCredentials: true })
-      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+      .pipe(switchMap((response) => this.adoptSession(response)));
   }
 
   /**
