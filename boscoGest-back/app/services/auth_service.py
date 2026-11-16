@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from jose import jwt
 from sqlalchemy.orm import Session
@@ -7,9 +7,7 @@ from app.models.user_model import User
 from app.utils.auth import (
     get_sync_db,
     authenticate_user,
-    create_access_token,
     has_permission,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     SECRET_KEY,
     ALGORITHM,
 )
