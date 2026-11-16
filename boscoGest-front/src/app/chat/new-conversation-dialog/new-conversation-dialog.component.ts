@@ -17,6 +17,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 import { ChatService } from '../chat.service';
+import { EntitiesService } from '../../entities/entities.service';
 import { ConversationListItem, UserSearchResult } from '../../models/chat.model';
 import { EntityResponse } from '../../models/user.model';
 
@@ -58,12 +59,12 @@ export class NewConversationDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<NewConversationDialogComponent>,
     private chatService: ChatService,
     private snackBar: MatSnackBar,
-    private http: HttpClient
+    private http: HttpClient,
+    private entitiesService: EntitiesService
   ) {}
 
   ngOnInit(): void {
-    this.http
-      .get<EntityResponse[]>(`${environment.apiUrl}/entities/accessible`)
+    this.entitiesService.getLocalAssociations()
       .subscribe({
         next: (entities) => this.entities.set(entities),
         error: () => this.entities.set([]),
