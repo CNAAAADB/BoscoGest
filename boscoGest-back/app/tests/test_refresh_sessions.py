@@ -92,3 +92,24 @@ def test_password_reset_revokes_old_device_sessions(client, db_session, test_use
 
     revoke_user_sessions(db_session, test_user.id)
     assert client.post("/auth/refresh", json={"refresh_token": session["refresh_token"]}).status_code == 401
+
+
+def test_web_origin_cannot_read_persistent_refresh_secret(client, test_user):
+    login = client.post(
+        "/auth/token",
+        data={"identifier": "test@example.com", "password": "testpassword"},
+        headers={"Origin": "https://boscogest.com"},
+    )
+    assert login.status_code == 200
+    assert login.json()["refresh_token"] is None
+    assert "boscogest_refresh=" in login.headers["set-cookie"]
+
+
+def test_capacitor_origin_receives_refresh_for_encrypted_native_vault(client, test_user):
+    login = client.post(
+        "/auth/token",
+        data={"identifier": "test@example.com", "password": "testpassword"},
+        headers={"Origin": "https://localhost"},
+    )
+    assert login.status_code == 200
+    assert login.json()["refresh_token"] is not None
