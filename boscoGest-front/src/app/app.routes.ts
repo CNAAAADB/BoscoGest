@@ -117,6 +117,12 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'directory',
+        loadComponent: () => import('./users/member-directory/member-directory.component')
+          .then(m => m.MemberDirectoryComponent),
+        data: { breadcrumb: 'Directorio de socios' }
+      },
+      {
         path: 'users',
         data: { breadcrumb: 'Usuarios' },
         children: [
