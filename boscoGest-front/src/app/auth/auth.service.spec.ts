@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, flushMicrotasks, TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 
 import { AuthService } from './auth.service';
@@ -34,9 +34,10 @@ describe('AuthService', () => {
   describe('la persona de la sesión', () => {
     beforeEach(() => localStorage.setItem('authToken', 'token'));
 
-    it('existe aunque aún no tenga asociaciones (solicitud pendiente)', () => {
+    it('existe aunque aún no tenga asociaciones (solicitud pendiente)', fakeAsync(() => {
       let ok: boolean | undefined;
       service.checkAuth().subscribe((v) => (ok = v));
+      flushMicrotasks();
 
       http.expectOne(`${environment.apiUrl}/memberships`).flush([]);
       http.expectOne(`${environment.apiUrl}/users/me`).flush(me);
@@ -45,10 +46,11 @@ describe('AuthService', () => {
       expect(service.hasMemberships()).toBeFalse();
       expect(service.getCurrentUser()?.name).toBe('Clara');
       expect(service.getCurrentUser()?.dni).toBe('12345678A');
-    });
+    }));
 
-    it('sale de /users/me y no de la primera asociación', () => {
+    it('sale de /users/me y no de la primera asociación', fakeAsync(() => {
       service.checkAuth().subscribe();
+      flushMicrotasks();
 
       http.expectOne(`${environment.apiUrl}/memberships`).flush([
         { id: 1, entity_id: 3, user: { id: 7, name: 'Otro', surname: 'Nombre' }, role: null },
@@ -57,6 +59,6 @@ describe('AuthService', () => {
 
       expect(service.hasMemberships()).toBeTrue();
       expect(service.getCurrentUser()?.name).toBe('Clara');
-    });
+    }));
   });
 });
