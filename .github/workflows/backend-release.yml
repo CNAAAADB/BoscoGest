@@ -3,12 +3,18 @@ name: Backend - verify and release via SSM
 on:
   pull_request:
     paths:
+      - 'boscoGest-back/**'
       - '.github/workflows/backend-release.yml'
-      - 'boscoGest-back/deploy/ssm-rollout.sh'
+  push:
+    branches: [main]
+    paths:
+      # Deploy only when the backend changes, not when CI configuration
+      # changes. This prevents an unnecessary duplicate production rollout.
+      - 'boscoGest-back/**'
   workflow_dispatch:
     inputs:
       source_ref:
-        description: 'Git branch or commit SHA to release (use tested PR #7 branch for backend-first rollout)'
+        description: 'Commit SHA to release manually (automatic releases use main)'
         required: true
         default: 'main'
         type: string
@@ -70,7 +76,7 @@ jobs:
 
   deploy:
     name: Snapshot RDS, publish image, and deploy backend
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs: verify
     # ECR pulls on the t3.micro host can exceed 15 minutes.
     timeout-minutes: 65
