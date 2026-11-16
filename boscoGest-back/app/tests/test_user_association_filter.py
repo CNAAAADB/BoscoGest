@@ -98,3 +98,36 @@ def test_unauthorized_local_association_is_rejected(
     assert client.get(
         f"/users/managed?entity_id={other.id}", headers=auth_headers,
     ).status_code == 403
+
+
+def test_expired_membership_does_not_appear_in_association(
+    client, auth_headers, db_session, test_entity,
+):
+    from datetime import date
+    from app.models.user_model import User
+    from app.utils.auth import get_password_hash
+
+    _, _, local, _ = _local_entities(db_session, test_entity)
+    socio = db_session.query(Role).filter_by(name="socio").first()
+    former = User(
+        email=None, phone=None, dni=None,
+        password_hash=get_password_hash("unused"),
+        name="AntiguoSocio", surname="Fuera",
+        birthdate=date(1960, 1, 1), is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    db_session.add(former)
+    db_session.flush()
+    db_session.add(Membership(
+        user_id=former.id, entity_id=local.id, role_id=socio.id,
+        is_active=False, created_at=datetime.utcnow(),
+    ))
+    db_session.commit()
+
+    result = client.get(
+        f"/users/managed?entity_id={local.id}&search=AntiguoSocio",
+        headers=auth_headers,
+    )
+    assert result.status_code == 200, result.text
+    assert result.json()["items"] == []
+    assert result.json()["total"] == 0
