@@ -5,6 +5,12 @@ from typing import Dict, Any, List, Optional
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: str | None = None
+
+
+class RefreshRequest(BaseModel):
+    # Mobile stores this in Keychain/Keystore. Web uses an HttpOnly cookie.
+    refresh_token: str | None = Field(default=None, min_length=32, max_length=256)
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
