@@ -261,6 +261,78 @@ class UserService:
                 detail=_describe_unique_clash(exc),
             )
 
+    def get_member_directory(
+        self, skip: int = 0, limit: int = 25,
+        search: str | None = None, entity_id: int | None = None,
+    ) -> dict:
+        """Cross-association directory: minimum information to start an in-app chat.
+
+        Only active users with a current local-association membership are
+        listed. No email, phone, DNI or other private field is returned.
+        All filter/count operations occur in SQL, before pagination.
+        """
+        from sqlalchemy import or_
+        from app.models.entity_model import Entity
+
+        if entity_id is not None:
+            association = self.db.get(Entity, entity_id)
+            if association is None or not association.is_active or association.level != 4:
+                raise HTTPException(status_code=400, detail="Selecciona una asociación local válida")
+
+        query = (
+            select(User.id, User.name, User.surname)
+            .join(Membership, Membership.user_id == User.id)
+            .join(Entity, Entity.id == Membership.entity_id)
+            .where(
+                User.is_active == True,
+                Membership.is_active == True,
+                Entity.is_active == True,
+                Entity.level == 4,
+            )
+        )
+        if entity_id is not None:
+            query = query.where(Entity.id == entity_id)
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            if self.db.bind is not None and self.db.bind.dialect.name == "postgresql":
+                match = lambda field: func.unaccent(field).ilike(func.unaccent(term))
+            else:
+                match = lambda field: field.ilike(term)
+            query = query.where(or_(
+                match(User.name), match(User.surname),
+                match(User.name + " " + User.surname)
+            ))
+        result = query.distinct()
+        count = self.db.execute(
+            select(func.count()).select_from(result.subquery())
+        ).scalar_one()
+        rows = self.db.execute(
+            result.order_by(User.surname, User.name, User.id)
+            .offset(skip).limit(limit)
+        ).all()
+        return {
+            "items": [{"id": row.id, "name": row.name, "surname": row.surname} for row in rows],
+            "total": count, "skip": skip, "limit": limit,
+        }
+
+    def get_manageable_local_associations(self, current_user: User) -> list[dict]:
+        """Filter the selector by actual management permission, not membership."""
+        accessible = self.auth_service.get_accessible_entity_ids(current_user)
+        if not accessible:
+            return []
+        entities = self.db.execute(
+            select(Entity)
+            .where(Entity.id.in_(accessible), Entity.is_active == True, Entity.level == 4)
+            .order_by(Entity.name)
+        ).scalars().all()
+        return [
+            {"id": entity.id, "name": entity.name}
+            for entity in entities
+            if self.auth_service.has_effective_permission(
+                current_user, entity.id, "users", "manage"
+            )
+        ]
+
     def list_users_in_scope(
         self,
         current_user: User,
