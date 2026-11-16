@@ -21,6 +21,7 @@ import { PaginatedUsers, UserResponse } from '../../models/user.model';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../auth/auth.service';
 import { ChatService } from '../../chat/chat.service';
+import { memberReviewReasons } from './member-review.utils';
 
 @Component({
   selector: 'app-users-list',
@@ -71,6 +72,23 @@ export class UsersListComponent implements OnInit {
   canSeeSensitive = computed(() =>
     this.authService.hasPermission('users', 'read_sensitive')
   );
+
+  canSeeContact = computed(() =>
+    this.authService.hasPermission('users', 'read')
+  );
+
+  /** Display warnings only to someone who may actually correct a record. */
+  canReviewData = computed(() =>
+    this.authService.hasPermission('users', 'update')
+  );
+
+  reviewReasons(user: UserResponse): string[] {
+    if (!this.canReviewData()) return [];
+    return memberReviewReasons(user, {
+      canReadContact: this.canSeeContact(),
+      canReadSensitive: this.canSeeSensitive(),
+    });
+  }
 
   displayedColumns = computed(() => {
     const columns = ['id', 'name', 'email'];

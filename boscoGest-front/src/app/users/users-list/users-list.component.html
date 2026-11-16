@@ -68,7 +68,19 @@
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef class="table-header">Nombre Completo</th>
                 <td mat-cell *matCellDef="let user" class="table-cell name-cell">
-                  {{ user.name }} {{ user.surname }}
+                  <span class="member-name-with-alert">
+                    <span>{{ user.name }} {{ user.surname }}</span>
+                    @if (reviewReasons(user); as reasons) {
+                      @if (reasons.length > 0) {
+                        <mat-icon
+                          class="member-review-alert"
+                          role="img"
+                          [attr.aria-label]="'Datos pendientes de revisión: ' + reasons.join('; ')"
+                          [matTooltip]="reasons.join(' · ')"
+                          matTooltipPosition="above">error</mat-icon>
+                      }
+                    }
+                  </span>
                 </td>
               </ng-container>
 
