@@ -28,6 +28,7 @@ from app.schemas.user import (
     ALLOWED_SIZES,
 )
 from app.services.user_visibility import UserVisibility
+from app.services.member_review import requires_review
 from app.repositories.user_repository import UserRepository
 from app.repositories.membership_repository import MembershipRepository
 from app.services.membership_service import MembershipService
@@ -266,6 +267,7 @@ class UserService:
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = None,
+        review_only: bool = False,
     ) -> PaginatedUsers:
         """A page of the users the caller can reach, redacted to their tier.
 
@@ -282,18 +284,46 @@ class UserService:
         if not accessible_entity_ids:
             return PaginatedUsers(items=[], total=0, skip=skip, limit=limit)
 
-        users = self.user_repo.get_by_entity_ids(
-            accessible_entity_ids, skip=skip, limit=limit, search=search
-        )
-        list_end = time.perf_counter()
-        total = self.user_repo.count_by_entity_ids(
-            accessible_entity_ids, search=search
-        )
-        count_end = time.perf_counter()
+        visibility = UserVisibility.for_viewer(self.auth_service, current_user)
+        if review_only:
+            # Filtering *after* paging hides later matches and gives a wrong
+            # total. Scan the scoped result set in bounded batches and paginate
+            # the matches, so every page and the total are correct. This path
+            # is opt-in; ordinary user listings retain their fast SQL paging.
+            if not self.auth_service.has_global_permission(current_user, "users", "update"):
+                raise HTTPException(status_code=403, detail="Permission denied")
+            users = []
+            total = 0
+            offset = 0
+            batch_size = 200
+            while True:
+                batch = self.user_repo.get_by_entity_ids(
+                    accessible_entity_ids, skip=offset, limit=batch_size, search=search
+                )
+                for candidate in batch:
+                    can_contact = visibility.can_read_contact or candidate.id == current_user.id
+                    can_sensitive = visibility.can_read_sensitive or candidate.id == current_user.id
+                    if requires_review(candidate, contact=can_contact, sensitive=can_sensitive):
+                        if skip <= total < skip + limit:
+                            users.append(candidate)
+                        total += 1
+                offset += len(batch)
+                if len(batch) < batch_size:
+                    break
+            list_end = time.perf_counter()
+            count_end = list_end
+        else:
+            users = self.user_repo.get_by_entity_ids(
+                accessible_entity_ids, skip=skip, limit=limit, search=search
+            )
+            list_end = time.perf_counter()
+            total = self.user_repo.count_by_entity_ids(
+                accessible_entity_ids, search=search
+            )
+            count_end = time.perf_counter()
 
         # Resolved once for the whole page rather than per row: it walks
         # memberships, groups and direct permissions.
-        visibility = UserVisibility.for_viewer(self.auth_service, current_user)
         response = PaginatedUsers(
             items=[visibility.serialize(u, viewer_id=current_user.id) for u in users],
             total=total,
@@ -327,8 +357,11 @@ class UserService:
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = None,
+        review_only: bool = False,
     ) -> PaginatedUsers:
-        return self.list_users_in_scope(current_user, skip, limit, search)
+        return self.list_users_in_scope(
+            current_user, skip, limit, search, review_only=review_only
+        )
 
     def get_users(
         self,
