@@ -7,6 +7,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { Capacitor } from '@capacitor/core';
+import { SessionCredentialService } from '../auth/session-credential.service';
 import { AuthService } from '../auth/auth.service';
 import { PostLoginFlowService } from '../auth/post-login-flow.service';
 
@@ -20,7 +23,8 @@ import { PostLoginFlowService } from '../auth/post-login-flow.service';
     MatInputModule,
     MatButtonModule,
     MatCardModule,
-    MatDialogModule
+    MatDialogModule,
+    MatCheckboxModule
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
@@ -31,12 +35,17 @@ export class LoginComponent {
   identifier = signal<string>('');
   password = signal<string>('');
   errorMessage = signal<string>('');
+  readonly mobileApp = Capacitor.isNativePlatform();
+  enableBiometric = signal(false);
 
   constructor(
     private authService: AuthService,
     private router: Router,
-    private postLoginFlow: PostLoginFlowService
-  ) {}
+    private postLoginFlow: PostLoginFlowService,
+    private credentials: SessionCredentialService
+  ) {
+    this.enableBiometric.set(this.credentials.biometricEnabled());
+  }
 
   onLogin(): void {
     this.authService.login(this.identifier(), this.password()).subscribe({
@@ -44,7 +53,16 @@ export class LoginComponent {
         if (success) {
           // The sequence after a session opens is shared with the activation
           // links, so it lives in PostLoginFlowService.
-          this.postLoginFlow.run(() => this.router.navigate(['/login']));
+          if (this.mobileApp) {
+            void this.credentials.enableBiometrics(this.enableBiometric()).then((enabled) => {
+              if (this.enableBiometric() && !enabled) {
+                this.errorMessage.set('La biometría no está disponible; puedes seguir usando tu contraseña.');
+              }
+              this.postLoginFlow.run(() => this.router.navigate(['/login']));
+            });
+          } else {
+            this.postLoginFlow.run(() => this.router.navigate(['/login']));
+          }
         } else {
           this.errorMessage.set('Usuario o contraseña incorrectos');
         }
