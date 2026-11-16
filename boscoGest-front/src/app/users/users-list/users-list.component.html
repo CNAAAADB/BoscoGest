@@ -46,6 +46,18 @@
             <mat-hint>Se ignoran mayúsculas y tildes</mat-hint>
           </mat-form-field>
 
+          <mat-form-field appearance="outline" class="association-filter-field">
+            <mat-label>Asociación</mat-label>
+            <mat-select
+              [value]="associationId()"
+              (selectionChange)="onAssociationChange($event.value)">
+              <mat-option [value]="null">Todas mis asociaciones</mat-option>
+              @for (association of availableAssociations(); track association.id) {
+                <mat-option [value]="association.id">{{ association.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
           @if (canReviewData()) {
             <label class="review-filter-toggle">
               <input
