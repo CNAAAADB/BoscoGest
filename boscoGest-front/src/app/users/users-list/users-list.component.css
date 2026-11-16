@@ -292,3 +292,5 @@ mat-card-header {
   height: 20px;
   font-size: 20px;
 }
+
+.association-filter-field { flex: 1 1 240px; max-width: 350px; }
