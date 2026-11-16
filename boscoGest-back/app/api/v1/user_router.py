@@ -72,10 +72,17 @@ def get_managed_users(
         max_length=100,
         description="Case-insensitive match on name, surname, email, DNI or phone.",
     ),
+    review_only: bool = Query(
+        False,
+        description="Only member records requiring administrative data review.",
+    ),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "manage")),
 ):
-    return service.get_managed_users(current_user, skip=skip, limit=limit, search=search)
+    return service.get_managed_users(
+        current_user, skip=skip, limit=limit, search=search,
+        review_only=review_only,
+    )
 
 
 @user_router.get("", response_model=PaginatedUsers)
