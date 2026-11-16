@@ -23,3 +23,4 @@ from .consent_clause_model import ConsentClause
 from .membership_request_model import MembershipRequest
 from .activation_token_model import ActivationToken
 from .relationships import user_groups, user_permissions, role_permissions, group_roles, entity_roles
+from .refresh_session_model import RefreshSession
