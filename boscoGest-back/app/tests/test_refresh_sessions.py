@@ -45,9 +45,25 @@ def test_refresh_works_with_httponly_cookie(client, test_user):
     assert response.status_code == 200, response.json()
 
 
-def test_reused_refresh_revokes_descendants(client, test_user):
+def test_fast_replay_cannot_rotate_but_does_not_kick_out_other_tab(client, test_user):
     first = _login(client)
     second = client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]}).json()
+    replay = client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
+    assert replay.status_code == 401
+    descendant = client.post("/auth/refresh", json={"refresh_token": second["refresh_token"]})
+    assert descendant.status_code == 200
+
+
+def test_late_replay_revokes_device_family(client, db_session, test_user):
+    first = _login(client)
+    second = client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]}).json()
+    from app.services.refresh_session_service import _hash
+    from datetime import timedelta
+    spent = db_session.query(RefreshSession).filter_by(
+        token_hash=_hash(first["refresh_token"])
+    ).one()
+    spent.revoked_at = datetime.utcnow() - timedelta(minutes=2)
+    db_session.commit()
     replay = client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
     assert replay.status_code == 401
     descendant = client.post("/auth/refresh", json={"refresh_token": second["refresh_token"]})
