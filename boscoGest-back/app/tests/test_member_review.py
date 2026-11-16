@@ -23,7 +23,7 @@ def test_invalid_dni_nie(value):
 
 def sample(**changes):
     values = dict(name="María", surname="López", email="maria@correo.es",
-                  phone="612345678", dni="12345678Z", birthdate=date(1965, 3, 21))
+                  phone="612345678", dni="87654321X", birthdate=date(1965, 3, 21))
     values.update(changes)
     return SimpleNamespace(**values)
 
