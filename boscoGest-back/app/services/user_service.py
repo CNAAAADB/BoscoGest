@@ -268,6 +268,7 @@ class UserService:
         limit: int = 100,
         search: Optional[str] = None,
         review_only: bool = False,
+        entity_id: int | None = None,
     ) -> PaginatedUsers:
         """A page of the users the caller can reach, redacted to their tier.
 
@@ -280,6 +281,13 @@ class UserService:
         accessible_entity_ids = self.auth_service.get_accessible_entity_ids(
             current_user
         )
+        # A selected association must both be reachable and be a local
+        # association (level 4); parent/federation IDs cannot broaden scope.
+        if entity_id is not None:
+            selected = self.db.get(Entity, entity_id)
+            if (entity_id not in accessible_entity_ids or selected is None
+                    or not selected.is_active or selected.level != 4):
+                raise HTTPException(status_code=403, detail="Asociación no accesible")
         scope_end = time.perf_counter()
         if not accessible_entity_ids:
             return PaginatedUsers(items=[], total=0, skip=skip, limit=limit)
@@ -298,7 +306,7 @@ class UserService:
             batch_size = 200
             while True:
                 batch = self.user_repo.get_by_entity_ids(
-                    accessible_entity_ids, skip=offset, limit=batch_size, search=search
+                    accessible_entity_ids, skip=offset, limit=batch_size, search=search, entity_id=entity_id
                 )
                 for candidate in batch:
                     can_contact = visibility.can_read_contact or candidate.id == current_user.id
@@ -314,11 +322,11 @@ class UserService:
             count_end = list_end
         else:
             users = self.user_repo.get_by_entity_ids(
-                accessible_entity_ids, skip=skip, limit=limit, search=search
+                accessible_entity_ids, skip=skip, limit=limit, search=search, entity_id=entity_id
             )
             list_end = time.perf_counter()
             total = self.user_repo.count_by_entity_ids(
-                accessible_entity_ids, search=search
+                accessible_entity_ids, search=search, entity_id=entity_id
             )
             count_end = time.perf_counter()
 
@@ -358,9 +366,10 @@ class UserService:
         limit: int = 100,
         search: Optional[str] = None,
         review_only: bool = False,
+        entity_id: int | None = None,
     ) -> PaginatedUsers:
         return self.list_users_in_scope(
-            current_user, skip, limit, search, review_only=review_only
+            current_user, skip, limit, search, review_only=review_only, entity_id=entity_id
         )
 
     def get_users(
@@ -369,8 +378,9 @@ class UserService:
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = None,
+        entity_id: int | None = None,
     ) -> PaginatedUsers:
-        return self.list_users_in_scope(current_user, skip, limit, search)
+        return self.list_users_in_scope(current_user, skip, limit, search, entity_id=entity_id)
 
     def search_by_email(self, email: str) -> User:
         db_user = self.user_repo.get_by_email(email)
