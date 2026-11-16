@@ -23,6 +23,28 @@ describe('UsersService', () => {
     expect(service).toBeTruthy();
   });
 
+  it('combina asociación con búsqueda y pendientes en usuarios gestionados', () => {
+    service.getManagedUsers(25, 25, 'García', true, 42).subscribe();
+    const request = httpMock.expectOne(req =>
+      req.url === `${environment.apiUrl}/users/managed`
+    );
+    expect(request.request.params.get('entity_id')).toBe('42');
+    expect(request.request.params.get('review_only')).toBe('true');
+    expect(request.request.params.get('search')).toBe('García');
+    expect(request.request.params.get('skip')).toBe('25');
+    request.flush({ items: [], total: 0, skip: 25, limit: 25 });
+  });
+
+  it('filtra por asociación en el listado general sin exigir pendientes', () => {
+    service.getUsers(0, 25, 'Ana', 99).subscribe();
+    const request = httpMock.expectOne(req =>
+      req.url === `${environment.apiUrl}/users`
+    );
+    expect(request.request.params.get('entity_id')).toBe('99');
+    expect(request.request.params.has('review_only')).toBeFalse();
+    request.flush({ items: [], total: 0, skip: 0, limit: 25 });
+  });
+
   describe('deleteMyAccount', () => {
     it('envía DELETE a /users/me con la contraseña en el cuerpo', () => {
       let response: { message: string } | undefined;
