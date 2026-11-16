@@ -72,6 +72,8 @@ jobs:
     name: Snapshot RDS, publish image, and deploy backend
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: verify
+    # ECR pulls on the t3.micro host can exceed 15 minutes.
+    timeout-minutes: 65
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -154,7 +156,9 @@ jobs:
         env:
           COMMAND_ID: ${{ steps.rollout.outputs.command_id }}
         run: |
-          for i in $(seq 1 90); do
+          # Pulling a large image on a small EC2 host can exceed 15 minutes.
+          # 240 attempts at 10 seconds gives AWS up to 40 minutes to finish.
+          for i in $(seq 1 240); do
             STATE="$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
               --instance-id i-0255523213e09540c \
@@ -167,7 +171,12 @@ jobs:
             esac
             sleep 10
           done
-          echo "Timeout waiting for SSM rollout verification." >&2
+          echo "Timeout waiting for SSM rollout verification after 40 minutes." >&2
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0255523213e09540c \
+            --query '{Status:Status,StatusDetails:StatusDetails,ResponseCode:ResponseCode}' \
+            --output json || true
           exit 1
       - name: Check the public API
         run: |
