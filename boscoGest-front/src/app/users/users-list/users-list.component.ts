@@ -16,6 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { UsersService } from '../users.service';
 import { PaginatedUsers, UserResponse, EntityResponse } from '../../models/user.model';
 import { EntitiesService } from '../../entities/entities.service';
@@ -39,7 +40,8 @@ import { memberReviewReasons } from './member-review.utils';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatChipsModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule
   ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
