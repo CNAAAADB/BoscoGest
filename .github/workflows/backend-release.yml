@@ -22,8 +22,11 @@ on:
 permissions:
   contents: read
 
+# Pull-request verification must never evict a pending production release.
+# GitHub keeps only one pending run per concurrency group, even when
+# cancel-in-progress is false. Separate each PR from production.
 concurrency:
-  group: boscogest-backend-release
+  group: ${{ github.event_name == 'pull_request' && format('boscogest-backend-pr-{0}', github.event.pull_request.number) || 'boscogest-backend-production' }}
   cancel-in-progress: false
 
 jobs:
