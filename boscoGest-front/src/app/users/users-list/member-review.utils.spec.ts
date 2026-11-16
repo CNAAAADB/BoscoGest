@@ -4,7 +4,7 @@ import { isValidSpanishDniOrNie } from './spanish-id.utils';
 
 const complete: UserResponse = {
   id: 1, name: 'María', surname: 'López', email: 'maria@correo.es',
-  phone: '612345678', dni: '12345678Z', birthdate: '1965-03-21',
+  phone: '612345678', dni: '87654321X', birthdate: '1965-03-21',
   photo: null, job_position: null, is_active: true,
   must_change_password: false, created_at: '2026-01-01',
   iban: null, address: null, size: null, hobbies: null,
