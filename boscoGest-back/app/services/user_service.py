@@ -261,6 +261,78 @@ class UserService:
                 detail=_describe_unique_clash(exc),
             )
 
+    def get_member_directory(
+        self, skip: int = 0, limit: int = 25,
+        search: str | None = None, entity_id: int | None = None,
+    ) -> dict:
+        """Cross-association directory: minimum information to start an in-app chat.
+
+        Only active users with a current local-association membership are
+        listed. No email, phone, DNI or other private field is returned.
+        All filter/count operations occur in SQL, before pagination.
+        """
+        from sqlalchemy import or_
+        from app.models.entity_model import Entity
+
+        if entity_id is not None:
+            association = self.db.get(Entity, entity_id)
+            if association is None or not association.is_active or association.level != 4:
+                raise HTTPException(status_code=400, detail="Selecciona una asociación local válida")
+
+        query = (
+            select(User.id, User.name, User.surname)
+            .join(Membership, Membership.user_id == User.id)
+            .join(Entity, Entity.id == Membership.entity_id)
+            .where(
+                User.is_active == True,
+                Membership.is_active == True,
+                Entity.is_active == True,
+                Entity.level == 4,
+            )
+        )
+        if entity_id is not None:
+            query = query.where(Entity.id == entity_id)
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            if self.db.bind is not None and self.db.bind.dialect.name == "postgresql":
+                match = lambda field: func.unaccent(field).ilike(func.unaccent(term))
+            else:
+                match = lambda field: field.ilike(term)
+            query = query.where(or_(
+                match(User.name), match(User.surname),
+                match(User.name + " " + User.surname)
+            ))
+        result = query.distinct()
+        count = self.db.execute(
+            select(func.count()).select_from(result.subquery())
+        ).scalar_one()
+        rows = self.db.execute(
+            result.order_by(User.surname, User.name, User.id)
+            .offset(skip).limit(limit)
+        ).all()
+        return {
+            "items": [{"id": row.id, "name": row.name, "surname": row.surname} for row in rows],
+            "total": count, "skip": skip, "limit": limit,
+        }
+
+    def get_manageable_local_associations(self, current_user: User) -> list[dict]:
+        """Filter the selector by actual management permission, not membership."""
+        accessible = self.auth_service.get_accessible_entity_ids(current_user)
+        if not accessible:
+            return []
+        entities = self.db.execute(
+            select(Entity)
+            .where(Entity.id.in_(accessible), Entity.is_active == True, Entity.level == 4)
+            .order_by(Entity.name)
+        ).scalars().all()
+        return [
+            {"id": entity.id, "name": entity.name}
+            for entity in entities
+            if self.auth_service.has_effective_permission(
+                current_user, entity.id, "users", "manage"
+            )
+        ]
+
     def list_users_in_scope(
         self,
         current_user: User,
@@ -269,6 +341,7 @@ class UserService:
         search: Optional[str] = None,
         review_only: bool = False,
         entity_id: int | None = None,
+        managed_only: bool = False,
     ) -> PaginatedUsers:
         """A page of the users the caller can reach, redacted to their tier.
 
@@ -281,6 +354,15 @@ class UserService:
         accessible_entity_ids = self.auth_service.get_accessible_entity_ids(
             current_user
         )
+        if managed_only:
+            # Scope ADMIN users to associations where management is actually
+            # granted; merely belonging to an association is not sufficient.
+            accessible_entity_ids = [
+                eid for eid in accessible_entity_ids
+                if self.auth_service.has_effective_permission(
+                    current_user, eid, "users", "manage"
+                )
+            ]
         # A selected association must both be reachable and be a local
         # association (level 4); parent/federation IDs cannot broaden scope.
         if entity_id is not None:
@@ -369,7 +451,8 @@ class UserService:
         entity_id: int | None = None,
     ) -> PaginatedUsers:
         return self.list_users_in_scope(
-            current_user, skip, limit, search, review_only=review_only, entity_id=entity_id
+            current_user, skip, limit, search, review_only=review_only,
+            entity_id=entity_id, managed_only=True
         )
 
     def get_users(
