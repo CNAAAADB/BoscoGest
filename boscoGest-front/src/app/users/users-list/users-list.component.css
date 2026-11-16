@@ -116,6 +116,21 @@ mat-card-header {
   color: #1b1b1b;
 }
 
+.member-name-with-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.member-review-alert {
+  color: #c62828 !important;
+  font-size: 1.25rem !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  flex-shrink: 0;
+  cursor: help;
+}
+
 .status-chip {
   font-size: 0.875rem !important;
   font-weight: 600 !important;
