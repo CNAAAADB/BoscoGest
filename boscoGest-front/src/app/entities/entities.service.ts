@@ -18,6 +18,18 @@ export class EntitiesService {
     });
   }
 
+  /** Only the 4th-level associations; never confederations/federations. */
+  getLocalAssociations(): Observable<EntityResponse[]> {
+    return this.http.get<EntityResponse[]>(`${this.apiUrl}/associations`);
+  }
+
+  /** Entities in the authenticated user's visibility scope. */
+  getAccessibleLocalAssociations(): Observable<EntityResponse[]> {
+    return this.http.get<EntityResponse[]>(`${this.apiUrl}/accessible`).pipe(
+      map(entities => entities.filter(entity => entity.level === 4))
+    );
+  }
+
   getEntity(entityId: number): Observable<EntityResponse> {
     return this.http.get<EntityResponse>(`${this.apiUrl}/${entityId}`);
   }

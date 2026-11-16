@@ -16,8 +16,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { UsersService } from '../users.service';
-import { PaginatedUsers, UserResponse } from '../../models/user.model';
+import { PaginatedUsers, UserResponse, EntityResponse } from '../../models/user.model';
+import { EntitiesService } from '../../entities/entities.service';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../auth/auth.service';
 import { ChatService } from '../../chat/chat.service';
@@ -38,7 +40,8 @@ import { memberReviewReasons } from './member-review.utils';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatChipsModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule
   ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
@@ -55,6 +58,8 @@ export class UsersListComponent implements OnInit {
   pageSize = signal<number>(25);
   searchTerm = signal<string>('');
   reviewOnly = signal<boolean>(false);
+  associationId = signal<number | null>(null);
+  availableAssociations = signal<EntityResponse[]>([]);
 
   /** Only true for the very first load: a spinner on every keystroke flickers. */
   loading = signal<boolean>(true);
@@ -63,7 +68,7 @@ export class UsersListComponent implements OnInit {
 
   private searchInput$ = new Subject<string>();
   /** All page and search requests pass through this stream so older HTTP calls are cancelled. */
-  private pageRequests$ = new Subject<{ skip: number; limit: number; search: string; reviewOnly: boolean }>();
+  private pageRequests$ = new Subject<{ skip: number; limit: number; search: string; reviewOnly: boolean; entityId: number | null }>();
 
   /**
    * DNI is hidden entirely from viewers without users:read_sensitive — the
@@ -121,6 +126,7 @@ export class UsersListComponent implements OnInit {
 
   constructor(
     private usersService: UsersService,
+    private entitiesService: EntitiesService,
     private router: Router,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
@@ -133,8 +139,8 @@ export class UsersListComponent implements OnInit {
     // post-deletion refreshes. switchMap cancels stale HTTP requests.
     this.pageRequests$
       .pipe(
-        switchMap(({ skip, limit, search, reviewOnly }) =>
-          this.usersService.getManagedUsers(skip, limit, search, reviewOnly).pipe(
+        switchMap(({ skip, limit, search, reviewOnly, entityId }) =>
+          this.usersService.getManagedUsers(skip, limit, search, reviewOnly, entityId).pipe(
             catchError((error) => {
               this.reportLoadError(error);
               return EMPTY;
@@ -157,6 +163,14 @@ export class UsersListComponent implements OnInit {
         this.loadUsers();
       });
 
+    this.entitiesService.getAccessibleLocalAssociations()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: associations => this.availableAssociations.set(associations),
+        error: () => this.snackBar.open(
+          'No se pudieron cargar las asociaciones', 'Cerrar', { duration: 4000 }
+        ),
+      });
     this.loadUsers();
   }
 
@@ -166,6 +180,12 @@ export class UsersListComponent implements OnInit {
 
   clearSearch(): void {
     this.searchInput$.next('');
+  }
+
+  onAssociationChange(entityId: number | null): void {
+    this.associationId.set(entityId);
+    this.pageIndex.set(0);
+    this.loadUsers();
   }
 
   toggleReviewOnly(checked: boolean): void {
@@ -188,7 +208,8 @@ export class UsersListComponent implements OnInit {
       skip,
       limit: this.pageSize(),
       search: this.searchTerm(),
-      reviewOnly: this.reviewOnly()
+      reviewOnly: this.reviewOnly(),
+      entityId: this.associationId()
     });
   }
 
