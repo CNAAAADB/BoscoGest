@@ -57,7 +57,12 @@ def rotate_session(db: Session, raw: str) -> tuple[str, str]:
     if row is None:
         raise _unauthorized()
     if row.revoked_at is not None:
-        # A rotated token was reused: revoke its whole device token family.
+        # Multiple tabs or a delayed retry can replay a token immediately
+        # after successful rotation. Reject it, but do not destroy the
+        # legitimate session for a transient race (<30 seconds).
+        if now - row.revoked_at <= timedelta(seconds=30):
+            raise _unauthorized()
+        # A later replay is suspicious: revoke its device token family.
         db.execute(
             update(RefreshSession)
             .where(
