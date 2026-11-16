@@ -83,18 +83,9 @@ export class AuthService {
   }
 
   private validateToken(): void {
-    this.loadSession().subscribe({
-      next: () => {
-        // Token is valid regardless of whether user has memberships.
-        this.isAuthenticated.set(true);
-        this.notificationService.connect();
-        this.notificationService.loadUnreadCount();
-      },
-      error: (error) => {
-        console.error('Token validation failed:', error);
-        this.clearAuthData();
-      }
-    });
+    // A persisted access JWT may have expired while the browser was closed.
+    // Restore via the refresh credential before deciding that login is needed.
+    this.checkAuth().subscribe();
   }
 
   checkAuth(): Observable<boolean> {
