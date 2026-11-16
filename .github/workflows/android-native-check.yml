@@ -1,0 +1,43 @@
+name: Android - native session smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'boscoGest-front/package.json'
+      - 'boscoGest-front/package-lock.json'
+      - 'boscoGest-front/src/app/auth/**'
+      - 'boscoGest-front/src/app/login/**'
+      - 'boscoGest-front/android/**'
+      - '.github/workflows/android-native-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    name: Sync Capacitor and compile Android debug
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: boscoGest-front/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install exact packages
+        run: npm ci
+        working-directory: boscoGest-front
+      - name: Sync native Android plugin and web bundle
+        run: |
+          npm run build
+          npx cap sync android
+        working-directory: boscoGest-front
+        env:
+          APP_DOMAIN: boscogest.com
+      - name: Build a debug APK without production signing keys
+        working-directory: boscoGest-front/android
+        run: ./gradlew assembleDebug --no-daemon

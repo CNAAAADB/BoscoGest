@@ -1,5 +1,5 @@
 from datetime import date
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.schemas.token import (
     Token,
+    RefreshRequest,
     ActivationRequest,
     ActivationResendRequest,
     PasswordForgotRequest,
@@ -21,6 +22,7 @@ from app.utils.auth import (
     get_password_hash,
 )
 from app.services.auth_service import AuthService, get_auth_service
+from app.services.refresh_session_service import rotate_session, revoke_session
 from app.services.membership_request_service import MembershipRequestService
 from app.services.user_service import UserService, get_user_service
 from app.services.email_service import send_password_reset_email, send_welcome_email
@@ -31,21 +33,83 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+_REFRESH_COOKIE = "boscogest_refresh"
+
+# Native WebViews require the refresh secret in their encrypted OS vault.
+# Browser JavaScript must never receive the persistent secret; it uses a
+# HttpOnly cookie. Browsers cannot forge the Origin header.
+_NATIVE_ORIGINS = {"capacitor://localhost", "https://localhost"}
+
+
+def _tokens_for_origin(request: Request | None, tokens: dict) -> dict:
+    origin = (request.headers.get("origin") if request else None)
+    if origin and origin not in _NATIVE_ORIGINS:
+        return {**tokens, "refresh_token": None}
+    return tokens
+
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    response.set_cookie(
+        key=_REFRESH_COOKIE,
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/auth",
+        max_age=30 * 24 * 3600,
+    )
+
+
+@auth_router.post("/refresh", response_model=Token)
+def refresh_login(
+    response: Response,
+    request: Request,
+    credentials: RefreshRequest | None = None,
+    db: Session = Depends(get_sync_db),
+):
+    """Rotate a device credential; no expired access JWT is required."""
+    raw = (credentials.refresh_token if credentials else None) or request.cookies.get(_REFRESH_COOKIE)
+    access, fresh = rotate_session(db, raw or "")
+    _set_refresh_cookie(response, fresh)
+    return _tokens_for_origin(
+        request,
+        {"access_token": access, "refresh_token": fresh, "token_type": "bearer"},
+    )
+
+
+@auth_router.post("/session/revoke", status_code=204)
+def revoke_device_session(
+    response: Response,
+    request: Request,
+    credentials: RefreshRequest | None = None,
+    db: Session = Depends(get_sync_db),
+):
+    raw = (credentials.refresh_token if credentials else None) or request.cookies.get(_REFRESH_COOKIE)
+    revoke_session(db, raw)
+    response.delete_cookie(_REFRESH_COOKIE, path="/auth", secure=True, httponly=True, samesite="lax")
+    return None
+
+
 
 @auth_router.post("/token", response_model=Token)
 def login_for_access_token(
     identifier: str = Form(..., description="Email o teléfono del usuario"),
     password: str = Form(...),
+    response: Response = None,
     request: Request = None,
     service: AuthService = Depends(get_auth_service),
 ):
     ip_address = request.client.host if request else None
-    return service.login(identifier, password, ip_address=ip_address)
+    tokens = service.login(identifier, password, ip_address=ip_address)
+    _set_refresh_cookie(response, tokens["refresh_token"])
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.post("/activate", response_model=Token)
 def activate_account(
     activation_in: ActivationRequest,
+    response: Response,
     request: Request = None,
     db: Session = Depends(get_sync_db),
     service: AuthService = Depends(get_auth_service),
@@ -73,7 +137,9 @@ def activate_account(
             detail={"reason": exc.reason, "message": exc.message},
         )
 
-    return service.session_for(user, ip_address=ip_address, method="activation_link")
+    tokens = service.session_for(user, ip_address=ip_address, method="activation_link")
+    _set_refresh_cookie(response, tokens["refresh_token"])
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.post("/activate/resend", status_code=status.HTTP_202_ACCEPTED)
@@ -166,6 +232,7 @@ def forgot_password(
 @auth_router.post("/password/reset", response_model=Token)
 def reset_password(
     reset_in: PasswordResetConfirm,
+    response: Response,
     request: Request = None,
     db: Session = Depends(get_sync_db),
     auth: AuthService = Depends(get_auth_service),
@@ -194,7 +261,9 @@ def reset_password(
         )
 
     users.reset_password(user, reset_in.new_password, ip_address=ip_address)
-    return auth.session_for(user, ip_address=ip_address, method="password_reset")
+    tokens = auth.session_for(user, ip_address=ip_address, method="password_reset")
+    _set_refresh_cookie(response, tokens["refresh_token"])
+    return _tokens_for_origin(request, tokens)
 
 
 @auth_router.get("/check-permission")
@@ -218,9 +287,14 @@ def logout(
     current_user: User = Depends(get_current_active_user),
     token: str = Depends(oauth2_scheme),
     request: Request = None,
+    response: Response = None,
 ):
     ip_address = request.client.host if request else None
-    return service.logout(current_user, token, ip_address=ip_address)
+    result = service.logout(current_user, token, ip_address=ip_address,
+                            refresh_token=request.cookies.get(_REFRESH_COOKIE) if request else None)
+    if response is not None:
+        response.delete_cookie(_REFRESH_COOKIE, path="/auth", secure=True, httponly=True, samesite="lax")
+    return result
 
 
 def _already_registered(field: str) -> str:

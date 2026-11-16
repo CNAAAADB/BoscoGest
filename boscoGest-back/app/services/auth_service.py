@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from jose import jwt
 from sqlalchemy.orm import Session
@@ -7,13 +7,12 @@ from app.models.user_model import User
 from app.utils.auth import (
     get_sync_db,
     authenticate_user,
-    create_access_token,
     has_permission,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     SECRET_KEY,
     ALGORITHM,
 )
 from app.services.audit_service import AuditService
+from app.services.refresh_session_service import create_session, revoke_session
 
 
 class AuthService:
@@ -50,10 +49,7 @@ class AuthService:
         emails, so both produce the same kind of session and both leave the
         same trace. ``method`` is what tells them apart in the audit log.
         """
-        access_token = create_access_token(
-            data={"sub": str(user.id)},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
-        )
+        access_token, refresh_token = create_session(self.db, user)
         self.audit_service.create_audit_log(
             user_id=user.id,
             action="login",
@@ -61,7 +57,7 @@ class AuthService:
             details={"success": True, "method": method},
             ip_address=ip_address,
         )
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
     def check_permission(
         self,
@@ -85,9 +81,11 @@ class AuthService:
         return {"has_permission": has_access}
 
     def logout(
-        self, current_user: User, token: str, ip_address: str | None = None
+        self, current_user: User, token: str, ip_address: str | None = None,
+        refresh_token: str | None = None,
     ) -> dict:
         try:
+            revoke_session(self.db, refresh_token)
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             jti = payload.get("jti")
             exp = payload.get("exp")

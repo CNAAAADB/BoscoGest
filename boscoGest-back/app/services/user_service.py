@@ -947,6 +947,8 @@ class UserService:
         activation_service.invalidate_tokens_for_user(
             self.db, current_user.id, commit=False
         )
+        from app.services.refresh_session_service import revoke_user_sessions
+        revoke_user_sessions(self.db, current_user.id)
         self.db.commit()
 
         self.audit_service.create_audit_log(
@@ -1043,6 +1045,8 @@ class UserService:
         )
         # Every other link still in an inbox, of either kind, stops working.
         activation_service.invalidate_tokens_for_user(self.db, user.id, commit=False)
+        from app.services.refresh_session_service import revoke_user_sessions
+        revoke_user_sessions(self.db, user.id)
         self.db.commit()
 
         self.audit_service.create_audit_log(

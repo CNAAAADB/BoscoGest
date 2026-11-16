@@ -1,17 +1,14 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError, of, map, switchMap, forkJoin } from 'rxjs';
+import { Observable, from, tap, catchError, of, map, switchMap, forkJoin } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { UserResponse, MembershipDetails, PermissionResponse } from '../models/user.model';
 import { BrandingService } from '../settings/branding.service';
 import { NotificationService } from '../notifications/notification.service';
 import { PushService } from '../notifications/push.service';
-
-interface TokenResponse {
-  access_token: string;
-  token_type: string;
-}
+import { SessionCredentialService } from './session-credential.service';
+import { SessionRefreshService, SessionTokens } from './session-refresh.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,6 +19,8 @@ export class AuthService {
   private currentMembership = signal<MembershipDetails | null>(null);
   private allMemberships = signal<MembershipDetails[]>([]);
   private apiUrl = environment.apiUrl;
+  private sessionCredentials = inject(SessionCredentialService);
+  private sessionRefresh = inject(SessionRefreshService);
 
   // Computed signal with unique permissions from all memberships
   private allUniquePermissions = computed<PermissionResponse[]>(() => {
@@ -47,9 +46,11 @@ export class AuthService {
     private http: HttpClient,
     private brandingService: BrandingService
   ) {
-    // Check if user is already logged in (from localStorage)
-    const token = localStorage.getItem('authToken');
-    if (token) {
+    // Native refresh is retrieved from the OS vault after the optional
+    // biometric check; a leftover short-lived web token cannot bypass it.
+    if (this.sessionCredentials.native) {
+      localStorage.removeItem('authToken');
+    } else if (localStorage.getItem('authToken')) {
       this.validateToken();
     }
   }
@@ -82,42 +83,44 @@ export class AuthService {
   }
 
   private validateToken(): void {
-    this.loadSession().subscribe({
-      next: () => {
-        // Token is valid regardless of whether user has memberships.
-        this.isAuthenticated.set(true);
-        this.notificationService.connect();
-        this.notificationService.loadUnreadCount();
-      },
-      error: (error) => {
-        console.error('Token validation failed:', error);
-        this.clearAuthData();
-      }
-    });
+    // A persisted access JWT may have expired while the browser was closed.
+    // Restore via the refresh credential before deciding that login is needed.
+    this.checkAuth().subscribe();
   }
 
   checkAuth(): Observable<boolean> {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      return of(false);
-    }
-
-    if (this.isAuthenticated()) {
-      return of(true);
-    }
-
-    return this.loadSession().pipe(
-      map(() => {
-        // Token valid — authenticate regardless of memberships count
-        this.isAuthenticated.set(true);
-        this.notificationService.connect();
-        this.notificationService.loadUnreadCount();
-        return true;
-      }),
-      catchError((error) => {
-        console.error('Token validation failed:', error);
-        this.clearAuthData();
-        return of(false);
+    if (this.isAuthenticated()) return of(true);
+    return from(this.sessionCredentials.unlock()).pipe(
+      switchMap((unlocked) => {
+        // A cancelled fingerprint/Face ID prompt keeps the session saved for
+        // the next attempt rather than revoking it.
+        if (!unlocked) return of(false);
+        const token = localStorage.getItem('authToken');
+        const access$ = token ? of(token) : this.sessionRefresh.renew();
+        return access$.pipe(
+          switchMap((access) => access ? this.loadSession().pipe(
+            map(() => {
+              this.isAuthenticated.set(true);
+              this.notificationService.connect();
+              this.notificationService.loadUnreadCount();
+              return true;
+            })
+          ) : of(false)),
+          catchError(() => {
+            // An expired access token may fail during initial restoration.
+            return this.sessionRefresh.renew().pipe(
+              switchMap((newToken) => newToken ? this.loadSession() : of(null)),
+              map((session) => {
+                if (session === null) return false;
+                this.isAuthenticated.set(true);
+                this.notificationService.connect();
+                this.notificationService.loadUnreadCount();
+                return true;
+              }),
+              catchError(() => of(false))
+            );
+          })
+        );
       })
     );
   }
@@ -127,8 +130,8 @@ export class AuthService {
     formData.append('identifier', identifier);
     formData.append('password', password);
 
-    return this.http.post<TokenResponse>(`${this.apiUrl}/auth/token`, formData).pipe(
-      switchMap((response) => this.adoptSession(response.access_token)),
+    return this.http.post<SessionTokens>(`${this.apiUrl}/auth/token`, formData, { withCredentials: true }).pipe(
+      switchMap((response) => this.adoptSession(response)),
       catchError((error) => {
         console.error('Login error:', error);
         this.isAuthenticated.set(false);
@@ -150,8 +153,8 @@ export class AuthService {
    */
   activateWithToken(token: string): Observable<boolean> {
     return this.http
-      .post<TokenResponse>(`${this.apiUrl}/auth/activate`, { token })
-      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+      .post<SessionTokens>(`${this.apiUrl}/auth/activate`, { token }, { withCredentials: true })
+      .pipe(switchMap((response) => this.adoptSession(response)));
   }
 
   /** Ask for a fresh link. Always succeeds, whoever the address belongs to. */
@@ -176,12 +179,12 @@ export class AuthService {
    */
   resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<boolean> {
     return this.http
-      .post<TokenResponse>(`${this.apiUrl}/auth/password/reset`, {
+      .post<SessionTokens>(`${this.apiUrl}/auth/password/reset`, {
         token,
         new_password: newPassword,
         confirm_password: confirmPassword,
-      })
-      .pipe(switchMap((response) => this.adoptSession(response.access_token)));
+      }, { withCredentials: true })
+      .pipe(switchMap((response) => this.adoptSession(response)));
   }
 
   /**
@@ -190,11 +193,14 @@ export class AuthService {
    * Shared by the password login and by the activation links, so a session
    * ends up in the same state however it was opened.
    */
-  private adoptSession(accessToken: string): Observable<boolean> {
-    localStorage.setItem('authToken', accessToken);
-    this.isAuthenticated.set(true);
-
-    return this.loadSession().pipe(
+  private adoptSession(tokens: SessionTokens): Observable<boolean> {
+    localStorage.setItem('authToken', tokens.access_token);
+    return from(this.sessionCredentials.persist(tokens.refresh_token)).pipe(
+      switchMap(() => {
+        this.isAuthenticated.set(true);
+        return this.loadSession();
+      }),
+      switchMap(() => of(true)),
       map(() => true),
       // Aquí, y no en login(), porque el enlace de activación entra por el
       // mismo sitio: quien estrena cuenta también debe recibir avisos.
@@ -209,21 +215,15 @@ export class AuthService {
   }
 
   logout(): void {
-    // La baja del dispositivo va primero: es una petición autenticada y el
-    // logout revoca el token. Sin esperarla, porque cerrar sesión no puede
-    // quedarse colgado si el servidor no responde; si se pierde, el token se
-    // limpiará solo cuando FCM lo rechace.
+    // Revoke the long-lived device credential *before* clearing the native
+    // vault. A failed network request must never prevent local logout.
     void this.pushService.unregister();
-
-    this.http.post(`${this.apiUrl}/auth/logout`, {}).subscribe({
-      next: () => {
-        this.clearAuthData();
-      },
-      error: (error) => {
-        console.error('Logout error:', error);
-        this.clearAuthData();
-      }
-    });
+    from(this.sessionRefresh.revoke()).pipe(
+      catchError(() => of(undefined)),
+      switchMap(() => this.http.post(`${this.apiUrl}/auth/logout`, {}).pipe(
+        catchError(() => of(null))
+      ))
+    ).subscribe({ complete: () => this.clearAuthData() });
   }
 
   /**
@@ -245,6 +245,7 @@ export class AuthService {
   private clearAuthData(): void {
     this.notificationService.disconnect();
     localStorage.removeItem('authToken');
+    void this.sessionCredentials.clear();
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
     this.currentMembership.set(null);
