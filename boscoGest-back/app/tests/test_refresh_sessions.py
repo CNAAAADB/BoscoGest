@@ -81,8 +81,6 @@ def test_refresh_requires_a_credential(client):
 
 def test_password_reset_revokes_old_device_sessions(client, db_session, test_user):
     session = _login(client)
-    from app.services.user_service import UserService
-    from app.services.authorization_service import AuthorizationService
     # The actual password reset flow calls this same method. Check that an
     # existing device secret no longer works after a password change.
     from app.services.refresh_session_service import revoke_user_sessions
