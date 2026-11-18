@@ -1,0 +1,13 @@
+<section class="calendar-screen">
+  <h1>Calendario de actividades</h1>
+  <p>Consulta las fechas de las actividades. Pulsa sobre una para ver sus detalles.</p>
+  @if (loading()) {
+    <div class="loading">
+      <mat-progress-spinner mode="indeterminate" diameter="38" />
+    </div>
+  } @else {
+    <div class="calendar-panel">
+      <full-calendar [options]="calendarOptions()" />
+    </div>
+  }
+</section>
