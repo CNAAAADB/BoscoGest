@@ -179,6 +179,12 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'calendar',
+        loadComponent: () => import('./activities/activities-calendar/activities-calendar.component')
+          .then(m => m.ActivitiesCalendarComponent),
+        data: { breadcrumb: 'Calendario' }
+      },
+      {
         path: 'activities',
         data: { breadcrumb: 'Actividades' },
         children: [
