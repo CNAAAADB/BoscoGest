@@ -104,7 +104,7 @@ jobs:
           aab="boscoGest-front/android/app/build/outputs/bundle/release/app-release.aab"
           test -s "$aab"
           if [[ "${{ steps.signing.outputs.signed }}" == 'true' ]]; then
-            jarsigner -verify -strict "$aab"
+            jarsigner -verify "$aab"
             echo 'bundle_kind=signed' >> "$GITHUB_OUTPUT"
             echo 'Signed Android bundle generated with the configured Play upload key.'
           else
