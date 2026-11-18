@@ -22,7 +22,7 @@
   <a routerLink="/chat" routerLinkActive="selected" aria-label="Ir a Mensajes" #chat="routerLinkActive"
     [attr.aria-current]="chat.isActive ? 'page' : null">
     <span class="tab-icon" aria-hidden="true">
-      <mat-icon>chat_bubble_outline</span>
+      <mat-icon>chat_bubble_outline</mat-icon>
       @if (unread() > 0) {
         <span class="unread-badge">{{ unread() > 99 ? '99+' : unread() }}</span>
       }
