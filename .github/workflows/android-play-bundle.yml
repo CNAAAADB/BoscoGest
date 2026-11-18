@@ -1,0 +1,121 @@
+name: Android - prepare Google Play bundle
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/android-play-bundle.yml'
+      - 'boscoGest-front/android/app/build.gradle'
+      - 'boscoGest-front/capacitor.config.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-play-bundle.yml'
+      - 'boscoGest-front/android/app/build.gradle'
+      - 'boscoGest-front/capacitor.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boscogest-android-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: Build Google Play AAB (signed only with existing upload key)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: boscoGest-front/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install exact dependencies
+        run: npm ci
+        working-directory: boscoGest-front
+
+      - name: Build web assets and sync Capacitor Android
+        working-directory: boscoGest-front
+        env:
+          APP_DOMAIN: boscogest.com
+        run: |
+          set -euo pipefail
+          npm run build
+          npx cap sync android
+          test -f android/app/google-services.json || {
+            echo 'Firebase google-services.json is required for push notifications.' >&2
+            exit 1
+          }
+
+      # The upload key is the one already registered with Google Play.
+      # Never generate a new key for an existing Play app.
+      - name: Configure existing Play upload key if available
+        id: signing
+        env:
+          UPLOAD_KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$UPLOAD_KEYSTORE_B64" && -z "$UPLOAD_STORE_PASSWORD" && -z "$UPLOAD_KEY_ALIAS" && -z "$UPLOAD_KEY_PASSWORD" ]]; then
+            echo 'signed=false' >> "$GITHUB_OUTPUT"
+            echo 'No Play upload signing secrets configured. The bundle will be UNSIGNED and cannot be uploaded to Play.'
+            exit 0
+          fi
+
+          if [[ -z "$UPLOAD_KEYSTORE_B64" || -z "$UPLOAD_STORE_PASSWORD" || -z "$UPLOAD_KEY_ALIAS" || -z "$UPLOAD_KEY_PASSWORD" ]]; then
+            echo 'Incomplete Play upload signing secrets. Supply all four or none.' >&2
+            exit 1
+          fi
+
+          keystore="$RUNNER_TEMP/boscogest-play-upload.jks"
+          printf '%s' "$UPLOAD_KEYSTORE_B64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          # Keep key material outside Git and expose it only to this build.
+          {
+            printf 'storeFile=%s\n' "$keystore"
+            printf 'storePassword=%s\n' "$UPLOAD_STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$UPLOAD_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$UPLOAD_KEY_PASSWORD"
+          } > boscoGest-front/android/key.properties
+          chmod 600 boscoGest-front/android/key.properties
+          echo 'signed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Build Android App Bundle
+        working-directory: boscoGest-front/android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Verify output and signing
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          aab="boscoGest-front/android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$aab"
+          if [[ "${{ steps.signing.outputs.signed }}" == 'true' ]]; then
+            jarsigner -verify -strict "$aab"
+            echo 'bundle_kind=signed' >> "$GITHUB_OUTPUT"
+            echo 'Signed Android bundle generated with the configured Play upload key.'
+          else
+            echo 'bundle_kind=unsigned' >> "$GITHUB_OUTPUT"
+            echo 'UNSIGNED Android bundle: not uploadable to Google Play until signed with the existing upload key.'
+          fi
+
+      - name: Upload Android bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boscogest-android-1.2.0-${{ steps.verify.outputs.bundle_kind }}
+          path: boscoGest-front/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
