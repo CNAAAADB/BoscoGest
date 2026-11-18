@@ -31,7 +31,7 @@
 .native-bottom-nav a.selected { color: #1c407b; background: #f3e5cf; }
 .native-bottom-nav a:focus-visible { outline: 2px solid #1c407b; outline-offset: -2px; }
 .tab-icon { position: relative; height: 26px; }
-.tab-icon .material-icons { font-size: 25px; line-height: 26px; }
+.tab-icon mat-icon { font-size: 25px; line-height: 26px; }
 .unread-badge {
   position: absolute; top: -5px; right: -12px;
   background: #c62828; color: white; border-radius: 10px;
@@ -41,5 +41,5 @@
 }
 @media (max-width: 355px) {
   .native-bottom-nav a { font-size: 9px; }
-  .tab-icon .material-icons { font-size: 22px; }
+  .tab-icon mat-icon { font-size: 22px; }
 }
