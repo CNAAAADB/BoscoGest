@@ -1,0 +1,17 @@
+.calendar-screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px; }
+h1 { margin: 0 0 8px; font-size: 1.6rem; font-weight: 700; }
+p { margin: 0 0 20px; color: #586174; line-height: 1.5; }
+.loading { display: flex; justify-content: center; padding: 45px; }
+.calendar-panel { background: white; padding: 12px; border: 1px solid #e3e8ee; border-radius: 12px; }
+:host ::ng-deep .fc { font-size: 12px; }
+:host ::ng-deep .fc .fc-toolbar-title { font-size: 1.05rem; text-transform: capitalize; }
+:host ::ng-deep .fc .fc-button { font-size: 0.8rem; padding: 6px 9px; }
+:host ::ng-deep .fc .fc-daygrid-event { cursor: pointer; }
+:host ::ng-deep .fc .fc-daygrid-day-number { padding: 6px; }
+@media (max-width: 480px) {
+  .calendar-screen { padding: 13px 8px; }
+  .calendar-panel { padding: 5px; }
+  :host ::ng-deep .fc { font-size: 10px; }
+  :host ::ng-deep .fc .fc-toolbar-title { font-size: 0.92rem; }
+  :host ::ng-deep .fc .fc-button { padding: 5px 6px; }
+}
