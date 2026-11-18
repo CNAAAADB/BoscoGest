@@ -36,3 +36,9 @@
      En Android no se veía porque env(safe-area-inset-top) vale ahí 0px. */
   padding-top: 3.5rem;
 }
+/* The native tab bar overlays the bottom edge. Reserve scrollable space
+   so the final button/card remains reachable above the iOS/Android safe area. */
+:host-context(.native-tabs-enabled) .body-content {
+  padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
