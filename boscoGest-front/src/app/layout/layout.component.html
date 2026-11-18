@@ -1,6 +1,9 @@
 <main class="main">
-  <div class="content">
+  <div class="content" [class.native-tabs-enabled]="showNativeNavigation">
     <app-sidebar [isLeftSidebarCollapsed]="isLeftSidebarCollapsed()" [isMobileView]="isMobileView()" (changeIsLeftSidebarCollapsed)="changeIsLeftSidebarCollapsed($event)" />
     <app-main [isLeftSidebarCollapsed]="isLeftSidebarCollapsed()" [screenWidth]="screenWidth()" [isMobileView]="isMobileView()" />
+    @if (showNativeNavigation) {
+      <app-native-bottom-nav />
+    }
   </div>
 </main>
