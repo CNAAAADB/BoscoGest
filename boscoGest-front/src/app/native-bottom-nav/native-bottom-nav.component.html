@@ -1,0 +1,32 @@
+<nav class="native-bottom-nav" aria-label="Accesos rápidos de la aplicación">
+  <a routerLink="/dashboard" routerLinkActive="selected" aria-label="Ir a Inicio" #home="routerLinkActive"
+    [attr.aria-current]="home.isActive ? 'page' : null">
+    <span class="tab-icon" aria-hidden="true"><span class="material-icons">home</span></span>
+    <span>Inicio</span>
+  </a>
+  <a routerLink="/directory" routerLinkActive="selected" aria-label="Ir al directorio de usuarios" #users="routerLinkActive"
+    [attr.aria-current]="users.isActive ? 'page' : null">
+    <span class="tab-icon" aria-hidden="true"><span class="material-icons">people</span></span>
+    <span>Usuarios</span>
+  </a>
+  <a routerLink="/activities" routerLinkActive="selected" aria-label="Ir a Actividades" #activities="routerLinkActive"
+    [attr.aria-current]="activities.isActive ? 'page' : null">
+    <span class="tab-icon" aria-hidden="true"><span class="material-icons">event</span></span>
+    <span>Actividades</span>
+  </a>
+  <a routerLink="/calendar" routerLinkActive="selected" aria-label="Ir al calendario" #calendar="routerLinkActive"
+    [attr.aria-current]="calendar.isActive ? 'page' : null">
+    <span class="tab-icon" aria-hidden="true"><span class="material-icons">calendar_month</span></span>
+    <span>Calendario</span>
+  </a>
+  <a routerLink="/chat" routerLinkActive="selected" aria-label="Ir a Mensajes" #chat="routerLinkActive"
+    [attr.aria-current]="chat.isActive ? 'page' : null">
+    <span class="tab-icon" aria-hidden="true">
+      <span class="material-icons">chat_bubble_outline</span>
+      @if (unread() > 0) {
+        <span class="unread-badge">{{ unread() > 99 ? '99+' : unread() }}</span>
+      }
+    </span>
+    <span>Mensajes</span>
+  </a>
+</nav>
