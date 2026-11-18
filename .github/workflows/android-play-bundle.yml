@@ -59,6 +59,8 @@ jobs:
       # The upload key is the one already registered with Google Play.
       # Never generate a new key for an existing Play app.
       - name: Configure existing Play upload key if available
+        # Never expose release signing secrets to pull-request build code.
+        if: github.event_name != 'pull_request'
         id: signing
         env:
           UPLOAD_KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
