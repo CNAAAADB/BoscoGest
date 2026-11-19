@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Request, UploadFile, File, Form, status
+import httpx
+from pydantic import BaseModel, ValidationError
+from fastapi import HTTPException, Query, APIRouter, Depends, Request, UploadFile, File, Form, status
 from fastapi.responses import RedirectResponse
 from typing import List
 from app.models.user_model import User
@@ -45,6 +47,32 @@ def get_magazines(
     current_user: User = Depends(get_current_active_user),
 ):
     return service.list_magazines(current_user, skip=skip, limit=limit)
+
+
+class ArchiveIssue(BaseModel):
+    id: int
+    publication: str
+    publication_year: int
+    first_page: int
+
+
+class ArchiveCatalog(BaseModel):
+    issues: list[ArchiveIssue]
+    has_more: bool
+
+
+@magazine_router.get("/archive/catalog", response_model=ArchiveCatalog)
+async def get_archive_catalog(
+    page: int = Query(1, ge=1),
+    current_user: User = Depends(get_current_active_user),
+):
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get("https://boscochat.com/api/archive/catalog", params={"page": page})
+            response.raise_for_status()
+            return ArchiveCatalog.model_validate_json(response.content)
+    except (httpx.HTTPError, ValidationError) as exc:
+        raise HTTPException(status_code=503, detail="El archivo de BoscoChat no está disponible") from exc
 
 
 @magazine_router.get("/{magazine_id}", response_model=MagazineDetails)

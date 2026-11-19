@@ -237,3 +237,19 @@
     height: 280px;
   }
 }
+
+.archive-issues {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: .5rem 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.archive-issues a {
+  display: block;
+  padding: .75rem;
+  color: #33466f;
+  background: #f5f6fa;
+  border-radius: .5rem;
+}
