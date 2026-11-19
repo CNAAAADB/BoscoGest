@@ -71,9 +71,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$UPLOAD_KEYSTORE_B64" && -z "$UPLOAD_STORE_PASSWORD" && -z "$UPLOAD_KEY_ALIAS" && -z "$UPLOAD_KEY_PASSWORD" ]]; then
-            echo 'signed=false' >> "$GITHUB_OUTPUT"
-            echo 'No Play upload signing secrets configured. The bundle will be UNSIGNED and cannot be uploaded to Play.'
-            exit 0
+            echo 'All four Play upload signing secrets are missing. Configure the ORIGINAL upload key in repository Actions Secrets before releasing.' >&2
+            exit 1
           fi
 
           if [[ -z "$UPLOAD_KEYSTORE_B64" || -z "$UPLOAD_STORE_PASSWORD" || -z "$UPLOAD_KEY_ALIAS" || -z "$UPLOAD_KEY_PASSWORD" ]]; then
