@@ -9,6 +9,7 @@ class ActivityRegistration(Base):
     id = Column(Integer, primary_key=True, index=True)
     activity_id = Column(Integer, ForeignKey("activities.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    guest_count = Column(Integer, nullable=False, default=0, server_default='0')
     status = Column(String(20), default="pending")  # pending, accepted, waitlist, rejected
     is_active = Column(Boolean, default=True)
     registered_at = Column(DateTime, default=datetime.utcnow)

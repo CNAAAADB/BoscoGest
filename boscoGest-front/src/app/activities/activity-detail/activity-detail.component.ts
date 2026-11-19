@@ -1,4 +1,6 @@
 import { Component, OnInit, signal, computed, ChangeDetectionStrategy} from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -25,6 +27,8 @@ interface RegistrationWithUser extends ActivityRegistrationOut {
   selector: 'app-activity-detail',
   imports: [
     CommonModule,
+    MatInputModule,
+    ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -45,6 +49,9 @@ export class ActivityDetailComponent implements OnInit {
   apiUrl = environment.apiUrl;
 
   // Registrations
+  guestCount = new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(0), Validators.max(2147483646), Validators.pattern(/^\d+$/)] });
+  registeredGuests = signal(0);
+  occupiedSeats = computed(() => this.acceptedRegistrations().reduce((total, reg) => total + 1 + (reg.guest_count ?? 0), 0));
   registrations = signal<RegistrationWithUser[]>([]);
   loadingRegistrations = signal<boolean>(false);
 
@@ -180,6 +187,7 @@ export class ActivityDetailComponent implements OnInit {
     this.activitiesService.getMyRegistration(this.activityId).subscribe({
       next: (registration) => {
         this.isRegistered.set(registration !== null);
+        this.registeredGuests.set(registration?.guest_count ?? 0);
       },
       error: (error) => {
         console.error('Error checking registration status:', error);
@@ -191,7 +199,9 @@ export class ActivityDetailComponent implements OnInit {
   registerToActivity(): void {
     if (!this.activityId) return;
 
-    this.activitiesService.registerToActivity(this.activityId).subscribe({
+    if (this.activity()?.allow_guests && this.guestCount.invalid) return;
+    const guests = this.activity()?.allow_guests ? this.guestCount.value : 0;
+    this.activitiesService.registerToActivity(this.activityId, guests).subscribe({
       next: () => {
         this.snackBar.open('Inscripción realizada correctamente', 'Cerrar', {
           duration: 3000,

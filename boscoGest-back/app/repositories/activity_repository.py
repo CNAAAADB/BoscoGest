@@ -17,6 +17,10 @@ class ActivityRepository:
     def get_by_id(self, activity_id: int) -> Optional[Activity]:
         return self.base.get_by_id(activity_id)
 
+    def lock_activity(self, activity_id: int) -> Optional[Activity]:
+        stmt = select(Activity).where(Activity.id == activity_id).with_for_update()
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def get_by_id_with_entity(self, activity_id: int) -> Optional[Activity]:
         """Load activity with its entity relationship eagerly loaded."""
         stmt = (
@@ -76,14 +80,15 @@ class ActivityRepository:
         )
         return self.db.execute(stmt).scalars().first()
 
-    def count_accepted_registrations(self, activity_id: int) -> int:
-        """Count registrations with status 'accepted' for an activity."""
+    def count_occupied_seats(self, activity_id: int) -> int:
+        """Count each accepted member and their guests."""
         stmt = (
-            select(func.count())
+            select(func.sum(ActivityRegistration.guest_count + 1))
             .select_from(ActivityRegistration)
             .where(
                 ActivityRegistration.activity_id == activity_id,
                 ActivityRegistration.status == "accepted",
+                ActivityRegistration.is_active.is_(True),
             )
         )
         return self.db.execute(stmt).scalar() or 0

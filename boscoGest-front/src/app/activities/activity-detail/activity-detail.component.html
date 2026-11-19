@@ -89,19 +89,27 @@
           }
         </div>
 
-        @if (!isRegistered() && !canManageActivities()) {
+        @if (!isRegistered() && (!canManageActivities() || activity()!.allow_guests)) {
           <div class="registration-action">
-            <button mat-raised-button color="accent" (click)="registerToActivity()" class="register-button">
+            @if (activity()!.allow_guests) {
+              <mat-form-field appearance="outline">
+                <mat-label>Acompañantes no asociados</mat-label>
+                <input matInput type="number" min="0" step="1" [formControl]="guestCount">
+                <mat-hint>Escribe 0 si vienes solo.</mat-hint>
+                <mat-error>Introduce un número entero igual o mayor que 0.</mat-error>
+              </mat-form-field>
+            }
+            <button mat-raised-button color="accent" [disabled]="activity()!.allow_guests && guestCount.invalid" (click)="registerToActivity()" class="register-button">
               <mat-icon aria-hidden="true">how_to_reg</mat-icon>
               Inscribirse a la actividad
             </button>
           </div>
         }
 
-        @if (isRegistered() && !canManageActivities()) {
+        @if (isRegistered() && (!canManageActivities() || activity()!.allow_guests || registeredGuests())) {
           <div class="already-registered">
             <mat-icon aria-hidden="true">check_circle</mat-icon>
-            <span>Ya estás inscrito en esta actividad</span>
+            <span>Ya estás inscrito en esta actividad. @if (activity()!.allow_guests || registeredGuests()) { Acompañantes: {{ registeredGuests() }}. }</span>
           </div>
         }
       </mat-card-content>
@@ -114,7 +122,7 @@
         <mat-card-header>
           <mat-card-title class="section-title">
             <mat-icon class="title-icon" aria-hidden="true">check_circle</mat-icon>
-            Inscritos Aceptados ({{ acceptedRegistrations().length }}/{{ activity()!.capacity }})
+            Plazas ocupadas ({{ occupiedSeats() }}/{{ activity()!.capacity }})
           </mat-card-title>
         </mat-card-header>
         <mat-card-content class="card-content">
@@ -129,6 +137,7 @@
                   <th mat-header-cell *matHeaderCellDef class="table-header">Usuario</th>
                   <td mat-cell *matCellDef="let reg" class="table-cell">
                     {{ reg.user?.name }} {{ reg.user?.surname }}
+                    @if (activity()!.allow_guests || reg.guest_count) { <div>Acompañantes: {{ reg.guest_count }}</div> }
                   </td>
                 </ng-container>
 
@@ -183,6 +192,7 @@
                   <th mat-header-cell *matHeaderCellDef class="table-header">Usuario</th>
                   <td mat-cell *matCellDef="let reg" class="table-cell">
                     {{ reg.user?.name }} {{ reg.user?.surname }}
+                    @if (activity()!.allow_guests || reg.guest_count) { <div>Acompañantes: {{ reg.guest_count }}</div> }
                   </td>
                 </ng-container>
 

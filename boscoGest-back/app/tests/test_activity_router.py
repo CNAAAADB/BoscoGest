@@ -458,3 +458,36 @@ def test_reject_registration(client, auth_headers, db_session, test_entity, test
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "rejected"
+
+
+@pytest.mark.parametrize(
+    "allowed, guests, capacity, waitlist, expected",
+    [
+        (False, 1, 3, True, 400),
+        (True, -1, 3, False, 422),
+        (True, 1.5, 3, False, 422),
+        (True, 2, 3, False, "accepted"),
+        (True, 2, 2, False, 400),
+        (True, 2, 2, True, "waitlist"),
+    ],
+)
+def test_register_with_guests(client, auth_headers, test_entity, allowed, guests, capacity, waitlist, expected):
+    activity = client.post("/activities", headers=auth_headers, json={
+        "title": "Visita", "description": "Visita en grupo", "date": datetime.utcnow().isoformat(),
+        "capacity": capacity, "price": 0, "allow_waitlist": waitlist,
+        "allow_guests": allowed, "entity_id": test_entity.id,
+    }).json()
+    url = f"/activities/{activity['id']}"
+    result = client.post(f"{url}/register", headers=auth_headers, json={"guest_count": guests})
+    if isinstance(expected, int):
+        assert result.status_code == expected
+        assert client.get(f"{url}/my-registration", headers=auth_headers).json() is None
+        return
+    assert result.status_code == 200
+    assert result.json()["status"] == expected
+    assert client.get(f"{url}/my-registration", headers=auth_headers).json()["guest_count"] == guests
+    registration = client.get(f"{url}/registrations", headers=auth_headers).json()[0]
+    assert registration["guest_count"] == guests
+    if waitlist:
+        accept = client.post(f"{url}/registrations/{registration['user_id']}/accept", headers=auth_headers)
+        assert accept.status_code == 400

@@ -246,6 +246,7 @@ export interface ActivityResponse {
   end_date?: string | null;
   capacity: number;
   price: number;
+  allow_guests?: boolean;
   allow_waitlist: boolean;
   entity_id: number;
   created_at: string;
@@ -261,6 +262,7 @@ export interface ActivityCreate {
   end_date?: string | null;
   capacity: number;
   price: number;
+  allow_guests?: boolean;
   allow_waitlist: boolean;
   entity_id: number;
 }
@@ -273,11 +275,13 @@ export interface ActivityUpdate {
   end_date?: string | null;
   capacity?: number | null;
   price?: number | null;
+  allow_guests?: boolean;
   allow_waitlist?: boolean | null;
 }
 
 // Activity Registration Models
 export interface ActivityRegistrationOut {
+  guest_count: number;
   id: number;
   status: 'pending' | 'accepted' | 'rejected' | 'waitlist';
   user_id: number;

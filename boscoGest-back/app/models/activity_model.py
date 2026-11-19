@@ -19,6 +19,7 @@ class Activity(Base):
     end_date = Column(DateTime, nullable=True)
     capacity = Column(Integer, nullable=False)
     price = Column(Float, default=0.0)
+    allow_guests = Column(Boolean, nullable=False, default=False, server_default='false')
     allow_waitlist = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)

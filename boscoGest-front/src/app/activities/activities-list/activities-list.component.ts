@@ -122,6 +122,11 @@ export class ActivitiesListComponent implements OnInit {
     // Stop event propagation to prevent card click navigation
     event.stopPropagation();
 
+    if (activity.allow_guests) {
+      this.viewActivity(activity);
+      return;
+    }
+
     this.activitiesService.registerToActivity(activity.id).subscribe({
       next: () => {
         this.snackBar.open('Inscripción realizada correctamente', 'Cerrar', {

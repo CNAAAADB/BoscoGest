@@ -56,10 +56,10 @@ export class ActivitiesService {
   }
 
   // Registration operations
-  registerToActivity(activityId: number): Observable<ActivityRegistrationOut> {
+  registerToActivity(activityId: number, guestCount = 0): Observable<ActivityRegistrationOut> {
     return this.http.post<ActivityRegistrationOut>(
       `${this.apiUrl}/${activityId}/register`,
-      {}
+      { guest_count: guestCount }
     );
   }
 

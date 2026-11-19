@@ -129,7 +129,7 @@ class ActivityService:
         activity_in: ActivityUpdate,
         current_user: User,
     ) -> Activity:
-        activity = self.activity_repo.get_by_id(activity_id)
+        activity = self.activity_repo.lock_activity(activity_id)
         if not activity:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
@@ -185,9 +185,9 @@ class ActivityService:
     # ── Registrations ───────────────────────────────────────────────
 
     def register_activity(
-        self, activity_id: int, current_user: User
+        self, activity_id: int, current_user: User, guest_count: int = 0
     ) -> ActivityRegistration:
-        activity = self.activity_repo.get_by_id(activity_id)
+        activity = self.activity_repo.lock_activity(activity_id)
         if not activity:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
@@ -207,22 +207,26 @@ class ActivityService:
                 status_code=400, detail="Ya estás inscrito en esta actividad"
             )
 
+        if guest_count and not activity.allow_guests:
+            raise HTTPException(status_code=400, detail='Esta actividad no admite acompañantes')
+
         # Capacity and waitlist logic
-        accepted_count = self.activity_repo.count_accepted_registrations(activity_id)
-        if accepted_count < activity.capacity:
+        accepted_count = self.activity_repo.count_occupied_seats(activity_id)
+        if accepted_count + 1 + guest_count <= activity.capacity:
             status_value = "accepted"
         elif activity.allow_waitlist:
             status_value = "waitlist"
         else:
             raise HTTPException(
                 status_code=400,
-                detail="Aforo completo y sin lista de espera",
+                detail="No hay plazas suficientes y la actividad no tiene lista de espera",
             )
 
         registration = ActivityRegistration(
             activity_id=activity_id,
             user_id=current_user.id,
             status=status_value,
+            guest_count=guest_count,
         )
         self.activity_repo.create_registration(registration)
         self.db.commit()
@@ -310,7 +314,7 @@ class ActivityService:
     def accept_registration(
         self, activity_id: int, user_id: int, current_user: User
     ) -> ActivityRegistration:
-        activity = self.activity_repo.get_by_id(activity_id)
+        activity = self.activity_repo.lock_activity(activity_id)
         if not activity:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
@@ -326,9 +330,12 @@ class ActivityService:
                 status_code=404, detail="Inscripción no encontrada"
             )
 
+        if registration.status == 'accepted':
+            return registration
+
         # Verify capacity
-        accepted_count = self.activity_repo.count_accepted_registrations(activity_id)
-        if accepted_count >= activity.capacity:
+        accepted_count = self.activity_repo.count_occupied_seats(activity_id)
+        if accepted_count + 1 + registration.guest_count > activity.capacity:
             raise HTTPException(
                 status_code=400, detail="No hay aforo disponible"
             )
