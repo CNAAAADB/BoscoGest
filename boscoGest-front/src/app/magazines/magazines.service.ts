@@ -11,6 +11,18 @@ import {
 import { downloadBlob } from '../utils/file-download.util';
 import { fetchBlobNative } from '../utils/native-http.util';
 
+export interface ArchiveIssue {
+  id: number;
+  publication: string;
+  publication_year: number;
+  first_page: number;
+}
+
+export interface ArchiveCatalog {
+  issues: ArchiveIssue[];
+  has_more: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -22,6 +34,10 @@ export class MagazinesService {
   /**
    * Get all magazines (filtered by user's accessible entities)
    */
+  getArchiveCatalog(page: number): Observable<ArchiveCatalog> {
+    return this.http.get<ArchiveCatalog>(`${this.apiUrl}/archive/catalog`, { params: { page } });
+  }
+
   getMagazines(): Observable<MagazineDetails[]> {
     return this.http.get<MagazineDetails[]>(this.apiUrl);
   }

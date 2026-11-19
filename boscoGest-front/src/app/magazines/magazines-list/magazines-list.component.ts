@@ -10,7 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialogModule } from '@angular/material/dialog';
 import { Capacitor } from '@capacitor/core';
 import { forkJoin } from 'rxjs';
-import { MagazinesService } from '../magazines.service';
+import { ArchiveIssue, MagazinesService } from '../magazines.service';
 import { MagazineDetails } from '../../models/user.model';
 import { AuthService } from '../../auth/auth.service';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
@@ -36,6 +36,12 @@ GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MagazinesListComponent implements OnInit {
+  archiveIssues = signal<ArchiveIssue[]>([]);
+  archiveLoading = signal(false);
+  archiveError = signal(false);
+  archiveHasMore = signal(false);
+  private nextArchivePage = 1;
+
   magazines = signal<MagazineDetails[]>([]);
   loading = signal<boolean>(true);
   coverImages = signal<Map<number, string>>(new Map());
@@ -49,6 +55,25 @@ export class MagazinesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadMagazines();
+    this.loadArchive();
+  }
+
+  loadArchive(): void {
+    if (this.archiveLoading()) return;
+    this.archiveLoading.set(true);
+    this.archiveError.set(false);
+    this.magazinesService.getArchiveCatalog(this.nextArchivePage).subscribe({
+      next: ({ issues, has_more }) => {
+        this.archiveIssues.update(current => [...current, ...issues]);
+        this.archiveHasMore.set(has_more);
+        this.nextArchivePage++;
+        this.archiveLoading.set(false);
+      },
+      error: () => {
+        this.archiveError.set(true);
+        this.archiveLoading.set(false);
+      }
+    });
   }
 
   loadMagazines(): void {
