@@ -12,7 +12,18 @@
 - Mejoras de sesión persistente y acceso biométrico opcional.
 - Avisos de datos incompletos e identificación DNI/NIE para administradores autorizados.
 
-## Preparación y publicación
+## Publicar desde GitHub Actions
+
+En Settings → Secrets and variables → Actions, configurar una vez:
+
+- Secreto `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`: JSON de la cuenta de servicio con la Google Play Android Developer API habilitada y permiso para publicar en canales de prueba de BoscoGest.
+- Variable `GOOGLE_PLAY_CLOSED_TRACK`: identificador exacto del canal cerrado existente de la app en Play Console. Mantener los cuatro secretos de firma indicados abajo.
+
+En Actions → Android - prepare Google Play bundle → Run workflow, seleccionar `main`, marcar **Publicar en la prueba cerrada de Google Play** y ejecutar. Cada ejecución nueva asigna el código de versión 5 más el número de ejecución del flujo. Al reintentar la misma ejecución se conserva el código. Si ya se utilizó ese código en una subida manual, comprobar el máximo usado en Play y ajustar la numeración antes de publicar.
+
+La tarea de publicación envía el AAB firmado de esa ejecución al canal configurado. Comprobar en Play Console el estado de revisión y la disponibilidad para testers.
+
+## Preparación y publicación manual
 
 1. Ejecutar el workflow GitHub Actions **Android - prepare Google Play bundle** en la rama principal tras superar las pruebas.
 2. Descargar el artefacto `boscogest-android-1.2.0-signed` si aparece. Solo un AAB **firmado con la clave de subida registrada** se puede cargar en Play Console.
