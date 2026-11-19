@@ -13,6 +13,11 @@ on:
       - 'boscoGest-front/android/app/build.gradle'
       - 'boscoGest-front/capacitor.config.ts'
   workflow_dispatch:
+    inputs:
+      publish_closed:
+        description: Publicar en la prueba cerrada de Google Play
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -24,6 +29,9 @@ concurrency:
 jobs:
   bundle:
     name: Build Google Play AAB (signed only with existing upload key)
+    if: ${{ !inputs.publish_closed || github.ref == 'refs/heads/main' }}
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +103,14 @@ jobs:
 
       - name: Build Android App Bundle
         working-directory: boscoGest-front/android
-        run: ./gradlew bundleRelease --no-daemon
+        env:
+          PUBLISH_CLOSED: ${{ inputs.publish_closed }}
+        run: |
+          args=()
+          if [[ "$PUBLISH_CLOSED" == "true" ]]; then
+            args+=("-PplayVersionCode=$((5 + GITHUB_RUN_NUMBER))")
+          fi
+          ./gradlew bundleRelease --no-daemon "${args[@]}"
 
       - name: Verify output and signing
         id: verify
@@ -114,9 +129,46 @@ jobs:
           fi
 
       - name: Upload Android bundle artifact
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: boscogest-android-1.2.0-${{ steps.verify.outputs.bundle_kind }}
           path: boscoGest-front/android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
+
+  publish:
+    name: Publicar en la prueba cerrada
+    needs: bundle
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_closed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar configuración de Google Play
+        env:
+          TRACK: ${{ vars.GOOGLE_PLAY_CLOSED_TRACK }}
+          HAS_CREDENTIAL: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        run: |
+          if [[ "$HAS_CREDENTIAL" != "true" ]]; then
+            echo "::error::Configura el secreto GOOGLE_PLAY_SERVICE_ACCOUNT_JSON."
+            exit 1
+          fi
+          case "${TRACK,,}" in
+            ''|production|beta|open|internal|qa|internalsharing|*:*|*,*|[[:space:]]*|*[[:space:]])
+              echo "::error::Configura GOOGLE_PLAY_CLOSED_TRACK con el identificador exacto del canal cerrado de BoscoGest."
+              exit 1 ;;
+          esac
+
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.artifact }}
+          path: bundle
+          merge-multiple: true
+
+      - name: Enviar el bundle firmado a Google Play
+        uses: r0adkll/upload-google-play@7f5b759879c088a86faf85d18779f7f14e79a086 # v1.1.4
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.boscogest.app
+          releaseFiles: bundle/app-release.aab
+          tracks: ${{ vars.GOOGLE_PLAY_CLOSED_TRACK }}
+          status: completed
