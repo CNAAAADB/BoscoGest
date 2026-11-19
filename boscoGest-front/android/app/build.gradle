@@ -21,7 +21,7 @@ android {
         // versionCode tiene que subir en cada subida a Google Play: la Consola
         // rechaza un AAB cuyo código ya se haya publicado, y no se puede
         // reutilizar ni aunque se elimine la versión anterior.
-        versionCode 5
+        versionCode (project.findProperty('playVersionCode') ?: '5').toInteger()
         versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
