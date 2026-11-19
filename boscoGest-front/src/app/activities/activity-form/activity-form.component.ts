@@ -72,6 +72,7 @@ export class ActivityFormComponent implements OnInit {
       description: ['', Validators.required],
       capacity: [0, [Validators.required, Validators.min(1)]],
       price: [0, [Validators.required, Validators.min(0)]],
+      allow_guests: [false],
       allow_waitlist: [true],
       entity_id: [null, Validators.required]
     });
@@ -119,6 +120,7 @@ export class ActivityFormComponent implements OnInit {
           description: activity.description,
           capacity: activity.capacity,
           price: activity.price,
+          allow_guests: activity.allow_guests ?? false,
           allow_waitlist: activity.allow_waitlist,
           entity_id: activity.entity_id
         });

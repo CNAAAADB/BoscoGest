@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File
 from app.models.user_model import User
 from app.schemas.activity import ActivityCreate, ActivityUpdate, ActivityResponse
-from app.schemas.activity_registration import ActivityRegistrationOut
+from app.schemas.activity_registration import ActivityRegistrationCreate, ActivityRegistrationOut
 from app.schemas.entity import EntityResponse
 from app.utils.auth import get_current_active_user
 from app.services.activity_service import ActivityService, get_activity_service
@@ -68,10 +68,11 @@ def delete_activity(
 )
 def register_activity(
     activity_id: int,
+    registration: ActivityRegistrationCreate | None = None,
     service: ActivityService = Depends(get_activity_service),
     current_user: User = Depends(get_current_active_user),
 ):
-    return service.register_activity(activity_id, current_user)
+    return service.register_activity(activity_id, current_user, registration.guest_count if registration else 0)
 
 
 @activity_router.get(

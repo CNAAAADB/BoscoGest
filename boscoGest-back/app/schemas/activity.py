@@ -46,6 +46,7 @@ class ActivityBase(BaseModel):
     end_date: Optional[datetime] = None
     capacity: int
     price: float
+    allow_guests: bool = False
     allow_waitlist: bool
     entity_id: int
 
@@ -57,6 +58,7 @@ class ActivityCreate(BaseModel):
     end_date: Optional[datetime] = None
     capacity: int
     price: float
+    allow_guests: bool = False
     allow_waitlist: bool
     entity_id: int
 
@@ -75,8 +77,8 @@ class ActivityUpdate(BaseModel):
     end_date: Optional[datetime] = None
     capacity: Optional[int] = None
     price: Optional[float] = None
+    allow_guests: bool = False
     allow_waitlist: Optional[bool] = None
-    image_url: Optional[str]
 
     _utc = field_validator("date", "end_date")(to_utc_naive)
 
