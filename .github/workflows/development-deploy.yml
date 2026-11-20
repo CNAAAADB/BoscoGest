@@ -121,10 +121,10 @@ jobs:
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 909186483504.dkr.ecr.eu-west-1.amazonaws.com
           docker pull NEW_IMAGE_PLACEHOLDER
           sed -i '/^DEV_IMAGE=/d' .env
-          printf 'DEV_IMAGE=%s\\n' NEW_IMAGE_PLACEHOLDER >> .env
+          echo 'DEV_IMAGE=NEW_IMAGE_PLACEHOLDER' >> .env
           if ! docker compose -f compose.yml up -d --no-deps back; then
             sed -i '/^DEV_IMAGE=/d' .env
-            printf 'DEV_IMAGE=%s\\n' "$previous" >> .env
+            echo "DEV_IMAGE=$previous" >> .env
             exit 1
           fi
           cid="$(docker compose -f compose.yml ps -q back)"
@@ -137,7 +137,7 @@ jobs:
           if [ "$healthy" != 1 ]; then
             echo "DEV backend failed healthcheck" >&2
             sed -i '/^DEV_IMAGE=/d' .env
-            printf 'DEV_IMAGE=%s\\n' "$previous" >> .env
+            echo "DEV_IMAGE=$previous" >> .env
             if [ "$previous" != "909186483504.dkr.ecr.eu-west-1.amazonaws.com/boscogest-back-dev:bootstrap" ]; then
               docker compose -f compose.yml up -d --no-deps back || true
             fi
