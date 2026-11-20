@@ -100,7 +100,7 @@ def test_federation_cannot_read_sibling_federation(
         return user
 
     federation_admin = member("federation-admin", fed_a.id, test_role.id)
-    other = member("other-local", local_b.id, test_role.id)
+    member("other-local", local_b.id, test_role.id)
     member("our-local", local_a.id, test_role.id)
     for target in (fed_a, fed_b):
         db_session.add(EntityViewConfig(
