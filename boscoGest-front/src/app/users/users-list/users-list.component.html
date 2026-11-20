@@ -1,4 +1,4 @@
-<div class="users-container">
+<div class="users-container" [class.embedded-users]="!!statsFilter()">
   @if (!statsFilter()) {
     <h1 class="page-title">Gestión de Usuarios</h1>
   }
