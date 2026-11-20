@@ -2,6 +2,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 from fastapi import HTTPException, Query, APIRouter, Depends, Request, UploadFile, File, Form, status
 from fastapi.responses import RedirectResponse
+from app.services.archive_reader import public_reader_key, read_archive_page
 from typing import List
 from app.models.user_model import User
 from app.schemas.magazine import MagazineResponse, MagazineUpdate, MagazineDetails
@@ -73,6 +74,20 @@ async def get_archive_catalog(
             return ArchiveCatalog.model_validate_json(response.content)
     except (httpx.HTTPError, ValidationError) as exc:
         raise HTTPException(status_code=503, detail="El archivo de BoscoChat no está disponible") from exc
+
+
+@magazine_router.get("/archive/reader-key")
+def archive_reader_key():
+    return public_reader_key()
+
+
+@magazine_router.get("/archive/{issue_id}/pages/{page_number}")
+async def archive_page(issue_id: int, page_number: int, current_user: User = Depends(get_current_active_user)):
+    if issue_id < 1 or not 1 <= page_number <= 5000:
+        raise HTTPException(404, "Página no encontrada")
+    if not any(m.is_active for m in current_user.memberships):
+        raise HTTPException(403, "Para leer la revista necesitas ser socio activo")
+    return await read_archive_page(issue_id, page_number, current_user.id)
 
 
 @magazine_router.get("/{magazine_id}", response_model=MagazineDetails)

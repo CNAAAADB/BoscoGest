@@ -34,6 +34,10 @@ export class MagazinesService {
   /**
    * Get all magazines (filtered by user's accessible entities)
    */
+  getArchivePage(id: number, page: number) {
+    return this.http.get(`${this.apiUrl}/archive/${id}/pages/${page}`, { observe: 'response', responseType: 'blob' });
+  }
+
   getArchiveCatalog(page: number): Observable<ArchiveCatalog> {
     return this.http.get<ArchiveCatalog>(`${this.apiUrl}/archive/catalog`, { params: { page } });
   }

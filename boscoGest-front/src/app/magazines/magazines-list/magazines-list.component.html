@@ -14,8 +14,8 @@
     @if (archiveIssues().length) {
       <ul class="archive-issues">
         @for (issue of archiveIssues(); track issue.id) {
-          <li><a [href]="'https://boscochat.com/#revista=' + issue.id + '&pagina=' + issue.first_page"
-                 target="_blank" rel="noopener noreferrer">
+          <li><a [routerLink]="['/magazines/archivo', issue.id]"
+                 [queryParams]="{ pagina: issue.first_page, titulo: issue.publication, anio: issue.publication_year }">
             {{ issue.publication }} · {{ issue.publication_year }}
           </a></li>
         }
