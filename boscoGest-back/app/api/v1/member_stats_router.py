@@ -14,6 +14,7 @@ from app.models.refresh_session_model import RefreshSession
 from app.repositories.entity_repository import EntityRepository
 from app.services.authorization_service import AuthorizationService
 from app.services.member_review import requires_review
+from app.services.user_visibility import UserVisibility
 from app.utils.auth import get_current_active_user, get_sync_db
 
 member_stats_router = APIRouter(prefix="/member-stats", tags=["Member statistics"])
@@ -155,16 +156,11 @@ def member_statistics_members(
     )
     # Identity only; sensitive personal details remain protected behind the
     # existing user detail/editor routes and their authorization rules.
-    names = {e.id: e.name for e in leaves}
-    associations_by_user: dict[int, list[str]] = {}
-    for local_id, members in by_entity.items():
-        for uid in members:
-            associations_by_user.setdefault(uid, []).append(names[local_id])
+    visibility = UserVisibility.for_viewer(AuthorizationService(db), user)
     return {
         "total": len(filtered), "skip": skip, "limit": limit,
-        "items": [
-            {"id": u.id, "name": u.name, "surname": u.surname,
-             "associations": sorted(associations_by_user.get(u.id, []))}
-            for u in filtered[skip:skip + limit]
-        ],
+        # Same schema and field-level permissions as Admin > Usuarios. Reuse its
+        # existing table instead of introducing a different user-list format.
+        "items": [visibility.serialize(member, viewer_id=user.id)
+                  for member in filtered[skip:skip + limit]],
     }
