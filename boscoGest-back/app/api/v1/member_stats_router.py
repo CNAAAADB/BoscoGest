@@ -1,6 +1,7 @@
 """Scoped, read-only membership statistics and permission-checked drill-downs."""
 from datetime import date, datetime, timedelta
 from typing import Literal
+import unicodedata
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -155,15 +156,22 @@ def member_statistics_members(
         (u for u in population if _matches(u, metric, recent_ids, today, cutoff)),
         key=lambda u: (u.surname.lower(), u.name.lower(), u.id),
     )
-    if search and search.strip():
-        query = search.strip().casefold()
-        filtered = [u for u in filtered if any(
-            query in str(value or "").casefold()
-            for value in (u.name, u.surname, u.email, u.dni, u.phone, u.id)
-        )]
-    # Identity only; sensitive personal details remain protected behind the
-    # existing user detail/editor routes and their authorization rules.
     visibility = UserVisibility.for_viewer(AuthorizationService(db), user)
+    if search and search.strip():
+        # Searching hidden DNI/phone values could disclose protected data.
+        def normalize(value):
+            return "".join(ch for ch in unicodedata.normalize(
+                "NFKD", str(value or "").casefold()
+            ) if not unicodedata.combining(ch))
+
+        query = normalize(search.strip())
+        def matches_search(member):
+            allowed = visibility.serialize(member, viewer_id=user.id)
+            return any(query in normalize(value) for value in (
+                allowed.id, allowed.name, allowed.surname, allowed.email,
+                allowed.phone, allowed.dni,
+            ))
+        filtered = [member for member in filtered if matches_search(member)]
     return {
         "total": len(filtered), "skip": skip, "limit": limit,
         # Same schema and field-level permissions as Admin > Usuarios. Reuse its
