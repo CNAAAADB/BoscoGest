@@ -3,6 +3,10 @@ name: DEV - verify and deploy isolated environment
 on:
   push:
     branches: [develop]
+    paths:
+      - 'boscoGest-front/**'
+      - 'boscoGest-back/**'
+      - '.github/workflows/development-deploy.yml'
   workflow_dispatch:
 
 permissions:
