@@ -59,6 +59,7 @@ export class ViewConfigService {
   // Iconos por defecto
   private readonly defaultIcons: Record<string, string> = {
     'dashboard': 'dashboard',
+    'member_stats': 'insights',
     'users': 'people',
     'entities': 'business',
     'roles': 'admin_panel_settings',
