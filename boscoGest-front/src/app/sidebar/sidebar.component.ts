@@ -197,6 +197,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // Expand the dynamic "fees" view: managers keep the admin view and also get
     // "Mis cuotas"; members only get "Mis cuotas" (the admin route is guarded).
     const dynamicItems = this.menuItems().flatMap((item): MenuItem[] => {
+      // This optional module is only for administrators, even if a tenant
+      // mistakenly enables the view for all members.
+      if (item.routeLink === 'member-stats') {
+        return this.authService.hasPermission('users', 'manage') ? [item] : [];
+      }
       if (item.routeLink !== 'fees') return [item];
       return canManageFees ? [item, this.myFeesItem] : [this.myFeesItem];
     });
