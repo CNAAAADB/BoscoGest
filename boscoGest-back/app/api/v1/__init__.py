@@ -1,3 +1,4 @@
+from .member_stats_router import member_stats_router
 from .auth_router import auth_router
 from .user_router import user_router
 from .role_router import role_router
@@ -20,6 +21,7 @@ from .fee_router import fee_router
 from .consent_router import consent_router
 
 routers = [
+    member_stats_router,
     auth_router,
     user_router,
     role_router,

@@ -70,6 +70,7 @@ class EntityViewConfig(Base):
 # Vistas predefinidas del sistema con sus valores por defecto
 DEFAULT_VIEWS = [
     {"view_name": "dashboard", "display_name": "Dashboard", "display_order": 1, "icon": "dashboard"},
+    {"view_name": "member_stats", "display_name": "Estadísticas de socios", "display_order": 2, "icon": "insights", "is_enabled": False},
     {"view_name": "users", "display_name": "Usuarios", "display_order": 2, "icon": "people"},
     {"view_name": "entities", "display_name": "Asociaciones", "display_order": 3, "icon": "business"},
     {"view_name": "roles", "display_name": "Roles", "display_order": 4, "icon": "admin_panel_settings"},

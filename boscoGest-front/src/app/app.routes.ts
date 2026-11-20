@@ -42,6 +42,12 @@ export const routes: Routes = [
         data: { breadcrumb: 'Dashboard' }
       },
       {
+        path: 'member-stats',
+        loadComponent: () => import('./member-stats/member-stats.component').then(m => m.MemberStatsComponent),
+        canActivate: [permissionGuard('users', 'manage')],
+        data: { breadcrumb: 'Estadísticas de socios' }
+      },
+      {
         path: 'my-profile',
         loadComponent: () => import('./my-profile/my-profile.component').then(m => m.MyProfileComponent),
         data: { breadcrumb: 'Mi Perfil' }

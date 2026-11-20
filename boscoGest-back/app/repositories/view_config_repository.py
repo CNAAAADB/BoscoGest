@@ -54,6 +54,26 @@ class ViewConfigRepository:
         self.db.flush()
         return configs
 
+    def add_missing_defaults(self, entity_id: int) -> bool:
+        """Register newly introduced views without changing tenant choices."""
+        existing = {c.view_name for c in self.get_by_entity_id(entity_id)}
+        added = False
+        for view in DEFAULT_VIEWS:
+            if view["view_name"] in existing:
+                continue
+            self.db.add(EntityViewConfig(
+                entity_id=entity_id,
+                view_name=view["view_name"],
+                display_name=view["display_name"],
+                display_order=view["display_order"],
+                icon=view.get("icon"),
+                is_enabled=view.get("is_enabled", True),
+            ))
+            added = True
+        if added:
+            self.db.flush()
+        return added
+
     def delete_by_entity_id(self, entity_id: int) -> None:
         self.db.query(EntityViewConfig).filter(
             EntityViewConfig.entity_id == entity_id
