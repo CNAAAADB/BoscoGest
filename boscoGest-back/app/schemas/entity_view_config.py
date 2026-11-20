@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # Lista de vistas válidas del sistema
 VALID_VIEW_NAMES = [
     "dashboard",
+    "member_stats",
     "users",
     "entities",
     "roles",
