@@ -39,9 +39,13 @@ class ViewConfigService:
         )
 
         configs = self.config_repo.get_by_entity_id(entity_id)
+        # Backfill newly shipped optional modules for existing tenants, too.
         if not configs:
             configs = self.config_repo.initialize_defaults(entity_id)
             self.db.commit()
+        elif self.config_repo.add_missing_defaults(entity_id):
+            self.db.commit()
+            configs = self.config_repo.get_by_entity_id(entity_id)
 
         return EntityViewConfigListResponse(
             entity_id=entity_id,
@@ -84,6 +88,8 @@ class ViewConfigService:
 
         config = self.config_repo.get_by_entity_and_view_name(entity_id, view_name)
         if not config:
+            self.config_repo.add_missing_defaults(entity_id)
+            self.db.flush()
             existing = self.config_repo.get_by_entity_id(entity_id)
             if not existing:
                 self.config_repo.initialize_defaults(entity_id)
