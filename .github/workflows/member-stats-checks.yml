@@ -1,0 +1,45 @@
+name: Member statistics checks
+
+on:
+  pull_request:
+    paths:
+      - 'boscoGest-back/**'
+      - 'boscoGest-front/**'
+      - '.github/workflows/member-stats-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: boscoGest-back
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: boscoGest-back/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Statistics regression tests
+        run: python -m pytest -q app/tests/test_member_stats.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: boscoGest-front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: boscoGest-front/package-lock.json
+      - run: npm ci
+      - name: Angular production compilation
+        run: npx ng build --configuration production
