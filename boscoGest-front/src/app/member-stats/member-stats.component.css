@@ -39,7 +39,6 @@
 .stats-details { margin-top: 1.5rem; }
 .detail-heading { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
 .detail-heading mat-form-field { min-width: 240px; }
-.stats-details .users-container { padding: 0; }
 .association-title { margin: 2rem 0 1rem; }
 .association-count { color: var(--primary-color, #3D4E7C); }
 .stats-explanation { margin-top: 1.25rem; font-size: 0.875rem; opacity: .8; }
