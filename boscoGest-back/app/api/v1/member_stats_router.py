@@ -139,6 +139,7 @@ def member_statistics_members(
     association_id: int | None = Query(None, ge=1),
     skip: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=100),
+    search: str | None = Query(None, max_length=100),
     user: User = Depends(get_current_active_user),
     db: Session = Depends(get_sync_db),
 ):
@@ -154,6 +155,12 @@ def member_statistics_members(
         (u for u in population if _matches(u, metric, recent_ids, today, cutoff)),
         key=lambda u: (u.surname.lower(), u.name.lower(), u.id),
     )
+    if search and search.strip():
+        query = search.strip().casefold()
+        filtered = [u for u in filtered if any(
+            query in str(value or "").casefold()
+            for value in (u.name, u.surname, u.email, u.dni, u.phone, u.id)
+        )]
     # Identity only; sensitive personal details remain protected behind the
     # existing user detail/editor routes and their authorization rules.
     visibility = UserVisibility.for_viewer(AuthorizationService(db), user)
