@@ -41,5 +41,7 @@ jobs:
           cache: npm
           cache-dependency-path: boscoGest-front/package-lock.json
       - run: npm ci
+      - name: Configure isolated compilation target
+        run: APP_DOMAIN=boscogest.com npm run config
       - name: Angular production compilation
         run: npx ng build --configuration production
