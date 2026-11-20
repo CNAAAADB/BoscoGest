@@ -62,7 +62,9 @@ def member_statistics(
     )).scalars().all()
     candidate_ids = {e.id for e in candidates}
     parent_ids = {e.parent_id for e in candidates if e.parent_id in candidate_ids}
-    leaves = sorted((e for e in candidates if e.id not in parent_ids),
+    # Local associations are level 4 in BoscoGest; an empty federation is
+    # never itself counted as a local association.
+    leaves = sorted((e for e in candidates if e.level == 4 and e.id not in parent_ids),
                     key=lambda e: (e.name.lower(), e.id))
     # A parent role does not automatically grant unrestricted cross-entity
     # access; apply the existing effective permission check to every row.
