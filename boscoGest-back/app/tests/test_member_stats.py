@@ -62,3 +62,60 @@ def test_statistics_for_enabled_entity(client, db_session, test_entity, test_use
 def test_statistics_requires_authentication(client, test_entity):
     response = client.get(f"/member-stats/entity/{test_entity.id}")
     assert response.status_code == 401
+
+
+def test_federation_cannot_read_sibling_federation(
+    client, db_session, test_entity, test_role, test_user,
+):
+    from app.models.entity_model import Entity
+    from app.models.user_model import User
+    from app.models.membership_model import Membership
+    from app.models.entity_view_config_model import EntityViewConfig
+    from app.utils.auth import create_access_token
+
+    conf = Entity(name="Demo confederation", level=2, parent_id=test_entity.id)
+    db_session.add(conf)
+    db_session.flush()
+    fed_a = Entity(name="Demo federation A", level=3, parent_id=conf.id)
+    fed_b = Entity(name="Demo federation B", level=3, parent_id=conf.id)
+    db_session.add_all([fed_a, fed_b])
+    db_session.flush()
+    local_a = Entity(name="Demo local A", level=4, parent_id=fed_a.id)
+    local_b = Entity(name="Demo local B", level=4, parent_id=fed_b.id)
+    db_session.add_all([local_a, local_b])
+    db_session.flush()
+
+    def member(label, entity_id, role_id):
+        user = User(
+            email=label + "@example.com", password_hash="not-used",
+            name="Persona", surname=label,
+            birthdate=date(2000, 1, 1), is_active=True,
+        )
+        db_session.add(user)
+        db_session.flush()
+        db_session.add(Membership(
+            user_id=user.id, entity_id=entity_id, role_id=role_id,
+            is_active=True,
+        ))
+        return user
+
+    federation_admin = member("federation-admin", fed_a.id, test_role.id)
+    other = member("other-local", local_b.id, test_role.id)
+    member("our-local", local_a.id, test_role.id)
+    for target in (fed_a, fed_b):
+        db_session.add(EntityViewConfig(
+            entity_id=target.id, view_name="member_stats",
+            display_name="Estadísticas de socios", is_enabled=True,
+            display_order=2,
+        ))
+    db_session.commit()
+    headers = {"Authorization": "Bearer " + create_access_token(
+        {"sub": str(federation_admin.id)}
+    )}
+    allowed = client.get(f"/member-stats/entity/{fed_a.id}", headers=headers)
+    assert allowed.status_code == 200, allowed.text
+    assert allowed.json()["totals"]["registered"] == 1
+    assert [x["entity_id"] for x in allowed.json()["associations"]] == [local_a.id]
+
+    denied = client.get(f"/member-stats/entity/{fed_b.id}", headers=headers)
+    assert denied.status_code == 403
