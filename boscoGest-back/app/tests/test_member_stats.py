@@ -41,6 +41,8 @@ def test_statistics_is_disabled_by_default(client, test_entity, auth_headers):
 
 def test_statistics_for_enabled_entity(client, db_session, test_entity, test_user, test_membership, auth_headers):
     from app.models.entity_view_config_model import EntityViewConfig
+    # The fixture's entity defaults to level 1; statistics list only locals.
+    test_entity.level = 4
     db_session.add(EntityViewConfig(
         entity_id=test_entity.id, view_name="member_stats",
         display_name="Estadísticas de socios", is_enabled=True,
