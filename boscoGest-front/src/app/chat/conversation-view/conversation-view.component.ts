@@ -395,8 +395,12 @@ export class ConversationViewComponent
   }
 
   private scrollToBottom(): void {
-    try {
-      this.messagesEnd?.nativeElement?.scrollIntoView({ behavior: 'smooth' });
-    } catch {}
+    // scrollIntoView() also scrolls ancestor containers (including the page).
+    // In the Android WebView that pushes the chat composer halfway up the screen
+    // while the fixed bottom navigation stays in place. Only scroll messages.
+    const messagesArea = this.messagesEnd?.nativeElement?.parentElement as HTMLElement | null;
+    if (messagesArea) {
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
   }
 }
