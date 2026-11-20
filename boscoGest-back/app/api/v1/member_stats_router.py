@@ -1,6 +1,7 @@
-"""Read-only membership overview scoped to the administrator's entity."""
+"""Scoped, read-only membership statistics and permission-checked drill-downs."""
 from datetime import date, datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Literal
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,104 +17,154 @@ from app.services.member_review import requires_review
 from app.utils.auth import get_current_active_user, get_sync_db
 
 member_stats_router = APIRouter(prefix="/member-stats", tags=["Member statistics"])
+Period = Literal["all", "90d", "30d", "7d"]
+Metric = Literal["registered", "under_30", "incomplete", "active_30_days"]
+PERIOD_DAYS = {"all": None, "90d": 90, "30d": 30, "7d": 7}
 
 
-def _summarize(users, recent_ids, today):
+def _young(u: User, today: date) -> bool:
+    return bool(u.birthdate) and (
+        today.year - u.birthdate.year
+        - ((today.month, today.day) < (u.birthdate.month, u.birthdate.day))
+    ) < 30
+
+
+def _matches(u: User, metric: Metric, recent_ids: set[int], today: date,
+             cutoff: datetime | None = None) -> bool:
+    # Each card is a filter on the same population: active memberships in local
+    # associations, deduplicated by user. For finite periods, the first three
+    # cards describe users registered within that period. Activity describes
+    # users who logged in or opened/renewed a session during the period.
+    if metric == "active_30_days":
+        return u.id in recent_ids
+    if cutoff is not None and (not u.created_at or u.created_at < cutoff):
+        return False
+    if metric == "registered":
+        return True
+    if metric == "under_30":
+        return _young(u, today)
+    return requires_review(u, contact=True, sensitive=True)
+
+
+def _summarize(users, recent_ids, today, cutoff=None):
     users = list({u.id: u for u in users}.values())
-    young = sum(
-        bool(u.birthdate) and (
-            today.year - u.birthdate.year
-            - ((today.month, today.day) < (u.birthdate.month, u.birthdate.day))
-        ) < 30 for u in users
-    )
-    return {
-        "registered": len(users),
-        "under_30": young,
-        "incomplete": sum(requires_review(u, contact=True, sensitive=True) for u in users),
-        "active_30_days": sum(u.id in recent_ids for u in users),
-    }
+    return {metric: sum(_matches(u, metric, recent_ids, today, cutoff) for u in users)
+            for metric in ("registered", "under_30", "incomplete", "active_30_days")}
+
+
+def _data(entity_id: int, period: Period, user: User, db: Session):
+    entity = db.get(Entity, entity_id)
+    if not entity or not entity.is_active:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    auth = AuthorizationService(db)
+    auth.check_entity_permission(user, entity_id, "users", "manage")
+    enabled = db.execute(select(EntityViewConfig).where(
+        EntityViewConfig.entity_id == entity_id,
+        EntityViewConfig.view_name == "member_stats",
+        EntityViewConfig.is_enabled.is_(True),
+    )).scalar_one_or_none()
+    if not enabled:
+        raise HTTPException(status_code=403, detail="Statistics view is not enabled")
+
+    descendants = EntityRepository(db).get_descendant_ids(entity_id)
+    candidates = db.execute(select(Entity).where(
+        Entity.id.in_([entity_id, *descendants]),
+        Entity.level == 4, Entity.is_active.is_(True),
+    )).scalars().all()
+    # Always enforce effective entity-level permissions per local association.
+    leaves = sorted((e for e in candidates if auth.has_effective_permission(
+        user, e.id, "users", "manage")), key=lambda e: (e.name.lower(), e.id))
+    local_ids = [e.id for e in leaves]
+    memberships = db.execute(select(Membership, User).join(
+        User, User.id == Membership.user_id
+    ).where(
+        Membership.entity_id.in_(local_ids),
+        Membership.is_active.is_(True),
+        User.is_active.is_(True),
+    )).all() if local_ids else []
+    by_entity: dict[int, dict[int, User]] = {e.id: {} for e in leaves}
+    all_users: dict[int, User] = {}
+    for m, member in memberships:
+        by_entity[m.entity_id][member.id] = member
+        all_users[member.id] = member
+
+    days = PERIOD_DAYS[period]
+    cutoff = datetime.utcnow() - timedelta(days=days) if days is not None else None
+    ids = list(all_users)
+    recent_ids: set[int] = set()
+    if ids:
+        audit = select(AuditLog.user_id).where(
+            AuditLog.user_id.in_(ids),
+            AuditLog.action == "login",
+            AuditLog.resource_type == "auth",
+        )
+        sessions = select(RefreshSession.user_id).where(RefreshSession.user_id.in_(ids))
+        if cutoff:
+            audit = audit.where(AuditLog.timestamp >= cutoff)
+            sessions = sessions.where(RefreshSession.created_at >= cutoff)
+        recent_ids.update(db.execute(audit).scalars().all())
+        recent_ids.update(db.execute(sessions).scalars().all())
+    return entity, leaves, by_entity, all_users, recent_ids, cutoff
 
 
 @member_stats_router.get("/entity/{entity_id}")
 def member_statistics(
     entity_id: int,
+    period: Period = Query("30d"),
     user: User = Depends(get_current_active_user),
     db: Session = Depends(get_sync_db),
 ):
-    entity = db.get(Entity, entity_id)
-    if not entity or not entity.is_active:
-        raise HTTPException(status_code=404, detail="Entity not found")
-
-    authorization = AuthorizationService(db)
-    authorization.check_entity_permission(user, entity_id, "users", "manage")
-
-    config = db.execute(select(EntityViewConfig).where(
-        EntityViewConfig.entity_id == entity_id,
-        EntityViewConfig.view_name == "member_stats",
-        EntityViewConfig.is_enabled.is_(True),
-    )).scalar_one_or_none()
-    if not config:
-        raise HTTPException(status_code=403, detail="Statistics view is not enabled")
-
-    descendant_ids = EntityRepository(db).get_descendant_ids(entity_id)
-    candidates = db.execute(select(Entity).where(
-        Entity.id.in_([entity_id, *descendant_ids]),
-        Entity.is_active.is_(True),
-    )).scalars().all()
-    candidate_ids = {e.id for e in candidates}
-    parent_ids = {e.parent_id for e in candidates if e.parent_id in candidate_ids}
-    # Local associations are level 4 in BoscoGest; an empty federation is
-    # never itself counted as a local association.
-    leaves = sorted((e for e in candidates if e.level == 4 and e.id not in parent_ids),
-                    key=lambda e: (e.name.lower(), e.id))
-    # A parent role does not automatically grant unrestricted cross-entity
-    # access; apply the existing effective permission check to every row.
-    leaves = [e for e in leaves if authorization.has_effective_permission(
-        user, e.id, "users", "manage"
-    )]
-    leaf_ids = [e.id for e in leaves]
-
-    memberships = db.execute(select(Membership, User).join(
-        User, User.id == Membership.user_id
-    ).where(
-        Membership.entity_id.in_(leaf_ids),
-        Membership.is_active.is_(True),
-        User.is_active.is_(True),
-    )).all() if leaf_ids else []
-
-    by_entity = {entity_id: {} for entity_id in leaf_ids}
-    all_users = {}
-    for membership, member in memberships:
-        by_entity[membership.entity_id][member.id] = member
-        all_users[member.id] = member
-
-    cutoff = datetime.utcnow() - timedelta(days=30)
-    user_ids = list(all_users)
-    recent_ids = set()
-    if user_ids:
-        recent_ids.update(db.execute(select(AuditLog.user_id).where(
-            AuditLog.user_id.in_(user_ids),
-            AuditLog.action == "login",
-            AuditLog.resource_type == "auth",
-            AuditLog.timestamp >= cutoff,
-        )).scalars().all())
-        recent_ids.update(db.execute(select(RefreshSession.user_id).where(
-            RefreshSession.user_id.in_(user_ids),
-            RefreshSession.created_at >= cutoff,
-        )).scalars().all())
-
+    entity, leaves, by_entity, all_users, recent_ids, cutoff = _data(
+        entity_id, period, user, db
+    )
     today = date.today()
     return {
-        "entity_id": entity.id,
-        "entity_name": entity.name,
-        "period_days": 30,
-        "totals": _summarize(all_users.values(), recent_ids, today),
+        "entity_id": entity.id, "entity_name": entity.name,
+        "period": period, "period_days": PERIOD_DAYS[period],
+        "totals": _summarize(all_users.values(), recent_ids, today, cutoff),
         "associations": [
-            {
-                "entity_id": leaf.id,
-                "entity_name": leaf.name,
-                **_summarize(by_entity[leaf.id].values(), recent_ids, today),
-            }
+            {"entity_id": leaf.id, "entity_name": leaf.name,
+             **_summarize(by_entity[leaf.id].values(), recent_ids, today, cutoff)}
             for leaf in leaves
+        ],
+    }
+
+
+@member_stats_router.get("/entity/{entity_id}/members")
+def member_statistics_members(
+    entity_id: int,
+    metric: Metric = Query(...),
+    period: Period = Query("30d"),
+    association_id: int | None = Query(None, ge=1),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_sync_db),
+):
+    _, leaves, by_entity, all_users, recent_ids, cutoff = _data(
+        entity_id, period, user, db
+    )
+    if association_id is not None and association_id not in by_entity:
+        raise HTTPException(status_code=403, detail="Association is outside your scope")
+    population = (by_entity[association_id].values() if association_id is not None
+                  else all_users.values())
+    today = date.today()
+    filtered = sorted(
+        (u for u in population if _matches(u, metric, recent_ids, today, cutoff)),
+        key=lambda u: (u.surname.lower(), u.name.lower(), u.id),
+    )
+    # Identity only; sensitive personal details remain protected behind the
+    # existing user detail/editor routes and their authorization rules.
+    names = {e.id: e.name for e in leaves}
+    associations_by_user: dict[int, list[str]] = {}
+    for local_id, members in by_entity.items():
+        for uid in members:
+            associations_by_user.setdefault(uid, []).append(names[local_id])
+    return {
+        "total": len(filtered), "skip": skip, "limit": limit,
+        "items": [
+            {"id": u.id, "name": u.name, "surname": u.surname,
+             "associations": sorted(associations_by_user.get(u.id, []))}
+            for u in filtered[skip:skip + limit]
         ],
     }
