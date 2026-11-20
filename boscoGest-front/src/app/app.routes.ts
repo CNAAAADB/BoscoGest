@@ -248,6 +248,11 @@ export const routes: Routes = [
         data: { breadcrumb: 'Revistas' },
         children: [
           {
+            path: 'archivo/:id',
+            loadComponent: () => import('./magazines/archive-reader/archive-reader.component').then(m => m.ArchiveReaderComponent),
+            data: { breadcrumb: 'Leer revista' }
+          },
+          {
             path: '',
             loadComponent: () => import('./magazines/magazines-list/magazines-list.component').then(m => m.MagazinesListComponent),
             canActivate: [permissionGuard('magazines', 'list')]
