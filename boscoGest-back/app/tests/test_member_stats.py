@@ -119,3 +119,70 @@ def test_federation_cannot_read_sibling_federation(
 
     denied = client.get(f"/member-stats/entity/{fed_b.id}", headers=headers)
     assert denied.status_code == 403
+
+
+def test_all_period_includes_historical_logins():
+    from datetime import datetime, timedelta
+    from app.api.v1.member_stats_router import _matches
+    user = person(19, date(1990, 2, 1))
+    user.created_at = datetime.utcnow() - timedelta(days=150)
+    today = date.today()
+    assert _matches(user, "registered", set(), today, None)
+    assert not _matches(user, "registered", set(), today,
+                        datetime.utcnow() - timedelta(days=90))
+    assert _matches(user, "active_30_days", {19}, today, None)
+    assert not _matches(user, "active_30_days", set(), today, None)
+
+
+def test_drilldown_matches_aggregate_and_never_exposes_sensitive_fields(
+    client, db_session, test_entity, test_user, test_membership, auth_headers,
+):
+    from app.models.entity_view_config_model import EntityViewConfig
+    test_entity.level = 4
+    db_session.add(EntityViewConfig(
+        entity_id=test_entity.id, view_name="member_stats",
+        display_name="Estadísticas de socios", is_enabled=True,
+        display_order=2,
+    ))
+    db_session.commit()
+    overview = client.get(
+        f"/member-stats/entity/{test_entity.id}?period=all", headers=auth_headers
+    )
+    response = client.get(
+        f"/member-stats/entity/{test_entity.id}/members",
+        params={"metric": "registered", "period": "all", "limit": 1},
+        headers=auth_headers,
+    )
+    assert overview.status_code == 200, overview.text
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["total"] == overview.json()["totals"]["registered"] == 1
+    assert data["items"][0]["id"] == test_user.id
+    assert set(data["items"][0]) == {"id", "name", "surname", "associations"}
+
+
+def test_drilldown_rejects_other_association_and_invalid_filter(
+    client, db_session, test_entity, test_membership, auth_headers,
+):
+    from app.models.entity_view_config_model import EntityViewConfig
+    test_entity.level = 4
+    db_session.add(EntityViewConfig(
+        entity_id=test_entity.id, view_name="member_stats",
+        display_name="Estadísticas de socios", is_enabled=True,
+        display_order=2,
+    ))
+    db_session.commit()
+    endpoint = f"/member-stats/entity/{test_entity.id}/members"
+    unauthorized = client.get(endpoint, params={
+        "metric": "registered", "period": "all",
+        "association_id": test_entity.id + 9999,
+    }, headers=auth_headers)
+    assert unauthorized.status_code == 403
+    invalid_period = client.get(endpoint, params={
+        "metric": "registered", "period": "invalid",
+    }, headers=auth_headers)
+    assert invalid_period.status_code == 422
+    invalid_metric = client.get(endpoint, params={
+        "metric": "password", "period": "all",
+    }, headers=auth_headers)
+    assert invalid_metric.status_code == 422
