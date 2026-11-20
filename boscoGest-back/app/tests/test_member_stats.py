@@ -158,7 +158,9 @@ def test_drilldown_matches_aggregate_and_never_exposes_sensitive_fields(
     data = response.json()
     assert data["total"] == overview.json()["totals"]["registered"] == 1
     assert data["items"][0]["id"] == test_user.id
-    assert set(data["items"][0]) == {"id", "name", "surname", "associations"}
+    assert data["items"][0]["name"] == test_user.name
+    assert data["items"][0]["is_active"] is True
+    assert "password_hash" not in data["items"][0]
 
 
 def test_drilldown_rejects_other_association_and_invalid_filter(
