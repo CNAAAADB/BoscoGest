@@ -1,3 +1,4 @@
+import { openNotification } from '../notification-navigation';
 import { Component, inject, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -35,10 +36,7 @@ export class NotificationsListComponent implements OnInit {
       this.notificationService.markAsRead(notification.id);
     }
 
-    const route = this.getRouteForNotification(notification);
-    if (route) {
-      this.router.navigate(route);
-    }
+    openNotification(this.router, notification);
   }
 
   deleteNotification(event: Event, id: number): void {
@@ -75,23 +73,5 @@ export class NotificationsListComponent implements OnInit {
     if (days < 30) return `hace ${days} d`;
     const months = Math.floor(days / 30);
     return `hace ${months} mes${months > 1 ? 'es' : ''}`;
-  }
-
-  private getRouteForNotification(notification: NotificationResponse): string[] | null {
-    const { resource_type, resource_id } = notification;
-    if (!resource_id) return null;
-
-    const routeMap: Record<string, string> = {
-      magazines: '/magazines',
-      activities: '/activities',
-      communications: '/communications',
-      resources: '/resources',
-    };
-
-    const base = routeMap[resource_type];
-    if (base) return [base, resource_id.toString()];
-
-    if (resource_type === 'memberships') return ['/dashboard'];
-    return null;
   }
 }

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import List, Optional
 
@@ -29,6 +30,9 @@ from app.services.chat_manager import chat_manager
 from app.services.notification_service import EventType, NotificationService
 from app.services.storage import get_storage_service
 from app.utils.auth import get_sync_db
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -616,39 +620,30 @@ class ChatService:
             },
         }
 
-        # Notify recipients that are NOT connected to chat WS
-        try:
-            notification_service = NotificationService(self.db)
-            offline_ids = [
-                m.user_id
-                for m in members
-                if m.user_id != sender.id and not chat_manager.is_online(m.user_id)
-                and not m.is_muted
-            ]
-            if offline_ids:
-                conv = self.repo.get_conversation(msg.conversation_id)
-                conv_name = conv.name if conv and conv.type == "group" else f"{sender.name} {sender.surname}"
-                active_membership = next(
-                    (m for m in sender.memberships if m.is_active), None
-                )
-                if not active_membership:
-                    return
-                notification_service.notify(
-                    event_type=EventType.CHAT_MESSAGE_RECEIVED,
-                    entity_id=active_membership.entity_id,
-                    actor=sender,
-                    resource_type="chat",
-                    resource_id=msg.conversation_id,
-                    title=f"Nuevo mensaje de {sender.name}",
-                    body=f"{conv_name}: {msg.content[:80]}",
-                    recipient_ids=offline_ids,
-                )
-        except Exception:
-            pass  # Never block message delivery due to notification failure
-
         for member in members:
             if member.user_id != sender.id:
                 chat_manager.enqueue(member.user_id, payload)
+
+        recipients = [m.user_id for m in members if m.user_id != sender.id and not m.is_muted]
+        if not recipients:
+            return
+        try:
+            membership = next((m for m in sender.memberships if m.is_active), None)
+            conv = self.repo.get_conversation(msg.conversation_id)
+            name = conv.name if conv and conv.type == "group" else f"{sender.name} {sender.surname}"
+            NotificationService(self.db).notify(
+                event_type=EventType.CHAT_MESSAGE_RECEIVED,
+                entity_id=membership.entity_id if membership else None,
+                actor=sender,
+                resource_type="chat",
+                resource_id=msg.conversation_id,
+                title=f"Nuevo mensaje de {sender.name}",
+                body=f"{name}: {(msg.content or '')[:80]}",
+                recipient_ids=recipients,
+            )
+        except Exception:
+            self.db.rollback()
+            logger.exception("No se pudo notificar el mensaje %s", msg.id)
 
     def _to_list_item(
         self, conv: ChatConversation, current_user_id: int

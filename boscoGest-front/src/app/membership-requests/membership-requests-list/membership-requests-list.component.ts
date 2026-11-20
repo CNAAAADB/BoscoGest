@@ -1,3 +1,6 @@
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { computed, DestroyRef } from '@angular/core';
 import { Component, OnInit, signal, inject, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -46,6 +49,17 @@ export class MembershipRequestsListComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  private params = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
+  selectedRequest = computed(() => Number(this.params().get('request')) || null);
+  visibleRequests = computed(() => this.selectedRequest() ? this.requests().filter(r => r.id === this.selectedRequest()) : this.requests());
+
+  showAll(): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  }
+
   requests = signal<MembershipRequestResponse[]>([]);
   loading = signal(true);
   statusFilter = signal<string>('pending');
@@ -54,7 +68,10 @@ export class MembershipRequestsListComponent implements OnInit {
   displayedColumns = ['user', 'entity', 'date', 'message', 'actions'];
 
   ngOnInit(): void {
-    this.loadRequests();
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.statusFilter.set(params.has('request') ? '' : 'pending');
+      this.loadRequests();
+    });
   }
 
   loadRequests(): void {

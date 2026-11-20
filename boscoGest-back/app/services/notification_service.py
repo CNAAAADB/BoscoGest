@@ -79,7 +79,7 @@ class NotificationService:
     def notify(
         self,
         event_type: str,
-        entity_id: int,
+        entity_id: int | None,
         actor: User | None,
         resource_type: str,
         resource_id: int | None = None,
@@ -98,6 +98,8 @@ class NotificationService:
         """
         actor_id = actor.id if actor else None
         if recipient_ids is None:
+            if entity_id is None:
+                raise ValueError('An entity is required to resolve notification recipients')
             recipient_ids = self._resolve_entity_members(entity_id, exclude_id=actor_id)
         else:
             recipient_ids = [uid for uid in recipient_ids if uid != actor_id]
@@ -105,11 +107,8 @@ class NotificationService:
         if not recipient_ids:
             return []
 
-        # Filter out users who disabled this event type
-        recipient_ids = self._filter_by_preferences(recipient_ids, event_type)
-        if not recipient_ids:
-            return []
-
+        in_app_ids = self._filter_by_preferences(recipient_ids, event_type) if entity_id is not None else []
+        push_ids = recipient_ids if event_type == EventType.CHAT_MESSAGE_RECEIVED else in_app_ids
         notifications = self.notification_repo.bulk_create(
             [
                 Notification(
@@ -123,10 +122,11 @@ class NotificationService:
                     body=body,
                     data=data,
                 )
-                for uid in recipient_ids
+                for uid in in_app_ids
             ]
-        )
-        self.db.commit()
+        ) if in_app_ids else []
+        if notifications:
+            self.db.commit()
 
         # Push to WebSocket for online users
         for n in notifications:
@@ -151,34 +151,24 @@ class NotificationService:
             )
 
         self._push(
-            notifications, event_type, title, body, resource_type, resource_id
+            push_ids, event_type, title, body, resource_type, resource_id
         )
 
         return notifications
 
     def _push(
         self,
-        notifications: List[Notification],
+        recipient_ids: List[int],
         event_type: str,
         title: str,
         body: str | None,
         resource_type: str,
         resource_id: int | None,
     ) -> None:
-        """Avisa por push a quien no esté mirando la aplicación.
-
-        Solo a los que están desconectados: a quien tiene la aplicación abierta
-        ya le ha llegado por WebSocket, y recibir las dos cosas a la vez es
-        justo lo que hace que la gente acabe apagando las notificaciones.
-
-        Nunca lanza. La notificación ya está guardada y se verá al abrir la
-        aplicación, así que un fallo aquí no puede tumbar la operación que la
-        originó — publicar una actividad, aceptar una inscripción.
-        """
+        """Un chat debe avisar al móvil incluso con una sesión web conectada."""
         destinatarios = [
-            n.recipient_id
-            for n in notifications
-            if not notification_manager.is_online(n.recipient_id)
+            uid for uid in recipient_ids
+            if event_type == EventType.CHAT_MESSAGE_RECEIVED or not notification_manager.is_online(uid)
         ]
         if not destinatarios:
             return
@@ -190,13 +180,13 @@ class NotificationService:
                 push_service.send_to_user(
                     self.db,
                     uid,
-                    title=title,
-                    body=body,
+                    title='Nuevo mensaje' if event_type == EventType.CHAT_MESSAGE_RECEIVED else title,
+                    body='Abre la conversación para leerlo.' if event_type == EventType.CHAT_MESSAGE_RECEIVED else body,
                     # Solo identificadores: el aviso se ve en la pantalla
                     # bloqueada y no debe llevar datos personales. El cliente
                     # los usa para abrir la pantalla que toca al pulsarlo.
                     data={
-                        "event_type": event_type,
+                        "event_type": event_type.value if isinstance(event_type, EventType) else event_type,
                         "resource_type": resource_type,
                         "resource_id": resource_id,
                     },

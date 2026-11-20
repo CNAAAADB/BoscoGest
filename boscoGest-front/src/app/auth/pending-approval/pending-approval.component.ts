@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, inject, ChangeDetectionStrategy} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,6 +31,8 @@ import { MembershipRequestResponse, NotificationResponse } from '../../models/us
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PendingApprovalComponent implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private querySub: Subscription | null = null;
   private router = inject(Router);
   private authService = inject(AuthService);
   private requestService = inject(MembershipRequestService);
@@ -44,11 +46,12 @@ export class PendingApprovalComponent implements OnInit, OnDestroy {
   private notificationSub: Subscription | null = null;
 
   ngOnInit(): void {
-    this.loadRequests();
+    this.querySub = this.route.queryParamMap.subscribe(() => this.loadRequests());
     this.listenForDecisions();
   }
 
   ngOnDestroy(): void {
+    this.querySub?.unsubscribe();
     this.notificationSub?.unsubscribe();
   }
 
@@ -56,11 +59,12 @@ export class PendingApprovalComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.requestService.getMyRequests().subscribe({
       next: (reqs) => {
-        this.requests.set(reqs);
+        const selectedId = Number(this.route.snapshot.queryParamMap.get('request'));
+        this.requests.set(selectedId ? reqs.filter(req => req.id === selectedId) : reqs);
         this.loading.set(false);
 
         // If user now has memberships (accepted elsewhere), redirect to dashboard
-        if (this.authService.hasMemberships()) {
+        if (!selectedId && this.authService.hasMemberships()) {
           this.router.navigate(['/dashboard']);
         }
       },

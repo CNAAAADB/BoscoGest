@@ -198,6 +198,13 @@ describe('PushService', () => {
       listeners['pushNotificationActionPerformed']({ notification: { data } });
     }
 
+    it('abre exactamente la solicitud o la conversación del aviso', () => {
+      tap({ resource_type: 'membership_requests', resource_id: '8', event_type: 'membership_request_created' });
+      expect(router.navigate).toHaveBeenCalledWith(['/membership-requests'], { queryParams: { request: '8' } });
+      tap({ resource_type: 'chat', resource_id: '12' });
+      expect(router.navigate).toHaveBeenCalledWith(['/chat'], { queryParams: { conversation: '12' } });
+    });
+
     it('abre el recurso que lo originó', () => {
       tap({ resource_type: 'activities', resource_id: '7' });
       expect(router.navigate).toHaveBeenCalledWith(['/activities', '7']);
