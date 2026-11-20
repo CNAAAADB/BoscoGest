@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal, ChangeDetectionStrategy} from '@angular/core';
+import { Component, DestroyRef, OnInit, OnChanges, SimpleChanges, computed, inject, input, signal, ChangeDetectionStrategy} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +23,15 @@ import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.comp
 import { AuthService } from '../../auth/auth.service';
 import { ChatService } from '../../chat/chat.service';
 import { memberReviewReasons } from './member-review.utils';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+
+export interface StatsTableFilter {
+  entityId: number;
+  metric: 'registered' | 'under_30' | 'incomplete' | 'active_30_days';
+  period: 'all' | '90d' | '30d' | '7d';
+  associationId: number | null;
+}
 
 @Component({
   selector: 'app-users-list',
@@ -47,7 +56,11 @@ import { memberReviewReasons } from './member-review.utils';
 ,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UsersListComponent implements OnInit {
+export class UsersListComponent implements OnInit, OnChanges {
+  /** Reuse the exact Admin Usuarios table within a statistics breakdown. */
+  statsFilter = input<StatsTableFilter | null>(null);
+  private initialized = false;
+  private http = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
 
   users = signal<UserResponse[]>([]);
@@ -138,7 +151,9 @@ export class UsersListComponent implements OnInit {
     this.pageRequests$
       .pipe(
         switchMap(({ skip, limit, search, reviewOnly, entityId }) =>
-          this.usersService.getManagedUsers(skip, limit, search, reviewOnly, entityId).pipe(
+          (this.statsFilter()
+            ? this.loadStatisticsPage(skip, limit, search)
+            : this.usersService.getManagedUsers(skip, limit, search, reviewOnly, entityId)).pipe(
             catchError((error) => {
               this.reportLoadError(error);
               return EMPTY;
@@ -169,7 +184,30 @@ export class UsersListComponent implements OnInit {
           'No se pudieron cargar las asociaciones', 'Cerrar', { duration: 4000 }
         ),
       });
+    this.initialized = true;
     this.loadUsers();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (this.initialized && changes['statsFilter']) {
+      this.pageIndex.set(0);
+      this.loadUsers();
+    }
+  }
+
+  private loadStatisticsPage(skip: number, limit: number, search: string) {
+    const filter = this.statsFilter()!;
+    let params = new HttpParams()
+      .set('metric', filter.metric)
+      .set('period', filter.period)
+      .set('skip', skip)
+      .set('limit', limit);
+    if (filter.associationId !== null) {
+      params = params.set('association_id', filter.associationId);
+    }
+    if (search.trim()) params = params.set('search', search.trim());
+    return this.http.get<PaginatedUsers>(
+      `${environment.apiUrl}/member-stats/entity/${filter.entityId}/members`, {params});
   }
 
   onSearchInput(term: string): void {
