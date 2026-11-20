@@ -1,4 +1,6 @@
-import { InjectionToken, Injectable, inject } from '@angular/core';
+import { openNotification } from './notification-navigation';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { InjectionToken, Injectable, NgZone, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
@@ -50,6 +52,8 @@ export class PushService {
   private http = inject(HttpClient);
   private router = inject(Router);
   private notifications = inject(NotificationService);
+  private zone = inject(NgZone);
+  private snackBar = inject(MatSnackBar);
   private push = inject(PUSH_PLUGIN);
 
   private apiUrl = `${environment.apiUrl}/notifications/devices`;
@@ -144,9 +148,14 @@ export class PushService {
     // notificación ya está en la base de datos.
     this.push.addListener(
       'pushNotificationReceived',
-      (_notification: PushNotificationSchema) => {
+      (notification: PushNotificationSchema) => this.zone.run(() => {
         this.notifications.loadUnreadCount();
-      }
+        const target = notification.data as PushData | undefined;
+        if (target?.resource_type === 'chat') {
+          const alert = this.snackBar.open('Tienes un nuevo mensaje', 'Abrir', { duration: 5000 });
+          alert.onAction().subscribe(() => openNotification(this.router, target));
+        }
+      })
     );
 
     // El usuario ha tocado el aviso.
@@ -154,8 +163,7 @@ export class PushService {
       'pushNotificationActionPerformed',
       (action: ActionPerformed) => {
         this.notifications.loadUnreadCount();
-        const route = this.routeFor(action.notification.data as PushData);
-        if (route) this.router.navigate(route);
+        this.zone.run(() => openNotification(this.router, action.notification.data as PushData));
       }
     );
   }
@@ -167,28 +175,5 @@ export class PushService {
         error: (error) =>
           console.warn('No se pudo enviar el token al servidor', error),
       });
-  }
-
-  /**
-   * A dónde llevar al tocar el aviso.
-   *
-   * Misma correspondencia que la campana de notificaciones, pero partiendo de
-   * `data`, donde todo llega como cadena porque FCM no admite otra cosa.
-   */
-  private routeFor(data: PushData): string[] | null {
-    const { resource_type, resource_id } = data;
-    if (!resource_type) return null;
-
-    if (resource_type === 'memberships') return ['/dashboard'];
-    if (!resource_id) return null;
-
-    const routeMap: Record<string, string> = {
-      magazines: '/magazines',
-      activities: '/activities',
-      communications: '/communications',
-      resources: '/resources',
-    };
-    const base = routeMap[resource_type];
-    return base ? [base, resource_id] : null;
   }
 }

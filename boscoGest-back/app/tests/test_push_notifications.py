@@ -404,3 +404,23 @@ def test_the_transport_google_auth_needs_is_installed():
     which needs the `requests` package. It was not in requirements.txt, so in
     production every push would have failed as soon as it was configured."""
     from google.auth.transport.requests import Request  # noqa: F401
+
+
+@pytest.mark.parametrize("in_app, push", [(True, True), (False, True), (True, False)])
+def test_chat_push_independiente_de_presencia_y_campana(
+    sin_websocket, db_session, test_user, otro_usuario, test_entity, in_app, push
+):
+    db_session.add(NotificationPreference(user_id=test_user.id, event_type="chat_message_received",
+                                          in_app_enabled=in_app, push_enabled=push))
+    db_session.commit()
+    with patch("app.services.notification_service.notification_manager.is_online", return_value=True), \
+         patch("app.services.push_service.send_to_user") as send:
+        notifications = NotificationService(db_session).notify(
+            EventType.CHAT_MESSAGE_RECEIVED, test_entity.id, otro_usuario, "chat", 17,
+            recipient_ids=[otro_usuario.id, test_user.id],
+        )
+    assert bool(notifications) == in_app
+    assert send.call_count == int(push)
+    if push:
+        assert send.call_args.args[1] == test_user.id
+        assert send.call_args.kwargs["data"]["resource_id"] == 17

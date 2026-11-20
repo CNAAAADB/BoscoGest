@@ -6,6 +6,9 @@
 
   <!-- Filters -->
   <div class="filters-row">
+    @if (selectedRequest()) {
+      <button mat-button (click)="showAll()">Ver todas las solicitudes</button>
+    } @else {
     <mat-form-field appearance="outline" class="filter-field">
       <mat-label>Estado</mat-label>
       <mat-select [value]="statusFilter()" (selectionChange)="onFilterChange($event.value)">
@@ -15,6 +18,7 @@
         <mat-option value="">Todas</mat-option>
       </mat-select>
     </mat-form-field>
+    }
 
     <button mat-icon-button (click)="loadRequests()" matTooltip="Actualizar" aria-label="Actualizar">
       <mat-icon aria-hidden="true">refresh</mat-icon>
@@ -25,10 +29,10 @@
     <div class="loading-center">
       <mat-spinner diameter="48"></mat-spinner>
     </div>
-  } @else if (requests().length === 0) {
+  } @else if (visibleRequests().length === 0) {
     <div class="empty-state">
       <mat-icon class="empty-icon" aria-hidden="true">inbox</mat-icon>
-      <p>No hay solicitudes {{ statusFilter() === 'pending' ? 'pendientes' : '' }}</p>
+      @if (selectedRequest()) { <p>Esta solicitud ya no está disponible.</p> } @else { <p>No hay solicitudes {{ statusFilter() === 'pending' ? 'pendientes' : '' }}</p> }
     </div>
   } @else {
     <mat-card class="table-card">
@@ -37,7 +41,7 @@
            de aceptar y rechazar quedaban fuera y no había forma de llegar a
            ellos salvo girando el teléfono. -->
       <div class="table-container">
-      <table mat-table [dataSource]="requests()" class="requests-table">
+      <table mat-table [dataSource]="visibleRequests()" class="requests-table">
 
         <!-- User column -->
         <ng-container matColumnDef="user">

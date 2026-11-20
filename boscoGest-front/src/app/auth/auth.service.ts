@@ -103,6 +103,7 @@ export class AuthService {
               this.isAuthenticated.set(true);
               this.notificationService.connect();
               this.notificationService.loadUnreadCount();
+              void this.pushService.register();
               return true;
             })
           ) : of(false)),
@@ -115,6 +116,7 @@ export class AuthService {
                 this.isAuthenticated.set(true);
                 this.notificationService.connect();
                 this.notificationService.loadUnreadCount();
+                void this.pushService.register();
                 return true;
               }),
               catchError(() => of(false))
