@@ -110,6 +110,9 @@ jobs:
           if [[ "$PUBLISH_CLOSED" == "true" ]]; then
             args+=("-PplayVersionCode=$((5 + GITHUB_RUN_NUMBER))")
           fi
+          if [[ "${{ steps.signing.outputs.signed }}" == "true" ]]; then
+            args+=(assembleRelease)
+          fi
           ./gradlew bundleRelease --no-daemon "${args[@]}"
 
       - name: Verify output and signing
@@ -127,6 +130,24 @@ jobs:
             echo 'bundle_kind=unsigned' >> "$GITHUB_OUTPUT"
             echo 'UNSIGNED Android bundle: not uploadable to Google Play until signed with the existing upload key.'
           fi
+
+      - name: Verify signed release APK
+        if: steps.signing.outputs.signed == 'true'
+        working-directory: boscoGest-front/android
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/release/app-release.apk"
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$signer" verify --verbose "$apk"
+
+      - name: Upload signed release APK
+        if: steps.signing.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoscoGest-1.2.0-apk
+          path: boscoGest-front/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload Android bundle artifact
         id: upload
