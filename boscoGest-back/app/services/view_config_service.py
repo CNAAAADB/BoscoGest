@@ -82,13 +82,13 @@ class ViewConfigService:
     def get_enabled_views(
         self, entity_id: int, current_user: User
     ) -> List[EntityViewConfig]:
-        self._ensure_entity_exists(entity_id)
+        entity = self._ensure_entity_exists(entity_id)
         self.auth_service.check_entity_permission(
             current_user, entity_id, "views", "read"
         )
 
         configs = self.config_repo.get_enabled_by_entity_id(entity_id)
-        if not configs:
+        if not self.config_repo.get_by_entity_id(entity_id):
             all_configs = self.config_repo.initialize_defaults(entity_id)
             self.db.commit()
             configs = [c for c in all_configs if c.is_enabled]
