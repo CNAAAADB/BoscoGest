@@ -58,10 +58,12 @@ def _data(entity_id: int, period: Period, user: User, db: Session):
     entity = db.get(Entity, entity_id)
     if not entity or not entity.is_active:
         raise HTTPException(status_code=404, detail="Entity not found")
+    if entity.level < 2:
+        raise HTTPException(status_code=403, detail="Las estadísticas no aplican a Superentity")
     auth = AuthorizationService(db)
     auth.check_entity_permission(user, entity_id, "users", "manage")
     enabled = db.execute(select(EntityViewConfig).where(
-        EntityViewConfig.entity_id == entity_id,
+        EntityViewConfig.entity_id == auth.root_entity_id(),
         EntityViewConfig.view_name == "member_stats",
         EntityViewConfig.is_enabled.is_(True),
     )).scalar_one_or_none()
@@ -107,6 +109,22 @@ def _data(entity_id: int, period: Period, user: User, db: Session):
         recent_ids.update(db.execute(audit).scalars().all())
         recent_ids.update(db.execute(sessions).scalars().all())
     return entity, leaves, by_entity, all_users, recent_ids, cutoff
+
+
+@member_stats_router.get("/entities")
+def manageable_statistics_entities(
+    user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_sync_db),
+):
+    """Only level-2+ scopes the administrator can legitimately aggregate."""
+    auth = AuthorizationService(db)
+    entities = db.execute(select(Entity).where(
+        Entity.level >= 2, Entity.is_active.is_(True)
+    ).order_by(Entity.level, Entity.name)).scalars().all()
+    return [{"id": e.id, "name": e.name, "level": e.level}
+            for e in entities if auth.has_effective_permission(
+                user, e.id, "users", "manage"
+            )]
 
 
 @member_stats_router.get("/entity/{entity_id}")

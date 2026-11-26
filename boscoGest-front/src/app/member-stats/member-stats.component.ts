@@ -7,7 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
-import { EntitiesService } from '../entities/entities.service';
 import { AuthService } from '../auth/auth.service';
 import { UsersListComponent, StatsTableFilter } from '../users/users-list/users-list.component';
 import { environment } from '../../environments/environment';
@@ -160,7 +159,6 @@ interface CardDefinition { key: Metric; label: string; icon: string; }
 })
 export class MemberStatsComponent implements OnInit {
   private http = inject(HttpClient);
-  private entities = inject(EntitiesService);
   private auth = inject(AuthService);
   private destroyRef = inject(DestroyRef);
   readonly cards: CardDefinition[] = [
@@ -187,7 +185,7 @@ export class MemberStatsComponent implements OnInit {
   private requestId = 0;
 
   ngOnInit(): void {
-    this.entities.getAdminEntities().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.http.get<AdminEntity[]>(`${environment.apiUrl}/member-stats/entities`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: entities => {
         this.adminEntities.set(entities);
         const preferred = this.auth.getCurrentMembership()?.entity_id;

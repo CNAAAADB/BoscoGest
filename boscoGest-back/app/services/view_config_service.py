@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.models.entity_model import Entity
 from app.models.entity_view_config_model import EntityViewConfig
 from app.models.user_model import User
+from app.models.membership_model import Membership
+from sqlalchemy import select
 from app.schemas.entity_view_config import (
     EntityViewConfigUpdate,
     EntityViewConfigBulkUpdate,
@@ -30,10 +32,35 @@ class ViewConfigService:
             raise HTTPException(status_code=404, detail="Entity not found")
         return entity
 
+    def _can_manage_global_statistics(self, current_user: User) -> bool:
+        """Only a superadmin appointed to the root Superentity."""
+        return any(
+            m.is_active and m.entity is not None and m.entity.level == 1
+            and m.role is not None and m.role.name == "superadmin"
+            for m in current_user.memberships
+        ) and self.auth_service.has_root_permission(current_user, "views", "update")
+
+    def _validate_statistics_setting(self, entity_id: int, current_user: User):
+        entity = self._ensure_entity_exists(entity_id)
+        if entity.level != 1 or not self._can_manage_global_statistics(current_user):
+            raise HTTPException(status_code=403, detail="Solo Superadmin en Superentity puede configurar estadísticas")
+
+    def _filter_stats_config(self, configs, entity: Entity, current_user: User):
+        if entity.level == 1 and self._can_manage_global_statistics(current_user):
+            return list(configs)
+        return [c for c in configs if c.view_name != "member_stats"]
+
+    def statistics_availability(self) -> dict:
+        """A global switch controlled only by root Superentity administration."""
+        root_id = self.auth_service.root_entity_id()
+        config = (self.config_repo.get_by_entity_and_view_name(root_id, "member_stats")
+                  if root_id is not None else None)
+        return {"is_enabled": bool(config and config.is_enabled)}
+
     def get_entity_view_configs(
         self, entity_id: int, current_user: User
     ) -> EntityViewConfigListResponse:
-        self._ensure_entity_exists(entity_id)
+        entity = self._ensure_entity_exists(entity_id)
         self.auth_service.check_entity_permission(
             current_user, entity_id, "views", "read"
         )
@@ -49,24 +76,24 @@ class ViewConfigService:
 
         return EntityViewConfigListResponse(
             entity_id=entity_id,
-            configs=[EntityViewConfigResponse.model_validate(c) for c in configs],
+            configs=[EntityViewConfigResponse.model_validate(c) for c in self._filter_stats_config(configs, entity, current_user)],
         )
 
     def get_enabled_views(
         self, entity_id: int, current_user: User
     ) -> List[EntityViewConfig]:
-        self._ensure_entity_exists(entity_id)
+        entity = self._ensure_entity_exists(entity_id)
         self.auth_service.check_entity_permission(
             current_user, entity_id, "views", "read"
         )
 
         configs = self.config_repo.get_enabled_by_entity_id(entity_id)
-        if not configs:
+        if not self.config_repo.get_by_entity_id(entity_id):
             all_configs = self.config_repo.initialize_defaults(entity_id)
             self.db.commit()
             configs = [c for c in all_configs if c.is_enabled]
 
-        return configs
+        return self._filter_stats_config(configs, entity, current_user)
 
     def update_view_config(
         self,
@@ -85,6 +112,8 @@ class ViewConfigService:
         self.auth_service.check_entity_permission(
             current_user, entity_id, "views", "update"
         )
+        if view_name == "member_stats":
+            self._validate_statistics_setting(entity_id, current_user)
 
         config = self.config_repo.get_by_entity_and_view_name(entity_id, view_name)
         if not config:
@@ -132,6 +161,9 @@ class ViewConfigService:
             current_user, entity_id, "views", "update"
         )
 
+        if any(item.view_name == "member_stats" for item in configs_in.configs):
+            self._validate_statistics_setting(entity_id, current_user)
+
         for config_item in configs_in.configs:
             if config_item.view_name not in VALID_VIEW_NAMES:
                 raise HTTPException(
@@ -139,6 +171,7 @@ class ViewConfigService:
                     detail=f"Invalid view name: {config_item.view_name}. Valid options: {', '.join(VALID_VIEW_NAMES)}",
                 )
 
+        entity = self._ensure_entity_exists(entity_id)
         existing_configs = self.config_repo.get_by_entity_id(entity_id)
         if not existing_configs:
             self.config_repo.initialize_defaults(entity_id)
@@ -176,7 +209,7 @@ class ViewConfigService:
 
         return EntityViewConfigListResponse(
             entity_id=entity_id,
-            configs=[EntityViewConfigResponse.model_validate(c) for c in all_configs],
+            configs=[EntityViewConfigResponse.model_validate(c) for c in self._filter_stats_config(all_configs, entity, current_user)],
         )
 
     def reset_view_configs(
@@ -189,6 +222,9 @@ class ViewConfigService:
             current_user, entity_id, "views", "update"
         )
 
+        entity = self._ensure_entity_exists(entity_id)
+        if entity.level == 1 and not self._can_manage_global_statistics(current_user):
+            raise HTTPException(status_code=403, detail="Solo Superadmin puede restaurar la configuración raíz")
         self.config_repo.delete_by_entity_id(entity_id)
         configs = self.config_repo.initialize_defaults(entity_id)
         self.db.commit()
@@ -204,7 +240,7 @@ class ViewConfigService:
 
         return EntityViewConfigListResponse(
             entity_id=entity_id,
-            configs=[EntityViewConfigResponse.model_validate(c) for c in configs],
+            configs=[EntityViewConfigResponse.model_validate(c) for c in self._filter_stats_config(configs, entity, current_user)],
         )
 
 

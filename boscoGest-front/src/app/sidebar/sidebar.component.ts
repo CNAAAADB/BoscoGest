@@ -68,6 +68,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       const membership = this.currentMembership();
       if (membership?.entity_id) {
         this.viewConfigService.loadViewConfigs(membership.entity_id).subscribe();
+        this.viewConfigService.loadStatisticsAvailability().subscribe();
       }
     });
 
@@ -93,6 +94,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const membership = this.currentMembership();
     if (membership?.entity_id) {
       this.viewConfigService.loadViewConfigs(membership.entity_id).subscribe();
+      this.viewConfigService.loadStatisticsAvailability().subscribe();
     }
 
     // Close mobile menu on navigation
@@ -213,7 +215,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const chatItems: MenuItem[] = hasChatDynamic ? [] : [this.chatItem];
 
     const adminItemsFiltered = this.adminItems.filter(item => {
-      if (item.routeLink === 'member-stats' && !this.viewConfigService.isViewEnabled('member_stats')) return false;
+      if (item.routeLink === 'member-stats') {
+        return this.viewConfigService.statisticsEnabled() &&
+          this.authService.canPerform('users', 'manage');
+      }
       if (!item.requiresPermission) return true;
       const { resource, action } = item.requiresPermission;
       return item.requiresRootPermission

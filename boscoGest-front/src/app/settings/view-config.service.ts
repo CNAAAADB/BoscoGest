@@ -25,6 +25,8 @@ export class ViewConfigService {
   // Signal para las configuraciones de vistas actuales
   private _viewConfigs = signal<EntityViewConfigResponse[]>([]);
   private _currentEntityId = signal<number | null>(null);
+  private _statisticsEnabled = signal(false);
+  statisticsEnabled = this._statisticsEnabled.asReadonly();
 
   // Computed para menú de navegación
   enabledViews = computed(() =>
@@ -76,6 +78,19 @@ export class ViewConfigService {
 
   constructor(private http: HttpClient) {}
 
+  /** Statistics is globally enabled at Superentity, not per current membership. */
+  loadStatisticsAvailability(): Observable<{ is_enabled: boolean }> {
+    return this.http.get<{ is_enabled: boolean }>(
+      `${this.apiUrl}/member-stats/availability`
+    ).pipe(
+      tap(response => this._statisticsEnabled.set(response.is_enabled)),
+      catchError(() => {
+        this._statisticsEnabled.set(false);
+        return of({is_enabled: false});
+      })
+    );
+  }
+
   /**
    * Obtener todas las configuraciones de vistas para una entidad
    */
@@ -101,6 +116,12 @@ export class ViewConfigService {
     return this.http.put<EntityViewConfigResponse>(
       `${this.apiUrl}/entity/${entityId}/view/${viewName}`,
       config
+    ).pipe(
+      tap(updated => {
+        if (viewName === 'member_stats') {
+          this._statisticsEnabled.set(updated.is_enabled);
+        }
+      })
     );
   }
 
@@ -190,6 +211,7 @@ export class ViewConfigService {
    * Limpiar configuraciones (para logout)
    */
   clearConfigs(): void {
+    this._statisticsEnabled.set(false);
     this._viewConfigs.set([]);
     this._currentEntityId.set(null);
   }

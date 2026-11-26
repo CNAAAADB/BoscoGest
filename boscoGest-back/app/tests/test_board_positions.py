@@ -179,3 +179,27 @@ def test_organigram_is_structured_and_federation_isolated(client, board_context)
                             headers=national)
     assert all_roster.status_code == 200
     assert len(all_roster.json()) == 2
+
+
+def test_superentity_cannot_receive_board_positions(client, board_context):
+    c = board_context
+    root_id = c["federation"].parent.parent_id
+    # The national administrator has an active membership at level 1.
+    national = c["national"]
+    response = client.post(
+        f"/board-positions/users/{national.id}",
+        json={"entity_id": root_id, "role_code": "presidente"},
+        headers=c["headers"](national),
+    )
+    assert response.status_code == 403
+    choices = client.get(
+        f"/board-positions/users/{national.id}/available-entities",
+        headers=c["headers"](national),
+    )
+    assert choices.status_code == 200
+    assert root_id not in {entity["id"] for entity in choices.json()}
+    organigram = client.get(
+        f"/board-positions/organigram/{root_id}",
+        headers=c["headers"](national),
+    )
+    assert organigram.status_code == 403
