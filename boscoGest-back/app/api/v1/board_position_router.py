@@ -68,7 +68,7 @@ def _administrator_scope(actor: User, target_entity: Entity, auth: Authorization
     Local users:manage does NOT grant authority to issue board appointments.
     A federal admin can affect only its own federation and descendants.
     """
-    if not target_entity.is_active:
+    if not target_entity.is_active or target_entity.level < 2:
         return False
     for membership in actor.memberships:
         if not membership.is_active or membership.entity is None:
