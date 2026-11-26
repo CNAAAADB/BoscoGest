@@ -116,6 +116,12 @@ export class ViewConfigService {
     return this.http.put<EntityViewConfigResponse>(
       `${this.apiUrl}/entity/${entityId}/view/${viewName}`,
       config
+    ).pipe(
+      tap(updated => {
+        if (viewName === 'member_stats') {
+          this._statisticsEnabled.set(updated.is_enabled);
+        }
+      })
     );
   }
 
