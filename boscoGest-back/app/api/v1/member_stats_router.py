@@ -58,10 +58,12 @@ def _data(entity_id: int, period: Period, user: User, db: Session):
     entity = db.get(Entity, entity_id)
     if not entity or not entity.is_active:
         raise HTTPException(status_code=404, detail="Entity not found")
+    if entity.level < 2:
+        raise HTTPException(status_code=403, detail="Las estadísticas no aplican a Superentity")
     auth = AuthorizationService(db)
     auth.check_entity_permission(user, entity_id, "users", "manage")
     enabled = db.execute(select(EntityViewConfig).where(
-        EntityViewConfig.entity_id == entity_id,
+        EntityViewConfig.entity_id == auth.root_entity_id(),
         EntityViewConfig.view_name == "member_stats",
         EntityViewConfig.is_enabled.is_(True),
     )).scalar_one_or_none()
