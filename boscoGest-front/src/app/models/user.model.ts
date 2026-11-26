@@ -320,6 +320,7 @@ export const COMMUNICATION_STATUS_COLORS: Record<CommunicationStatus, string> = 
 };
 
 export interface CommunicationResponse {
+  permissions?: { create?: boolean; edit?: boolean; delete?: boolean; publish?: boolean; review?: boolean; comment_create?: boolean; comment_delete?: boolean; comment_moderate?: boolean } | null;
   id: number;
   title: string;
   content: string;
@@ -383,6 +384,7 @@ export interface CommunicationWithCommentsResponse extends CommunicationResponse
 
 // Magazine Models
 export interface MagazineResponse {
+  permissions?: { update?: boolean; delete?: boolean } | null;
   id: number;
   title: string;
   collection: string | null;
@@ -497,6 +499,7 @@ export interface EntityViewConfigListResponse {
 export type ResourceType = 'link' | 'document' | 'image' | 'video';
 
 export interface ResourceResponse {
+  permissions?: { update?: boolean; delete?: boolean } | null;
   id: number;
   title: string;
   description: string | null;

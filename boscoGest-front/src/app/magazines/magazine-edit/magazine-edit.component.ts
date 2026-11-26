@@ -72,6 +72,11 @@ export class MagazineEditComponent implements OnInit {
     this.loading.set(true);
     this.magazinesService.getMagazineDetails(id).subscribe({
       next: (magazine) => {
+        if (!magazine.permissions?.update) {
+          this.snackBar.open('No tienes permisos para editar esta revista', 'Cerrar', { duration: 3000 });
+          this.router.navigate(['/magazines']);
+          return;
+        }
         this.magazine.set(magazine);
         this.editForm.patchValue({
           title: magazine.title,
@@ -94,7 +99,7 @@ export class MagazineEditComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.editForm.valid && this.magazineId) {
+    if (this.editForm.valid && this.magazineId && this.magazine()?.permissions?.update) {
       this.saving.set(true);
 
       const magazineUpdate = {

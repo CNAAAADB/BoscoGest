@@ -49,6 +49,7 @@ export class NewsFormComponent implements OnInit {
   availableEntities = signal<EntityResponse[]>([]);
 
   canPublish = signal<boolean>(false);
+  editAuthorized = signal(false);
   currentStatus = signal<CommunicationStatus>('draft');
 
   constructor(
@@ -99,6 +100,13 @@ export class NewsFormComponent implements OnInit {
     this.loading.set(true);
     this.newsService.getNews(this.communicationId).subscribe({
       next: (news) => {
+        if (!news.permissions?.edit || !['draft', 'review'].includes(news.status)) {
+          this.snackBar.open('No tienes permisos para editar esta comunicación', 'Cerrar', { duration: 3000 });
+          this.router.navigate(['/communications']);
+          return;
+        }
+        this.editAuthorized.set(true);
+        this.canPublish.set(news.permissions?.publish === true);
         this.newsForm.patchValue({
           title: news.title,
           content: news.content,
@@ -184,7 +192,7 @@ export class NewsFormComponent implements OnInit {
   }
 
   private submitWithStatus(status: CommunicationStatus, transitionTo?: CommunicationStatus): void {
-    if (this.newsForm.invalid) return;
+    if (this.newsForm.invalid || (this.isEditMode() && !this.editAuthorized())) return;
 
     this.loading.set(true);
     const formValue = this.newsForm.value;

@@ -59,7 +59,7 @@ class UserVisibility:
     ) -> "UserVisibility":
         scope = ScopedPermissions(auth_service.db)
         visibility = cls(False, False)
-        visibility.contact_ids = scope.ids(viewer, "users", "read", inherit=False)
+        visibility.contact_ids = scope.ids(viewer, "users", "read")
         visibility.sensitive_ids = scope.ids(viewer, "users", "read_sensitive", wildcard=False)
         visibility.root_superadmin = scope.is_root_superadmin(viewer)
         return visibility
@@ -72,10 +72,9 @@ class UserVisibility:
         # Ancestor memberships automatically created as socio must not expose
         # a local treasurer's sensitive access to unrelated local associations.
         memberships = ScopedPermissions.active_memberships(user)
-        deepest = [m for m in memberships if m.entity.level > 1]
         ids = {m.entity_id for m in memberships}
-        sensitive = {m.entity_id for m in deepest} if deepest else ids
-        return bool(ids & self.contact_ids), bool(sensitive & self.sensitive_ids)
+        # The sensitive grant must be explicit on an entity shared with the subject.
+        return bool(ids & self.contact_ids), bool(ids & self.sensitive_ids)
 
     def visible_fields(self, is_self: bool) -> Set[str]:
         if is_self:

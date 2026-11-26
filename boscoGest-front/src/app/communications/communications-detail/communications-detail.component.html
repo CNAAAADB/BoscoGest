@@ -37,13 +37,13 @@
             </button>
           }
           <!-- Workflow actions -->
-          @if (news()!.status === 'draft') {
+          @if (news()!.status === 'draft' && news()!.permissions?.create) {
             <button mat-button (click)="transitionStatus('review')">
               <mat-icon aria-hidden="true">send</mat-icon>
               Enviar a revisión
             </button>
             @if (canPublishNews()) {
-              <button mat-button color="primary" (click)="transitionStatus('published')">
+              <button mat-button color="primary" (click)="transitionStatus('published')" [disabled]="!canPublishNews()">
                 <mat-icon aria-hidden="true">publish</mat-icon>
                 Publicar
               </button>
@@ -54,7 +54,7 @@
               <mat-icon aria-hidden="true">check_circle</mat-icon>
               Aprobar
             </button>
-            <button mat-button (click)="transitionStatus('draft')">
+            <button mat-button (click)="transitionStatus('draft')" [disabled]="!canReviewNews()">
               <mat-icon aria-hidden="true">undo</mat-icon>
               Devolver
             </button>
@@ -134,7 +134,7 @@
                       <span class="comment-author">{{ comment.user.name }} {{ comment.user.surname }}</span>
                       <span class="comment-date">{{ formatShortDate(comment.created_at) }}</span>
                     </div>
-                    @if (canDeleteComment()) {
+                    @if (canDeleteComment(comment)) {
                       <button mat-icon-button color="warn" (click)="deleteComment(comment)" class="delete-comment-btn" aria-label="Eliminar comentario">
                         <mat-icon aria-hidden="true">delete</mat-icon>
                       </button>

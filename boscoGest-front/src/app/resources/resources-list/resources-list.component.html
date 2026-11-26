@@ -116,14 +116,14 @@
               </div>
             }
           </mat-card-content>
-          @if (canEdit() || canDelete()) {
+          @if (resource.permissions?.update || resource.permissions?.delete) {
             <div class="card-actions">
-              @if (canEdit()) {
+              @if (resource.permissions?.update) {
                 <button mat-icon-button color="primary" (click)="editResource($event, resource.id)" title="Editar" aria-label="Editar recurso">
                   <mat-icon aria-hidden="true">edit</mat-icon>
                 </button>
               }
-              @if (canDelete()) {
+              @if (resource.permissions?.delete) {
                 <button mat-icon-button color="warn" (click)="deleteResource($event, resource)" title="Eliminar" aria-label="Eliminar recurso">
                   <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>

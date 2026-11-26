@@ -287,7 +287,7 @@ def test_get_communication_no_access(client, db_session, test_entity, test_user)
 
     response = client.get(f"/communications/{communication.id}", headers=headers)
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_update_communication(client, auth_headers, db_session, test_entity, test_user):
@@ -366,6 +366,7 @@ def test_create_comment(client, auth_headers, db_session, test_entity, test_user
     communication = Communication(
         title="Communication with comments",
         content="Content",
+        status="published",
         entity_id=test_entity.id,
         created_by_id=test_user.id
     )
@@ -426,6 +427,7 @@ def test_delete_comment(client, auth_headers, db_session, test_entity, test_user
     communication = Communication(
         title="Communication",
         content="Content",
+        status="published",
         entity_id=test_entity.id,
         created_by_id=test_user.id
     )

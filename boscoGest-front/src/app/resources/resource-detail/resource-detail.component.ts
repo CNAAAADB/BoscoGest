@@ -37,8 +37,8 @@ export class ResourceDetailComponent implements OnInit, OnDestroy {
   fileUrl = signal<SafeResourceUrl | null>(null);
   private objectUrl: string | null = null;
 
-  canEdit = computed(() => this.authService.hasPermission('resources', 'update'));
-  canDelete = computed(() => this.authService.hasPermission('resources', 'delete'));
+  canEdit = computed(() => this.resource()?.permissions?.update === true);
+  canDelete = computed(() => this.resource()?.permissions?.delete === true);
 
   constructor(
     private resourcesService: ResourcesService,
