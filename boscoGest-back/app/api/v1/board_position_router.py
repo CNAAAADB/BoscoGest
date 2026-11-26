@@ -63,7 +63,7 @@ def _normalize(payload: PositionCreate) -> str:
 
 
 def _administrator_scope(actor: User, target_entity: Entity, auth: AuthorizationService) -> bool:
-    """Explicitly require a national (1) or federal (2) active membership.
+    """Explicitly require a national (1) or federal (3) active membership.
 
     Local users:manage does NOT grant authority to issue board appointments.
     A federal admin can affect only its own federation and descendants.
@@ -73,7 +73,7 @@ def _administrator_scope(actor: User, target_entity: Entity, auth: Authorization
     for membership in actor.memberships:
         if not membership.is_active or membership.entity is None:
             continue
-        if membership.entity.level not in (1, 2):
+        if membership.entity.level not in (1, 3):
             continue
         own_entity = membership.entity_id
         if target_entity.id != own_entity and target_entity.id not in auth.entity_repo.get_descendant_ids(own_entity):
