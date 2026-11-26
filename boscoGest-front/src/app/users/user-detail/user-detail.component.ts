@@ -19,6 +19,7 @@ import {
   ChangeRoleDialogData,
 } from '../change-role-dialog/change-role-dialog.component';
 import { AuthService } from '../../auth/auth.service';
+import { BoardPositionsComponent } from '../board-positions/board-positions.component';
 
 interface EntityMembership {
   membershipId: number;
@@ -42,7 +43,8 @@ interface EntityMembership {
     MatChipsModule,
     MatDividerModule,
     MatTableModule,
-    MatTooltipModule
+    MatTooltipModule,
+    BoardPositionsComponent
   ],
   templateUrl: './user-detail.component.html',
   styleUrl: './user-detail.component.css'
