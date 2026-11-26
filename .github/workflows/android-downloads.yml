@@ -1,0 +1,52 @@
+name: Publicar descargas Android
+on:
+  workflow_run:
+    workflows: ["Android - prepare Google Play bundle"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Ejecución de producción que generó el APK firmado
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths: ['downloads/**', '.github/workflows/android-downloads.yml']
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: boscogest-publicar-descargas
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request'))
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtener el APK firmado de producción
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RUN_ID" ]]; then
+            RUN_ID=$(gh run list --workflow android-play-bundle.yml --branch main --status success --limit 50 --json databaseId,event --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0].databaseId')
+          fi
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" | jq -e --arg repo "$GITHUB_REPOSITORY" '.path == ".github/workflows/android-play-bundle.yml" and .head_repository.full_name == $repo and .head_branch == "main" and (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success"' >/dev/null
+          gh run download "$RUN_ID" --pattern 'BoscoGest-*-apk' --dir "$RUNNER_TEMP/downloads"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::909186483504:role/BoscoGest-GitHub-Frontend-Deployer
+          aws-region: eu-west-1
+      - name: Publicar APK y catálogo
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find "$RUNNER_TEMP/downloads" -type f -name 'app-release.apk')
+          [[ ${#apks[@]} == 1 ]]
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          python downloads/publish.py "${apks[0]}" "$(dirname "$signer")"
+          aws cloudfront create-invalidation --distribution-id E34CSQ092X6U3D --paths '/descargas/index.html'
