@@ -133,7 +133,7 @@ def test_list_activities(client, auth_headers, db_session, test_entity, test_use
     assert activity_in_other_entity.id not in activity_ids
 
 
-def test_get_activity(client, db_session, test_entity, test_user):
+def test_get_activity(client, auth_headers, db_session, test_entity, test_user):
     from app.models.activity_model import Activity
 
     activity = Activity(
@@ -149,7 +149,8 @@ def test_get_activity(client, db_session, test_entity, test_user):
     db_session.commit()
     db_session.refresh(activity)
 
-    response = client.get(f"/activities/{activity.id}")
+    assert client.get(f"/activities/{activity.id}").status_code == 401
+    response = client.get(f"/activities/{activity.id}", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -157,8 +158,8 @@ def test_get_activity(client, db_session, test_entity, test_user):
     assert data["title"] == activity.title
 
 
-def test_get_activity_not_found(client):
-    response = client.get("/activities/9999")
+def test_get_activity_not_found(client, auth_headers):
+    response = client.get("/activities/9999", headers=auth_headers)
 
     assert response.status_code == 404
 

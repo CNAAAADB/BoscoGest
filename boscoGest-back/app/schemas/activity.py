@@ -82,12 +82,21 @@ class ActivityUpdate(BaseModel):
 
     _utc = field_validator("date", "end_date")(to_utc_naive)
 
+class ActivityPermissions(BaseModel):
+    can_edit: bool = False
+    can_delete: bool = False
+    can_manage_registrations: bool = False
+    can_create_chat_group: bool = False
+    can_register: bool = False
+
+
 class ActivityResponse(ActivityBase):
     id: int
     created_at: datetime
     created_by_id: int
     image_url: Optional[str]
     entity: Optional["EntityResponse"] = None
+    permissions: Optional[ActivityPermissions] = None
 
     model_config = ConfigDict(from_attributes=True)
 

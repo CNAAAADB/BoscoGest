@@ -89,7 +89,7 @@
           }
         </div>
 
-        @if (!isRegistered() && (!canManageActivities() || activity()!.allow_guests)) {
+        @if (canRegister() && !isRegistered() && (!canManageActivities() || activity()!.allow_guests)) {
           <div class="registration-action">
             @if (activity()!.allow_guests) {
               <mat-form-field appearance="outline">

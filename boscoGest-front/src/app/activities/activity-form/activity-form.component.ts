@@ -43,6 +43,7 @@ export class ActivityFormComponent implements OnInit {
   activityForm: FormGroup;
   loading = signal<boolean>(false);
   isEditMode = false;
+  editAuthorized = signal(false);
   activityId: number | null = null;
   selectedFile: File | null = null;
   imagePreview: string | null = null;
@@ -85,14 +86,13 @@ export class ActivityFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Load available entities
-    this.loadAvailableEntities();
-
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditMode = true;
       this.activityId = parseInt(id, 10);
       this.loadActivity(this.activityId);
+    } else {
+      this.loadAvailableEntities();
     }
   }
 
@@ -115,6 +115,13 @@ export class ActivityFormComponent implements OnInit {
     this.loading.set(true);
     this.activitiesService.getActivity(id).subscribe({
       next: (activity) => {
+        if (activity.permissions?.can_edit !== true) {
+          this.snackBar.open('No tienes permisos para editar esta actividad', 'Cerrar', { duration: 3000 });
+          this.router.navigate(['/activities', id]);
+          return;
+        }
+        this.editAuthorized.set(true);
+        if (activity.entity) this.availableEntities.set([activity.entity]);
         this.activityForm.patchValue({
           title: activity.title,
           description: activity.description,
@@ -124,6 +131,8 @@ export class ActivityFormComponent implements OnInit {
           allow_waitlist: activity.allow_waitlist,
           entity_id: activity.entity_id
         });
+        // The organizer is immutable when editing an activity.
+        this.activityForm.get('entity_id')?.disable();
 
         // Set date and time from activity date
         const activityDate = new Date(activity.date);
@@ -237,6 +246,7 @@ export class ActivityFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.loading() || (this.isEditMode && !this.editAuthorized())) return;
     if (this.activityForm.invalid || this.dateControl.invalid || this.timeControl.invalid) {
       this.snackBar.open('Por favor completa todos los campos requeridos', 'Cerrar', {
         duration: 3000,
