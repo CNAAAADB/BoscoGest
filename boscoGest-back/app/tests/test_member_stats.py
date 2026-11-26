@@ -39,10 +39,24 @@ def test_statistics_is_disabled_by_default(client, test_entity, auth_headers):
     assert response.status_code == 403
 
 
+def _local_scope(db, root, membership):
+    from app.models.entity_model import Entity
+    conf = Entity(name="Stats test conf " + str(membership.id), level=2, parent_id=root.id)
+    db.add(conf)
+    db.flush()
+    fed = Entity(name="Stats test fed " + str(membership.id), level=3, parent_id=conf.id)
+    db.add(fed)
+    db.flush()
+    local = Entity(name="Stats test local " + str(membership.id), level=4, parent_id=fed.id)
+    db.add(local)
+    db.flush()
+    membership.entity_id = local.id
+    return local
+
+
 def test_statistics_for_enabled_entity(client, db_session, test_entity, test_user, test_membership, auth_headers):
     from app.models.entity_view_config_model import EntityViewConfig
-    # The fixture's entity defaults to level 1; statistics list only locals.
-    test_entity.level = 4
+    local = _local_scope(db_session, test_entity, test_membership)
     db_session.add(EntityViewConfig(
         entity_id=test_entity.id, view_name="member_stats",
         display_name="Estadísticas de socios", is_enabled=True,
@@ -51,12 +65,12 @@ def test_statistics_for_enabled_entity(client, db_session, test_entity, test_use
     db_session.commit()
 
     response = client.get(
-        f"/member-stats/entity/{test_entity.id}", headers=auth_headers
+        f"/member-stats/entity/{local.id}", headers=auth_headers
     )
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["totals"]["registered"] == 1
-    assert result["associations"][0]["entity_id"] == test_entity.id
+    assert result["associations"][0]["entity_id"] == local.id
 
 
 def test_statistics_requires_authentication(client, test_entity):
@@ -102,12 +116,11 @@ def test_federation_cannot_read_sibling_federation(
     federation_admin = member("federation-admin", fed_a.id, test_role.id)
     member("other-local", local_b.id, test_role.id)
     member("our-local", local_a.id, test_role.id)
-    for target in (fed_a, fed_b):
-        db_session.add(EntityViewConfig(
-            entity_id=target.id, view_name="member_stats",
-            display_name="Estadísticas de socios", is_enabled=True,
-            display_order=2,
-        ))
+    db_session.add(EntityViewConfig(
+        entity_id=test_entity.id, view_name="member_stats",
+        display_name="Estadísticas de socios", is_enabled=True,
+        display_order=2,
+    ))
     db_session.commit()
     headers = {"Authorization": "Bearer " + create_access_token(
         {"sub": str(federation_admin.id)}
@@ -138,7 +151,7 @@ def test_drilldown_matches_aggregate_and_never_exposes_sensitive_fields(
     client, db_session, test_entity, test_user, test_membership, auth_headers,
 ):
     from app.models.entity_view_config_model import EntityViewConfig
-    test_entity.level = 4
+    local = _local_scope(db_session, test_entity, test_membership)
     db_session.add(EntityViewConfig(
         entity_id=test_entity.id, view_name="member_stats",
         display_name="Estadísticas de socios", is_enabled=True,
@@ -146,10 +159,10 @@ def test_drilldown_matches_aggregate_and_never_exposes_sensitive_fields(
     ))
     db_session.commit()
     overview = client.get(
-        f"/member-stats/entity/{test_entity.id}?period=all", headers=auth_headers
+        f"/member-stats/entity/{local.id}?period=all", headers=auth_headers
     )
     response = client.get(
-        f"/member-stats/entity/{test_entity.id}/members",
+        f"/member-stats/entity/{local.id}/members",
         params={"metric": "registered", "period": "all", "limit": 1},
         headers=auth_headers,
     )
@@ -167,14 +180,14 @@ def test_drilldown_rejects_other_association_and_invalid_filter(
     client, db_session, test_entity, test_membership, auth_headers,
 ):
     from app.models.entity_view_config_model import EntityViewConfig
-    test_entity.level = 4
+    local = _local_scope(db_session, test_entity, test_membership)
     db_session.add(EntityViewConfig(
         entity_id=test_entity.id, view_name="member_stats",
         display_name="Estadísticas de socios", is_enabled=True,
         display_order=2,
     ))
     db_session.commit()
-    endpoint = f"/member-stats/entity/{test_entity.id}/members"
+    endpoint = f"/member-stats/entity/{local.id}/members"
     unauthorized = client.get(endpoint, params={
         "metric": "registered", "period": "all",
         "association_id": test_entity.id + 9999,
@@ -196,14 +209,14 @@ def test_drilldown_search_respects_case_and_returns_standard_user_rows(
     """The embedded Admin Usuarios search must work with the new data source."""
     from app.models.entity_view_config_model import EntityViewConfig
 
-    test_entity.level = 4
+    local = _local_scope(db_session, test_entity, test_membership)
     db_session.add(EntityViewConfig(
         entity_id=test_entity.id, view_name="member_stats",
         display_name="Estadísticas de socios", is_enabled=True,
         display_order=2,
     ))
     db_session.commit()
-    endpoint = f"/member-stats/entity/{test_entity.id}/members"
+    endpoint = f"/member-stats/entity/{local.id}/members"
     visible = client.get(endpoint, params={
         "metric": "registered", "period": "all", "search": "tEsT",
     }, headers=auth_headers)
