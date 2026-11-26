@@ -1,5 +1,5 @@
 """Board positions are descriptive and are scoped to the user's active memberships."""
-from datetime import datetime
+from datetime import date, datetime
 import pytest
 
 from app.models.entity_model import Entity
@@ -32,8 +32,8 @@ def board_context(db_session, test_membership, test_entity):
     def person(code):
         p = User(email=f"{code}@example.com",
                  password_hash=get_password_hash("test-password-123"),
-                 name=code, surname="Board", is_active=True,
-                 created_at=datetime.utcnow())
+                 name=code, surname="Board", birthdate=date(1990, 1, 1),
+                 is_active=True, created_at=datetime.utcnow())
         db_session.add(p)
         db_session.flush()
         return p
