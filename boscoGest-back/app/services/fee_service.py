@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 
 def _cycle_year(ref: date, start_month: int) -> int:
@@ -157,28 +158,19 @@ class FeeService:
     # ── Entities selector ─────────────────────────────────────────────────────
 
     def list_fee_entities(self, current_user: User) -> List[Entity]:
-        # Entities where the user can create fees (used by the admin UI selector).
-        # Consistent with EntityService.get_admin_entities: based on the user's
-        # active memberships, filtered by effective (inheritable) permission.
-        seen: set[int] = set()
-        entities: List[Entity] = []
-        for membership in current_user.memberships:
-            if not membership.is_active or membership.entity_id in seen:
-                continue
-            if self.auth_service.has_effective_permission(
-                current_user, membership.entity_id, "fees", "create"
-            ):
-                entity = self.db.get(Entity, membership.entity_id)
-                if entity and entity.is_active:
-                    entities.append(entity)
-                    seen.add(membership.entity_id)
-        entities.sort(key=lambda e: e.name)
+        create_ids = self.scope.ids(current_user, "fees", "create")
+        manage_ids = self.scope.ids(current_user, "fees", "manage")
+        entities = list(self.db.scalars(select(Entity).where(
+            Entity.id.in_(create_ids | manage_ids)
+        ).order_by(Entity.name)).all())
+        for entity in entities:
+            entity.permissions = {"fee_create": entity.id in create_ids, "fee_manage": entity.id in manage_ids}
         return entities
 
     # ── Fees ──────────────────────────────────────────────────────────────────
 
     def list_fees(self, entity_id: int, current_user: User) -> List[Fee]:
-        self.scope.require(current_user, entity_id, "fees", "read")
+        self.scope.require(current_user, entity_id, "fees", "read", inherit=False)
         return [self._attach_current_config(f) for f in self.fee_repo.list_by_entity(entity_id)]
 
     def create_fee(

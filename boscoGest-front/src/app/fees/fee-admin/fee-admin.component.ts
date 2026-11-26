@@ -124,8 +124,8 @@ export class FeeAdminComponent implements OnInit {
     return [...new Set(all)].sort().reverse();
   });
 
-  canManage = computed(() => this.authService.hasPermission('fees', 'manage'));
-  canCreate = computed(() => this.authService.hasPermission('fees', 'create'));
+  canManage = computed(() => this.entities().find(e => e.id === this.selectedEntityId())?.permissions?.fee_manage === true);
+  canCreate = computed(() => this.entities().find(e => e.id === this.selectedEntityId())?.permissions?.fee_create === true);
 
   constructor(
     private feesService: FeesService,
@@ -462,6 +462,8 @@ export class FeeAdminComponent implements OnInit {
   );
 
   loadAssignments(): void {
+    this.assignments.set([]);
+    if (!this.canManage()) return;
     const entityId = this.selectedEntityId();
     if (!entityId) return;
     this.loadingAssignments.set(true);

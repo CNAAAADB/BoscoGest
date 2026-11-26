@@ -21,6 +21,7 @@ class EntityUpdate(BaseModel):
 
 class EntityResponse(EntityBase):
     id: int
+    permissions: Optional[dict[str, bool]] = None
     created_at: datetime
     parent: Optional["EntityResponse"] = None  # self-referential relationship
 

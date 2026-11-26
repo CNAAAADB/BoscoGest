@@ -73,6 +73,8 @@ class CommunicationService:
 
         # If publishing directly, check publish permission
         status = communication_in.status or "draft"
+        if status not in ("draft", "review", "published"):
+            raise HTTPException(status_code=422, detail="Estado de comunicación no válido")
         if status == "published":
             self.scope.require(
                 current_user,

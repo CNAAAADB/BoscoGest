@@ -135,6 +135,7 @@ export interface UserDetails {
 }
 
 export interface EntityResponse {
+  permissions?: { fee_create?: boolean; fee_manage?: boolean } | null;
   id: number;
   name: string;
   level: number;
@@ -357,7 +358,6 @@ export interface UserBasicInfo {
   id: number;
   name: string;
   surname: string;
-  email: string;
 }
 
 export interface CommentResponse {

@@ -146,7 +146,10 @@ def search_user_by_email(
         current_user, service.search_by_email(email), "read",
         detail=f"User with email '{email}' not found",
     )
-    return redact_user(service.auth_service, current_user, found)
+    result = redact_user(service.auth_service, current_user, found)
+    if result.email is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return result
 
 
 @user_router.get("/search/dni/{dni}", response_model=UserResponse)
@@ -159,7 +162,10 @@ def search_user_by_dni(
         current_user, service.search_by_dni(dni), "read",
         detail=f"User with DNI '{dni}' not found",
     )
-    return redact_user(service.auth_service, current_user, found)
+    result = redact_user(service.auth_service, current_user, found)
+    if result.dni is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return result
 
 
 @user_router.get("/creatable-entities", response_model=List[Dict[str, Any]])
@@ -234,13 +240,14 @@ def upload_user_photo(
     current_user: User = Depends(require_permission("users", "update")),
 ):
     content = file.file.read()
-    return service.set_user_photo(
+    updated = service.set_user_photo(
         user_id,
         content,
         file.content_type,
         current_user,
         ip_address=request.client.host if request else None,
     )
+    return redact_user(service.auth_service, current_user, updated)
 
 
 # ──────────────────────────────────────────────
@@ -318,12 +325,13 @@ def update_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_permission("users", "update")),
 ):
-    return service.update_user(
+    updated = service.update_user(
         user_id,
         user_update,
         current_user,
         ip_address=request.client.host if request else None,
     )
+    return redact_user(service.auth_service, current_user, updated)
 
 
 @user_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
