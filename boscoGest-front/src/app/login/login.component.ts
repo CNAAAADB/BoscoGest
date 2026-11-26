@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -22,6 +23,7 @@ import { PostLoginFlowService } from '../auth/post-login-flow.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatIconModule,
     MatCardModule,
     MatDialogModule,
     MatCheckboxModule
@@ -34,6 +36,7 @@ import { PostLoginFlowService } from '../auth/post-login-flow.service';
 export class LoginComponent {
   identifier = signal<string>('');
   password = signal<string>('');
+  showPassword = signal(false);
   errorMessage = signal<string>('');
   readonly mobileApp = Capacitor.isNativePlatform();
   enableBiometric = signal(false);
