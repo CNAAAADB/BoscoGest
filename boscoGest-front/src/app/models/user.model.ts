@@ -856,3 +856,33 @@ export interface EntityDeletionImpact {
   /** Memberships that would be ended along with the association. */
   member_count: number;
 }
+
+// Cargos de juntas directivas (etiquetas informativas, NO roles de acceso).
+export type BoardRoleCode = 'presidente' | 'secretario' | 'tesorero'
+  | 'vicepresidente' | 'coordinador_joven' | 'otro';
+
+export interface BoardPosition {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_surname: string;
+  entity_id: number;
+  entity_name: string;
+  entity_level: number;
+  role_code: BoardRoleCode;
+  custom_title: string | null;
+  title: string;
+  created_at: string;
+}
+
+export interface BoardPositionEntity {
+  id: number;
+  name: string;
+  level: number;
+}
+
+export interface BoardPositionCreate {
+  entity_id: number;
+  role_code: BoardRoleCode;
+  custom_title?: string | null;
+}

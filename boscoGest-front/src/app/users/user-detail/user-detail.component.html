@@ -246,6 +246,9 @@
       </mat-card-content>
     </mat-card>
 
+    <!-- Junta directiva: cargos informativos vinculados a membresías, sin permisos de aplicación. -->
+    <app-board-positions [userId]="user()!.id"></app-board-positions>
+
     <!-- Action Buttons -->
     <div class="action-buttons">
       <button mat-button (click)="goBack()" class="back-button">
