@@ -1,3 +1,4 @@
+.users-container.embedded-users { padding: 0; min-height: 0; }
 .users-container {
   padding: 2rem;
   width: 100%;
@@ -8,7 +9,7 @@
 .page-title {
   font-size: 2.5rem;
   font-weight: 600;
-  color: #3D4E7C;
+  color: var(--primary-color, #3D4E7C);
   margin-bottom: 2rem;
 }
 
@@ -47,7 +48,7 @@ mat-card-header {
 }
 
 .title-icon {
-  color: #D4A76A;
+  color: var(--accent-color, #D4A76A);
   font-size: 1.75rem !important;
   width: 1.75rem !important;
   height: 1.75rem !important;
@@ -276,7 +277,7 @@ mat-card-header {
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #3d4e7c;
+  color: var(--primary-color, #3d4e7c);
 }
 
 .review-filter-toggle input {

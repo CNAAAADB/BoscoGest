@@ -41,6 +41,7 @@ export class ViewConfigService {
   // Mapeo de view_name a rutas (sin slash inicial para rutas relativas)
   private readonly routeMap: Record<string, string> = {
     'dashboard': 'dashboard',
+    'member_stats': 'member-stats',
     'users': 'directory',
     'entities': 'entities',
     'roles': 'roles',
@@ -58,6 +59,7 @@ export class ViewConfigService {
   // Iconos por defecto
   private readonly defaultIcons: Record<string, string> = {
     'dashboard': 'dashboard',
+    'member_stats': 'insights',
     'users': 'people',
     'entities': 'business',
     'roles': 'admin_panel_settings',

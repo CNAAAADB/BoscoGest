@@ -1,0 +1,51 @@
+/* Reuses users-list.component.css for page, card and table design.
+   Only the statistics-specific layout lives here; colours use shared branding tokens. */
+.stats-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stats-filters mat-form-field { min-width: 210px; flex: 0 1 300px; }
+.stats-filters button { margin-bottom: 20px; }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.stat-metric { border: 1px solid #e9ecef; box-shadow: none; }
+.stat-metric.metric-expanded { border-color: var(--primary-color, #3D4E7C); }
+.metric-button {
+  padding: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.metric-button:focus-visible { outline: 2px solid var(--primary-color, #3D4E7C); outline-offset: -3px; }
+.metric-label { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.metric-label mat-icon { color: var(--accent-color, #D4A76A); }
+.metric-value { font-size: 2.5rem; font-weight: 600; color: var(--primary-color, #3D4E7C); }
+.metric-toggle { display: flex; align-items: center; gap: 0.2rem; color: var(--primary-color, #3D4E7C); font-size: 0.875rem; }
+.stats-details { margin-top: 1.5rem; }
+.detail-heading { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.detail-heading mat-form-field { min-width: 240px; }
+.association-title { margin: 2rem 0 1rem; }
+.association-count { color: var(--primary-color, #3D4E7C); }
+.stats-explanation { margin-top: 1.25rem; font-size: 0.875rem; opacity: .8; }
+@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .stats-grid { gap: 0.5rem; }
+  .metric-button { padding: 0.8rem; }
+  .metric-value { font-size: 2rem; }
+  .stats-filters mat-form-field { flex: 1 1 100%; }
+}

@@ -132,6 +132,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
   adminItems: MenuItem[] = [
     { separator: true, separatorTitle: 'Admin', routeLink: '', icon: '', label: '' },
     {
+      routeLink: 'member-stats',
+      icon: 'insights',
+      label: 'Estadísticas de socios',
+      requiresPermission: { resource: 'users', action: 'manage' }
+    },
+    {
       routeLink: 'users',
       icon: 'manage_accounts',
       label: 'Usuarios',
@@ -197,6 +203,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // Expand the dynamic "fees" view: managers keep the admin view and also get
     // "Mis cuotas"; members only get "Mis cuotas" (the admin route is guarded).
     const dynamicItems = this.menuItems().flatMap((item): MenuItem[] => {
+      // Statistics is an optional *admin* view, never a public menu entry.
+      if (item.routeLink === 'member-stats') return [];
       if (item.routeLink !== 'fees') return [item];
       return canManageFees ? [item, this.myFeesItem] : [this.myFeesItem];
     });
@@ -205,6 +213,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const chatItems: MenuItem[] = hasChatDynamic ? [] : [this.chatItem];
 
     const adminItemsFiltered = this.adminItems.filter(item => {
+      if (item.routeLink === 'member-stats' && !this.viewConfigService.isViewEnabled('member_stats')) return false;
       if (!item.requiresPermission) return true;
       const { resource, action } = item.requiresPermission;
       return item.requiresRootPermission
