@@ -4,6 +4,7 @@ import pytest
 
 from app.models.entity_model import Entity
 from app.models.membership_model import Membership
+from app.models.role_model import Role
 from app.models.user_model import User
 from app.models.board_position_model import BoardPosition
 from app.utils.auth import create_access_token, get_password_hash
@@ -42,13 +43,17 @@ def board_context(db_session, test_membership, test_entity):
     member = person("board-member")
     outsider = person("other-board-member")
     role = test_membership.role
+    socio = db_session.query(Role).filter(Role.name == "socio").one()
     assert role is not None
     db_session.add_all([
         Membership(user_id=federal_admin.id, role_id=role.id, entity_id=federation.id),
         Membership(user_id=local_admin.id, role_id=role.id, entity_id=local.id),
         Membership(user_id=member.id, role_id=role.id, entity_id=local.id),
-        Membership(user_id=other_federation.id if False else outsider.id,
-                   role_id=role.id, entity_id=other_local.id),
+        Membership(user_id=outsider.id, role_id=role.id, entity_id=other_local.id),
+        # Like real memberships, these users also carry a root 'socio'
+        # enrollment. That must not turn a local administrator into national.
+        Membership(user_id=local_admin.id, role_id=socio.id, entity_id=test_entity.id),
+        Membership(user_id=federal_admin.id, role_id=socio.id, entity_id=test_entity.id),
     ])
     db_session.commit()
 
