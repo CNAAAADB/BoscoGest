@@ -15,6 +15,15 @@ view_config_router = APIRouter(
 )
 
 
+@view_config_router.get("/member-stats/availability")
+def member_stats_availability(
+    service: ViewConfigService = Depends(get_view_config_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Global visibility flag; this endpoint does not disclose user data."""
+    return service.statistics_availability()
+
+
 @view_config_router.get(
     "/entity/{entity_id}", response_model=EntityViewConfigListResponse
 )
