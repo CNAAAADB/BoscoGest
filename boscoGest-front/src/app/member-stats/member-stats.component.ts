@@ -152,11 +152,6 @@ interface CardDefinition { key: Metric; label: string; icon: string; }
                 </table>
               </div>
             }
-            <p class="stats-explanation">
-              Registrados, jóvenes y fichas incompletas: socios inscritos durante el periodo elegido.
-              Accesos: socios que iniciaron o renovaron sesión en ese intervalo.
-              Una persona se cuenta una sola vez en los totales.
-            </p>
           }
         </mat-card-content>
       </mat-card>
