@@ -75,6 +75,14 @@ def _administrator_scope(actor: User, target_entity: Entity, auth: Authorization
             continue
         if membership.entity.level not in (1, 3):
             continue
+        # Permission must come from THIS national/federal appointment, not
+        # from an unrelated local admin membership combined with an automatic
+        # 'socio' membership at the root.
+        if not membership.role or not any(
+            p.resource == "users" and p.action in ("manage", "manage_all")
+            for p in membership.role.permissions
+        ):
+            continue
         own_entity = membership.entity_id
         if target_entity.id != own_entity and target_entity.id not in auth.entity_repo.get_descendant_ids(own_entity):
             continue
