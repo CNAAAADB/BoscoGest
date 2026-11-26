@@ -1,0 +1,30 @@
+name: Activity authorization checks
+
+on:
+  pull_request:
+    paths:
+      - 'boscoGest-back/**'
+      - 'boscoGest-front/**'
+      - '.github/workflows/activity-authorization-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: boscoGest-front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: boscoGest-front/package-lock.json
+      - run: npm ci
+      - run: APP_DOMAIN=boscogest.com npm run config
+      - name: Activity authorization UI regression
+        run: npx ng test --watch=false --browsers=ChromeHeadless --include=src/app/activities/activity-detail/activity-detail.component.spec.ts
