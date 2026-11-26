@@ -45,4 +45,7 @@ jobs:
           cache: npm
           cache-dependency-path: boscoGest-front/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - name: Build against valid production API configuration
+        env:
+          APP_DOMAIN: boscogest.com
+        run: npm run build
