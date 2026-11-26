@@ -215,7 +215,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const chatItems: MenuItem[] = hasChatDynamic ? [] : [this.chatItem];
 
     const adminItemsFiltered = this.adminItems.filter(item => {
-      if (item.routeLink === 'member-stats' && !this.viewConfigService.statisticsEnabled()) return false;
+      if (item.routeLink === 'member-stats') {
+        return this.viewConfigService.statisticsEnabled() &&
+          this.authService.canPerform('users', 'manage');
+      }
       if (!item.requiresPermission) return true;
       const { resource, action } = item.requiresPermission;
       return item.requiresRootPermission
