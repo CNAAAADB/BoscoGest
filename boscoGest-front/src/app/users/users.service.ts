@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { UserResponse, UserCreate, UserUpdate, UserDetails, PaginatedUsers, ConsentStatus } from '../models/user.model';
+import { UserResponse, UserCreate, UserUpdate, UserDetails, PaginatedUsers, ConsentStatus, BoardPosition, BoardPositionEntity, BoardPositionCreate } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -84,6 +84,27 @@ export class UsersService {
     return this.http.get<PaginatedUsers>(`${this.apiUrl}/managed`, {
       params
     });
+  }
+
+  /** Los cargos de junta no conceden permisos: son etiquetas por entidad. */
+  getBoardPositions(userId: number): Observable<BoardPosition[]> {
+    return this.http.get<BoardPosition[]>(
+      `${environment.apiUrl}/board-positions/users/${userId}`);
+  }
+
+  getBoardPositionEntities(userId: number): Observable<BoardPositionEntity[]> {
+    return this.http.get<BoardPositionEntity[]>(
+      `${environment.apiUrl}/board-positions/users/${userId}/available-entities`);
+  }
+
+  addBoardPosition(userId: number, payload: BoardPositionCreate): Observable<BoardPosition> {
+    return this.http.post<BoardPosition>(
+      `${environment.apiUrl}/board-positions/users/${userId}`, payload);
+  }
+
+  deleteBoardPosition(positionId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiUrl}/board-positions/${positionId}`);
   }
 
   getConsentStatus(): Observable<ConsentStatus> {
