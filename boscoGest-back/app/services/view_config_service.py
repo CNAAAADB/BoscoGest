@@ -16,7 +16,7 @@ from app.schemas.entity_view_config import (
 from app.repositories.view_config_repository import ViewConfigRepository
 from app.services.authorization_service import AuthorizationService
 from app.services.audit_service import AuditService
-from app.utils.auth import get_sync_db
+from app.utils.auth import get_sync_db, is_root_superadmin
 
 
 class ViewConfigService:
@@ -34,11 +34,7 @@ class ViewConfigService:
 
     def _can_manage_global_statistics(self, current_user: User) -> bool:
         """Only a superadmin appointed to the root Superentity."""
-        return any(
-            m.is_active and m.entity is not None and m.entity.level == 1
-            and m.role is not None and m.role.name == "superadmin"
-            for m in current_user.memberships
-        ) and self.auth_service.has_root_permission(current_user, "views", "update")
+        return is_root_superadmin(current_user)
 
     def _validate_statistics_setting(self, entity_id: int, current_user: User):
         entity = self._ensure_entity_exists(entity_id)

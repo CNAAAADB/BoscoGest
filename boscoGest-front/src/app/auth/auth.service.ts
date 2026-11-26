@@ -286,7 +286,17 @@ export class AuthService {
     return this.currentMembership();
   }
 
+  /** Only the reserved active membership at the root grants platform authority. */
+  isRootSuperadmin(): boolean {
+    return this.allMemberships().some(membership =>
+      membership.is_active && membership.role?.name === 'superadmin' &&
+      membership.role.is_active !== false && membership.entity?.level === 1 &&
+      membership.entity.parent_id === null && membership.entity.is_active !== false
+    );
+  }
+
   hasPermission(resource: string, action: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     const permissions = this.allUniquePermissions();
     return permissions.some(
       permission => permission.resource === resource && permission.action === action
@@ -294,6 +304,7 @@ export class AuthService {
   }
 
   hasEntityPermission(entityId: number, action: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     const memberships = this.allMemberships();
 
     // manage_all only from the root: the backend no longer lets one held in a
@@ -331,6 +342,7 @@ export class AuthService {
    * va a devolver 403.
    */
   hasPermissionAtEntity(entityId: number, resource: string, action: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     return this.allMemberships().some((membership) => {
       if (!membership.is_active) return false;
       const permisos = membership.role?.permissions ?? [];
@@ -357,6 +369,7 @@ export class AuthService {
    * lo que va a devolver 403.
    */
   hasRootPermission(resource: string, action: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     return this.allMemberships().some((membership) =>
       membership.is_active &&
       membership.entity?.level === 1 &&
@@ -367,6 +380,7 @@ export class AuthService {
   }
 
   hasAnyPermissionForResource(resource: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     const permissions = this.allUniquePermissions();
     return permissions.some(
       permission => permission.resource === resource
@@ -391,6 +405,7 @@ export class AuthService {
    * comprueba el backend en cada petición.
    */
   canPerform(resource: string, action: string): boolean {
+    if (this.isRootSuperadmin()) return true;
     return this.allMemberships().some((membership) =>
       membership.is_active &&
       (membership.role?.permissions ?? []).some(

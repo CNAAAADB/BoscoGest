@@ -130,6 +130,17 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
+def is_root_superadmin(user: User) -> bool:
+    """Reserved platform authority: an active superadmin membership at the root."""
+    return any(
+        m.is_active
+        and m.role is not None and m.role.is_active and m.role.name == "superadmin"
+        and m.entity is not None and m.entity.is_active
+        and m.entity.level == 1 and m.entity.parent_id is None
+        for m in user.memberships
+    )
+
+
 # ABAC Permission verification
 def has_permission(
     user: User,
@@ -146,6 +157,8 @@ def has_permission(
     - Group-based permissions
     - Contextual conditions
     """
+    if is_root_superadmin(user):
+        return True
     context = context or {}
 
     # Helper function to check conditions
@@ -201,6 +214,8 @@ def require_permission(resource: str, action: str):
     def dependency(
         current_user: User = Depends(get_current_active_user)
     ):
+        if is_root_superadmin(current_user):
+            return current_user
         # Check permissions across all active memberships
         for membership in current_user.memberships:
             if membership.is_active:

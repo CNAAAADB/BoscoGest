@@ -143,14 +143,10 @@ class EntityService:
         )
         roles = list(self.db.execute(stmt).scalars().all())
 
-        # If user is admin (not superadmin) in this entity, filter out superadmin role
-        direct_membership = self.membership_repo.get_by_user_and_entity(
-            current_user.id, entity_id, active_only=True
-        )
-        if direct_membership:
-            user_role = self.db.get(Role, direct_membership.role_id)
-            if user_role and user_role.name == "admin":
-                roles = [r for r in roles if r.name != "superadmin"]
+        from app.utils.auth import is_root_superadmin
+        entity = self.db.get(Entity, entity_id)
+        if entity is None or entity.level != 1 or not is_root_superadmin(current_user):
+            roles = [r for r in roles if r.name != "superadmin"]
 
         return [RoleResponse.model_validate(r) for r in roles]
 

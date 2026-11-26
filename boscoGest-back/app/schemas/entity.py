@@ -21,6 +21,7 @@ class EntityUpdate(BaseModel):
 
 class EntityResponse(EntityBase):
     id: int
+    is_active: bool = True
     created_at: datetime
     parent: Optional["EntityResponse"] = None  # self-referential relationship
 

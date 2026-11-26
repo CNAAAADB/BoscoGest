@@ -298,3 +298,57 @@ def test_multi_level_inheritance(db_session, entity_hierarchy, hierarchy_permiss
 
     # users:list is inheritable -> should cascade to Local (L4), skipping Federation (L3)
     assert has_effective_permission(db_session, user, h["local"].id, "users", "list") is True
+
+
+# Root superadmin must not depend on the role's stored permission catalogue.
+def test_root_superadmin_without_permissions_can_manage_all_levels(db_session, entity_hierarchy):
+    from app.services.authorization_service import AuthorizationService
+    from app.utils.auth import has_permission, is_root_superadmin, require_permission
+
+    user = _make_user(db_session)
+    role = _make_role(db_session, "superadmin", [])
+    membership = _make_membership(db_session, user, entity_hierarchy["superentity"], role)
+    auth = AuthorizationService(db_session)
+    assert is_root_superadmin(user)
+    for entity in entity_hierarchy.values():
+        for resource, action in (("memberships", "review"), ("roles", "assign"),
+                                 ("branding", "update"), ("future_resource", "manage")):
+            assert auth.has_effective_permission(user, entity.id, resource, action)
+    assert auth.has_root_permission(user, "views", "update")
+    assert auth.has_global_permission(user, "users", "read_sensitive")
+    assert has_permission(user, "fees", "create")
+    assert require_permission("fees", "create")(user) is user
+
+    membership.is_active = False
+    db_session.commit()
+    assert not is_root_superadmin(user)
+    assert not auth.has_root_permission(user, "views", "update")
+    assert not auth.has_effective_permission(user, entity_hierarchy["local"].id, "memberships", "review")
+
+
+def test_superadmin_name_at_lower_level_is_not_platform_authority(db_session, entity_hierarchy):
+    from app.services.authorization_service import AuthorizationService
+    from app.utils.auth import is_root_superadmin
+
+    user = _make_user(db_session)
+    role = _make_role(db_session, "superadmin", [])
+    _make_membership(db_session, user, entity_hierarchy["federation"], role)
+    auth = AuthorizationService(db_session)
+    assert not is_root_superadmin(user)
+    assert not auth.has_root_permission(user, "views", "update")
+    assert not auth.has_effective_permission(user, entity_hierarchy["local"].id, "memberships", "review")
+    with pytest.raises(HTTPException) as exc:
+        auth.check_superadmin_assignment(user, entity_hierarchy["superentity"], role)
+    assert exc.value.status_code == 403
+
+
+def test_only_root_superadmin_can_assign_reserved_role(db_session, entity_hierarchy, hierarchy_permissions):
+    from app.services.authorization_service import AuthorizationService
+
+    auth = AuthorizationService(db_session)
+    user = _make_user(db_session)
+    role = _make_role(db_session, "superadmin", [])
+    _make_membership(db_session, user, entity_hierarchy["superentity"], role)
+    auth.check_superadmin_assignment(user, entity_hierarchy["superentity"], role)
+    with pytest.raises(HTTPException):
+        auth.check_superadmin_assignment(user, entity_hierarchy["local"], role)

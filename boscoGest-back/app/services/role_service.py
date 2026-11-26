@@ -60,6 +60,9 @@ class RoleService:
             current_user, current_membership.entity_id, "roles", "create"
         )
 
+        if role_in.name == "superadmin":
+            raise HTTPException(status_code=403, detail="El rol superadmin está reservado")
+
         # Role names are unique across the whole system, but the list each
         # administrator sees is scoped to their own association. So a clash with
         # a role they cannot see reads as nonsense unless we say where it is.
@@ -307,6 +310,9 @@ class RoleService:
         db_role = self.role_repo.get_by_id(role_id)
         if not db_role:
             raise HTTPException(status_code=404, detail="Role not found")
+
+        if db_role.name == "superadmin":
+            raise HTTPException(status_code=403, detail="El rol superadmin está reservado")
 
         # Check entity associations
         associated_entity_ids = self.role_repo.get_entity_associations(role_id)
