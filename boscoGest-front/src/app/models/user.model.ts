@@ -358,6 +358,7 @@ export interface UserBasicInfo {
   id: number;
   name: string;
   surname: string;
+  email: string;
 }
 
 export interface CommentResponse {
@@ -365,7 +366,7 @@ export interface CommentResponse {
   content: string;
   communication_id: number;
   user_id: number;
-  user: UserBasicInfo;
+  user: Pick<UserBasicInfo, 'id' | 'name' | 'surname'>;
   created_at: string;
   updated_at: string;
 }

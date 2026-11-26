@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, Query, Request, Response, UploadFile, File, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Form, Query, Request, Response, UploadFile, File, status
 from typing import List, Dict, Any, Optional
 from app.models.user_model import User
 from app.schemas.user import (

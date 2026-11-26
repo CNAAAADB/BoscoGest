@@ -170,7 +170,10 @@ class FeeService:
     # ── Fees ──────────────────────────────────────────────────────────────────
 
     def list_fees(self, entity_id: int, current_user: User) -> List[Fee]:
-        self.scope.require(current_user, entity_id, "fees", "read", inherit=False)
+        if not (self.scope.allows(current_user, entity_id, "fees", "read", inherit=False)
+                or self.scope.allows(current_user, entity_id, "fees", "manage")
+                or self.scope.allows(current_user, entity_id, "fees", "create")):
+            raise HTTPException(status_code=403, detail="Permission denied")
         return [self._attach_current_config(f) for f in self.fee_repo.list_by_entity(entity_id)]
 
     def create_fee(
