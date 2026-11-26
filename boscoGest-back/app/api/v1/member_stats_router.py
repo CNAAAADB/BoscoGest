@@ -111,6 +111,22 @@ def _data(entity_id: int, period: Period, user: User, db: Session):
     return entity, leaves, by_entity, all_users, recent_ids, cutoff
 
 
+@member_stats_router.get("/entities")
+def manageable_statistics_entities(
+    user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_sync_db),
+):
+    """Only level-2+ scopes the administrator can legitimately aggregate."""
+    auth = AuthorizationService(db)
+    entities = db.execute(select(Entity).where(
+        Entity.level >= 2, Entity.is_active.is_(True)
+    ).order_by(Entity.level, Entity.name)).scalars().all()
+    return [{"id": e.id, "name": e.name, "level": e.level}
+            for e in entities if auth.has_effective_permission(
+                user, e.id, "users", "manage"
+            )]
+
+
 @member_stats_router.get("/entity/{entity_id}")
 def member_statistics(
     entity_id: int,
