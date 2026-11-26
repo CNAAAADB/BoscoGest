@@ -188,3 +188,36 @@ def test_drilldown_rejects_other_association_and_invalid_filter(
         "metric": "password", "period": "all",
     }, headers=auth_headers)
     assert invalid_metric.status_code == 422
+
+
+def test_drilldown_search_respects_case_and_returns_standard_user_rows(
+    client, db_session, test_entity, test_user, test_membership, auth_headers,
+):
+    """The embedded Admin Usuarios search must work with the new data source."""
+    from app.models.entity_view_config_model import EntityViewConfig
+
+    test_entity.level = 4
+    db_session.add(EntityViewConfig(
+        entity_id=test_entity.id, view_name="member_stats",
+        display_name="Estadísticas de socios", is_enabled=True,
+        display_order=2,
+    ))
+    db_session.commit()
+    endpoint = f"/member-stats/entity/{test_entity.id}/members"
+    visible = client.get(endpoint, params={
+        "metric": "registered", "period": "all", "search": "tEsT",
+    }, headers=auth_headers)
+    assert visible.status_code == 200, visible.text
+    assert visible.json()["total"] == 1
+    row = visible.json()["items"][0]
+    assert row["id"] == test_user.id
+    assert row["email"] == test_user.email
+    assert row["is_active"] is True
+    assert "password_hash" not in row
+
+    excluded = client.get(endpoint, params={
+        "metric": "registered", "period": "all", "search": "no-match-xyz",
+    }, headers=auth_headers)
+    assert excluded.status_code == 200
+    assert excluded.json()["total"] == 0
+    assert excluded.json()["items"] == []
