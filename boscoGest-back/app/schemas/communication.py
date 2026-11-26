@@ -55,6 +55,7 @@ class CommunicationResponse(CommunicationBase):
     updated_at: datetime
     is_active: bool
     entity_name: Optional[str] = None
+    permissions: Optional[dict[str, bool]] = None
 
     class Config:
         from_attributes = True

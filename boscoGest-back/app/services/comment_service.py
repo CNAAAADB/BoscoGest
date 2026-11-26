@@ -6,7 +6,7 @@ from app.models.communication_model import Communication
 from app.models.user_model import User
 from app.schemas.communication import CommentCreate, CommentUpdate
 from app.repositories.comment_repository import CommentRepository
-from app.services.authorization_service import AuthorizationService
+from app.services.scoped_permissions import ScopedPermissions
 from app.services.notification_service import NotificationService, EventType
 from app.utils.auth import get_sync_db
 
@@ -15,7 +15,7 @@ class CommentService:
     def __init__(self, db: Session):
         self.db = db
         self.comment_repo = CommentRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.notification_service = NotificationService(db)
 
     def _get_communication(self, communication_id: int) -> Communication:
@@ -24,7 +24,7 @@ class CommentService:
             .filter(Communication.id == communication_id)
             .first()
         )
-        if not communication:
+        if not communication or not communication.is_active or communication.status != "published":
             raise HTTPException(status_code=404, detail="Comunicación no encontrada")
         return communication
 
@@ -35,8 +35,8 @@ class CommentService:
         current_user: User,
     ) -> Comment:
         communication = self._get_communication(communication_id)
-        self.auth_service.check_entity_permission(
-            current_user, communication.entity_id, "comment", "create"
+        self.scope.require(
+            current_user, communication.entity_id, "comment", "create", inherit=False
         )
         comment = Comment(
             **comment_in.model_dump(),
@@ -71,8 +71,8 @@ class CommentService:
         self, communication_id: int, current_user: User
     ) -> List[Comment]:
         communication = self._get_communication(communication_id)
-        self.auth_service.check_entity_permission(
-            current_user, communication.entity_id, "comment", "read"
+        self.scope.require(
+            current_user, communication.entity_id, "comment", "read", inherit=False
         )
         return self.comment_repo.get_by_communication_id(communication_id)
 
@@ -87,9 +87,9 @@ class CommentService:
             raise HTTPException(status_code=404, detail="Comentario no encontrado")
 
         communication = self._get_communication(comment.communication_id)
-        self.auth_service.check_entity_permission(
-            current_user, communication.entity_id, "comment", "edit"
-        )
+        if comment.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Solo el autor puede editar su comentario")
+        self.scope.require(current_user, communication.entity_id, "comment", "edit", inherit=False)
 
         for field, value in comment_in.model_dump(exclude_unset=True).items():
             setattr(comment, field, value)
@@ -103,9 +103,10 @@ class CommentService:
             raise HTTPException(status_code=404, detail="Comentario no encontrado")
 
         communication = self._get_communication(comment.communication_id)
-        self.auth_service.check_entity_permission(
-            current_user, communication.entity_id, "comment", "delete"
-        )
+        if not self.scope.allows(current_user, communication.entity_id, "comment", "manage_all", wildcard=False):
+            if comment.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Solo el autor o un moderador puede eliminar este comentario")
+            self.scope.require(current_user, communication.entity_id, "comment", "delete", inherit=False)
 
         self.comment_repo.hard_delete(comment)
         self.db.commit()

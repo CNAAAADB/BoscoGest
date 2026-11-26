@@ -391,8 +391,7 @@ class UserService:
                     accessible_entity_ids, skip=offset, limit=batch_size, search=search, entity_id=entity_id
                 )
                 for candidate in batch:
-                    can_contact = visibility.can_read_contact or candidate.id == current_user.id
-                    can_sensitive = visibility.can_read_sensitive or candidate.id == current_user.id
+                    can_contact, can_sensitive = visibility.tiers_for(candidate, current_user.id)
                     if requires_review(candidate, contact=can_contact, sensitive=can_sensitive):
                         if skip <= total < skip + limit:
                             users.append(candidate)

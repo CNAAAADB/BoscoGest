@@ -9,7 +9,7 @@ from app.models.magazine_model import Magazine
 from app.models.user_model import User
 from app.schemas.magazine import MagazineUpdate
 from app.repositories.magazine_repository import MagazineRepository
-from app.services.authorization_service import AuthorizationService
+from app.services.scoped_permissions import ScopedPermissions
 from app.services.audit_service import AuditService
 from app.services.notification_service import NotificationService, EventType
 from app.services.storage import get_storage_service
@@ -22,7 +22,7 @@ class MagazineService:
     def __init__(self, db: Session):
         self.db = db
         self.magazine_repo = MagazineRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.audit_service = AuditService(db)
         self.notification_service = NotificationService(db)
 
@@ -38,7 +38,7 @@ class MagazineService:
         description: str | None = None,
         ip_address: str | None = None,
     ) -> Magazine:
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, entity_id, "magazines", "create"
         )
 
@@ -125,14 +125,15 @@ class MagazineService:
     def list_magazines(
         self, current_user: User, skip: int = 0, limit: int = 100
     ) -> List[Magazine]:
-        accessible_entity_ids = self.auth_service.get_accessible_entity_ids(current_user)
+        accessible_entity_ids = self.scope.content_ids(current_user, "magazines", ("create", "update", "delete"))
 
         if not accessible_entity_ids:
             return []
 
-        return self.magazine_repo.get_by_entity_ids(
-            accessible_entity_ids, skip=skip, limit=limit
+        rows = self.magazine_repo.get_by_entity_ids(
+            list(accessible_entity_ids), skip=skip, limit=limit
         )
+        return self.scope.decorate(current_user, rows, "magazines", ("update", "delete"))
 
     def get_magazine(self, magazine_id: int, current_user: User) -> Magazine:
         magazine = self.magazine_repo.get_by_id_with_entity(magazine_id)
@@ -141,21 +142,17 @@ class MagazineService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Magazine not found"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, magazine.entity_id, "magazines", "read"
-        )
-        return magazine
-
-    def get_magazine_file_url(self, magazine_id: int, current_user: User) -> str:
+        if magazine.entity_id not in self.scope.content_ids(current_user, "magazines", ("create", "update", "delete")):
+            raise HTTPException(status_code=404, detail="Magazine not found")
+        return self.scope.decorate(current_user, magazine, "magazines", ("update", "delete"))(self, magazine_id: int, current_user: User) -> str:
         magazine = self.magazine_repo.get_by_id(magazine_id)
         if not magazine:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Magazine not found"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, magazine.entity_id, "magazines", "read"
-        )
+        if magazine.entity_id not in self.scope.content_ids(current_user, "magazines", ("create", "update", "delete")):
+            raise HTTPException(status_code=404, detail="Magazine not found")
 
         key = magazine.file_path
         if key.startswith("/uploads/"):
@@ -180,7 +177,7 @@ class MagazineService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Magazine not found"
             )
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_magazine.entity_id, "magazines", "update"
         )
 
@@ -212,7 +209,7 @@ class MagazineService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Magazine not found"
             )
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_magazine.entity_id, "magazines", "delete"
         )
 

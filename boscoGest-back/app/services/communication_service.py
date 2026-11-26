@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from app.models.communication_model import Communication
 from app.models.user_model import User
 from app.schemas.communication import CommunicationCreate, CommunicationUpdate, VALID_TRANSITIONS
-from app.models.membership_model import Membership
+from app.models.entity_model import Entity
+from sqlalchemy import select
 from app.repositories.communication_repository import CommunicationRepository
-from app.services.authorization_service import AuthorizationService
+from app.services.scoped_permissions import ScopedPermissions
 from app.services.notification_service import NotificationService, EventType
 from app.services.storage import get_storage_service
 from app.utils.auth import get_sync_db
@@ -21,7 +22,7 @@ class CommunicationService:
     def __init__(self, db: Session):
         self.db = db
         self.comm_repo = CommunicationRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.notification_service = NotificationService(db)
 
     @staticmethod
@@ -46,34 +47,24 @@ class CommunicationService:
             )
         return communications
 
+    ADMIN_ACTIONS = ("create", "edit", "delete", "publish", "review")
+
     def get_entities_with_create_permission(self, current_user: User) -> list:
-        """Return entities where the user has permission to create communications."""
-        memberships = (
-            self.db.query(Membership)
-            .filter(
-                Membership.user_id == current_user.id,
-                Membership.is_active == True,
-            )
-            .all()
-        )
+        ids = self.scope.ids(current_user, "communications", "create")
+        return list(self.db.scalars(select(Entity).where(Entity.id.in_(ids)).order_by(Entity.name)).all())
 
-        entities_with_permission = []
-        for membership in memberships:
-            for permission in membership.role.permissions:
-                if (
-                    permission.resource == "communications"
-                    and permission.action == "create"
-                ):
-                    if membership.entity.is_active:
-                        entities_with_permission.append(membership.entity)
-                    break
-
-        return entities_with_permission
+    def _decorate(self, user, rows):
+        rows = self.scope.decorate(user, rows, "communications", self.ADMIN_ACTIONS)
+        for row in rows if isinstance(rows, list) else [rows]:
+            row.permissions["comment_create"] = self.scope.allows(user, row.entity_id, "comment", "create", inherit=False)
+            row.permissions["comment_delete"] = self.scope.allows(user, row.entity_id, "comment", "delete", inherit=False)
+            row.permissions["comment_moderate"] = self.scope.allows(user, row.entity_id, "comment", "manage_all", wildcard=False)
+        return rows
 
     def create_communication(
         self, communication_in: CommunicationCreate, current_user: User
     ) -> Communication:
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user,
             communication_in.entity_id,
             "communications",
@@ -83,7 +74,7 @@ class CommunicationService:
         # If publishing directly, check publish permission
         status = communication_in.status or "draft"
         if status == "published":
-            self.auth_service.check_entity_permission(
+            self.scope.require(
                 current_user,
                 communication_in.entity_id,
                 "communications",
@@ -113,85 +104,36 @@ class CommunicationService:
 
         return self._resolve_images(db_communication)
 
-    def _can_review(self, current_user: User, entity_ids: List[int]) -> bool:
-        """Check if user has review or publish permission in any of the entities."""
-        for eid in entity_ids:
-            try:
-                self.auth_service.check_entity_permission(
-                    current_user, eid, "communications", "review"
-                )
-                return True
-            except HTTPException:
-                pass
-            try:
-                self.auth_service.check_entity_permission(
-                    current_user, eid, "communications", "publish"
-                )
-                return True
-            except HTTPException:
-                pass
-        return False
+    def _visibility(self, user):
+        visible = self.scope.content_ids(user, "communications", self.ADMIN_ACTIONS)
+        private = set()
+        for action in ("create", "edit", "review", "publish"):
+            private.update(self.scope.ids(user, "communications", action))
+        return visible, private
 
-    def list_communications(
-        self, current_user: User, skip: int = 0, limit: int = 10,
-        status: Optional[str] = None,
-    ) -> List[Communication]:
-        entity_ids = self.comm_repo.get_accessible_entity_ids(current_user.id)
-        if not entity_ids:
-            return []
-
-        # Users with review/publish permission see all statuses; others only published
-        if status:
-            effective_status = status
-            effective_statuses = None
-        elif self._can_review(current_user, entity_ids):
-            effective_status = None
-            effective_statuses = None  # all statuses
-        else:
-            effective_status = "published"
-            effective_statuses = None
-
-        communications = self.comm_repo.get_by_entity_ids(
-            entity_ids, skip=skip, limit=limit,
-            status=effective_status, statuses=effective_statuses,
+    def list_communications(self, current_user: User, skip: int = 0, limit: int = 10,
+                            status: Optional[str] = None) -> List[Communication]:
+        visible, private = self._visibility(current_user)
+        rows = self.comm_repo.get_by_entity_ids(
+            list(visible), skip=skip, limit=limit, status=status,
+            private_entity_ids=list(private),
         )
-        return self._resolve_images(communications)
+        return self._decorate(current_user, self._resolve_images(rows))
 
-    def count_communications(
-        self, current_user: User, status: Optional[str] = None,
-    ) -> dict:
-        entity_ids = self.comm_repo.get_accessible_entity_ids(current_user.id)
-        if not entity_ids:
-            return {"total": 0}
+    def count_communications(self, current_user: User, status: Optional[str] = None) -> dict:
+        visible, private = self._visibility(current_user)
+        return {"total": self.comm_repo.count_by_entity_ids(
+            list(visible), status=status, private_entity_ids=list(private),
+        )}
 
-        if status:
-            effective_status = status
-        elif not self._can_review(current_user, entity_ids):
-            effective_status = "published"
-        else:
-            effective_status = None
-
-        count = self.comm_repo.count_by_entity_ids(
-            entity_ids, status=effective_status,
-        )
-        return {"total": count}
-
-    def get_communication(
-        self, communication_id: int, current_user: User
-    ) -> Communication:
+    def get_communication(self, communication_id: int, current_user: User) -> Communication:
         communication = self.comm_repo.get_by_id(communication_id)
-        if not communication:
-            raise HTTPException(
-                status_code=404, detail="Comunicación no encontrada"
-            )
-
-        self.auth_service.check_entity_permission(
-            current_user,
-            communication.entity_id,
-            "communications",
-            "read",
-        )
-        return self._resolve_images(communication)
+        visible, private = self._visibility(current_user)
+        if (not communication or not communication.is_active
+                or communication.entity_id not in visible
+                or (communication.status != "published" and communication.entity_id not in private)):
+            raise HTTPException(status_code=404, detail="Comunicación no encontrada")
+        return self._decorate(current_user, self._resolve_images(communication))
 
     def update_communication(
         self,
@@ -200,7 +142,7 @@ class CommunicationService:
         current_user: User,
     ) -> Communication:
         communication = self.comm_repo.get_by_id(communication_id)
-        if not communication:
+        if not communication or not communication.is_active:
             raise HTTPException(
                 status_code=404, detail="Comunicación no encontrada"
             )
@@ -212,7 +154,7 @@ class CommunicationService:
                 detail="Solo se pueden editar comunicaciones en estado borrador o revisión",
             )
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user,
             communication.entity_id,
             "communications",
@@ -230,7 +172,7 @@ class CommunicationService:
         self, communication_id: int, target_status: str, current_user: User,
     ) -> Communication:
         communication = self.comm_repo.get_by_id(communication_id)
-        if not communication:
+        if not communication or not communication.is_active:
             raise HTTPException(
                 status_code=404, detail="Comunicación no encontrada"
             )
@@ -245,19 +187,19 @@ class CommunicationService:
 
         # Permission checks per transition
         if target_status == "review":
-            self.auth_service.check_entity_permission(
+            self.scope.require(
                 current_user, communication.entity_id, "communications", "create",
             )
         elif target_status == "published":
-            self.auth_service.check_entity_permission(
+            self.scope.require(
                 current_user, communication.entity_id, "communications", "publish",
             )
         elif target_status == "draft" and current_status == "review":
-            self.auth_service.check_entity_permission(
+            self.scope.require(
                 current_user, communication.entity_id, "communications", "review",
             )
         elif target_status == "archived":
-            self.auth_service.check_entity_permission(
+            self.scope.require(
                 current_user, communication.entity_id, "communications", "publish",
             )
 
@@ -285,12 +227,12 @@ class CommunicationService:
         self, communication_id: int, current_user: User
     ) -> dict:
         communication = self.comm_repo.get_by_id(communication_id)
-        if not communication:
+        if not communication or not communication.is_active:
             raise HTTPException(
                 status_code=404, detail="Comunicación no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user,
             communication.entity_id,
             "communications",
@@ -310,12 +252,12 @@ class CommunicationService:
         current_user: User,
     ) -> dict:
         communication = self.comm_repo.get_by_id(communication_id)
-        if not communication:
+        if not communication or not communication.is_active:
             raise HTTPException(
                 status_code=404, detail="Comunicación no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user,
             communication.entity_id,
             "communications",

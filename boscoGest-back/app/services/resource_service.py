@@ -13,7 +13,7 @@ from app.repositories.resource_repository import (
     ResourceRepository,
     ResourceCategoryRepository,
 )
-from app.services.authorization_service import AuthorizationService
+from app.services.scoped_permissions import ScopedPermissions
 from app.services.audit_service import AuditService
 from app.services.notification_service import NotificationService, EventType
 from app.services.storage import get_storage_service
@@ -29,13 +29,13 @@ class ResourceCategoryService:
     def __init__(self, db: Session):
         self.db = db
         self.category_repo = ResourceCategoryRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.audit_service = AuditService(db)
 
     def create_category(
         self, category_in, current_user: User, ip_address: str | None = None
     ) -> ResourceCategory:
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, category_in.entity_id, "resources", "create"
         )
 
@@ -68,9 +68,8 @@ class ResourceCategoryService:
     def list_categories(
         self, entity_id: int, current_user: User
     ) -> List[ResourceCategory]:
-        self.auth_service.check_entity_permission(
-            current_user, entity_id, "resources", "list"
-        )
+        if entity_id not in self.scope.content_ids(current_user, "resources", ("create", "update", "delete")):
+            raise HTTPException(status_code=403, detail="Permission denied")
         return self.category_repo.get_by_entity_id(entity_id)
 
     def update_category(
@@ -84,7 +83,7 @@ class ResourceCategoryService:
         if not db_category:
             raise HTTPException(status_code=404, detail="Category not found")
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_category.entity_id, "resources", "update"
         )
 
@@ -115,7 +114,7 @@ class ResourceCategoryService:
         if not db_category:
             raise HTTPException(status_code=404, detail="Category not found")
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_category.entity_id, "resources", "delete"
         )
 
@@ -136,7 +135,7 @@ class ResourceService:
     def __init__(self, db: Session):
         self.db = db
         self.resource_repo = ResourceRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.audit_service = AuditService(db)
         self.notification_service = NotificationService(db)
 
@@ -146,7 +145,7 @@ class ResourceService:
         current_user: User,
         ip_address: str | None = None,
     ) -> Resource:
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, resource_in.entity_id, "resources", "create"
         )
 
@@ -229,7 +228,7 @@ class ResourceService:
         category_id: int | None = None,
         ip_address: str | None = None,
     ) -> Resource:
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, entity_id, "resources", "create"
         )
 
@@ -348,20 +347,14 @@ class ResourceService:
         skip: int = 0,
         limit: int = 100,
     ) -> List[Resource]:
-        if entity_id:
-            self.auth_service.check_entity_permission(
-                current_user, entity_id, "resources", "list"
-            )
-            accessible_ids = [entity_id]
-        else:
-            accessible_ids = self.auth_service.get_accessible_entity_ids(
-                current_user
-            )
-            if not accessible_ids:
-                return []
+        accessible_ids = self.scope.content_ids(current_user, "resources", ("create", "update", "delete"))
+        if entity_id is not None:
+            if entity_id not in accessible_ids:
+                raise HTTPException(status_code=403, detail="Permission denied")
+            accessible_ids = {entity_id}
 
-        return self.resource_repo.get_filtered(
-            accessible_ids,
+        rows = self.resource_repo.get_filtered(
+            list(accessible_ids),
             category_id=category_id,
             resource_type=resource_type,
             tags=tags,
@@ -369,27 +362,26 @@ class ResourceService:
             skip=skip,
             limit=limit,
         )
+        return self.scope.decorate(current_user, rows, "resources", ("update", "delete"))
 
     def get_resource(self, resource_id: int, current_user: User) -> Resource:
         resource = self.resource_repo.get_by_id_with_relations(resource_id)
-        if not resource:
+        if not resource or not resource.is_active:
             raise HTTPException(status_code=404, detail="Resource not found")
 
-        self.auth_service.check_entity_permission(
-            current_user, resource.entity_id, "resources", "read"
-        )
-        return resource
+        if resource.entity_id not in self.scope.content_ids(current_user, "resources", ("create", "update", "delete")):
+            raise HTTPException(status_code=404, detail="Resource not found")
+        return self.scope.decorate(current_user, resource, "resources", ("update", "delete"))
 
     def get_resource_file_url(
         self, resource_id: int, current_user: User
     ) -> str:
         resource = self.resource_repo.get_by_id(resource_id)
-        if not resource:
+        if not resource or not resource.is_active:
             raise HTTPException(status_code=404, detail="Resource not found")
 
-        self.auth_service.check_entity_permission(
-            current_user, resource.entity_id, "resources", "read"
-        )
+        if resource.entity_id not in self.scope.content_ids(current_user, "resources", ("create", "update", "delete")):
+            raise HTTPException(status_code=404, detail="Resource not found")
 
         if not resource.file_path:
             raise HTTPException(
@@ -414,7 +406,7 @@ class ResourceService:
         if not db_resource:
             raise HTTPException(status_code=404, detail="Resource not found")
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_resource.entity_id, "resources", "update"
         )
 
@@ -445,7 +437,7 @@ class ResourceService:
         if not db_resource:
             raise HTTPException(status_code=404, detail="Resource not found")
 
-        self.auth_service.check_entity_permission(
+        self.scope.require(
             current_user, db_resource.entity_id, "resources", "delete"
         )
 

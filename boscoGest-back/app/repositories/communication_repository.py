@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.models.communication_model import Communication
 from app.models.membership_model import Membership
 from app.repositories.base_repository import BaseRepository
@@ -16,7 +16,7 @@ class CommunicationRepository:
 
     def get_accessible_entity_ids(self, user_id: int) -> List[int]:
         stmt = select(Membership.entity_id).where(
-            Membership.user_id == user_id
+            Membership.user_id == user_id, Membership.is_active.is_(True)
         )
         return list(self.db.execute(stmt).scalars().all())
 
@@ -27,6 +27,7 @@ class CommunicationRepository:
         limit: int = 10,
         status: Optional[str] = None,
         statuses: Optional[List[str]] = None,
+        private_entity_ids: Optional[List[int]] = None,
     ) -> List[Communication]:
         query = self.db.query(Communication).options(
             joinedload(Communication.entity)
@@ -34,6 +35,9 @@ class CommunicationRepository:
             Communication.entity_id.in_(entity_ids),
             Communication.is_active == True,
         )
+        if private_entity_ids is not None:
+            query = query.filter(or_(Communication.status == "published",
+                                     Communication.entity_id.in_(private_entity_ids)))
         if status:
             query = query.filter(Communication.status == status)
         elif statuses:
@@ -50,11 +54,15 @@ class CommunicationRepository:
         entity_ids: List[int],
         status: Optional[str] = None,
         statuses: Optional[List[str]] = None,
+        private_entity_ids: Optional[List[int]] = None,
     ) -> int:
         query = self.db.query(Communication).filter(
             Communication.entity_id.in_(entity_ids),
             Communication.is_active == True,
         )
+        if private_entity_ids is not None:
+            query = query.filter(or_(Communication.status == "published",
+                                     Communication.entity_id.in_(private_entity_ids)))
         if status:
             query = query.filter(Communication.status == status)
         elif statuses:
