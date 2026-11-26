@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <title>BoscoGest — Gestión de asociaciones</title>
   <base href="/">
+  <script>
+    if (location.hostname === 'descargas.boscogest.com' && location.pathname === '/') {
+      location.replace('/descargas/index.html');
+    }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Favicon optimizado a partir del escudo facilitado para BoscoGest. -->
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-boscogest.png?v=20261118">
