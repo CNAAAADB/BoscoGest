@@ -24,11 +24,21 @@
           <mat-label>Contraseña</mat-label>
           <input
             matInput
-            type="password"
+            [type]="showPassword() ? 'text' : 'password'"
             [(ngModel)]="password"
             name="password"
+            autocomplete="current-password"
             required
           />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.title]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+            <mat-icon aria-hidden="true">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
         </mat-form-field>
 
         <a
