@@ -15,7 +15,6 @@ import { ActivitiesService } from '../activities.service';
 import { UsersService } from '../../users/users.service';
 import { ActivityResponse, ActivityRegistrationOut, UserResponse } from '../../models/user.model';
 import { formatActivityDates } from '../activity-dates';
-import { AuthService } from '../../auth/auth.service';
 import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 import { environment } from '../../../environments/environment';
 
@@ -56,23 +55,23 @@ export class ActivityDetailComponent implements OnInit {
   loadingRegistrations = signal<boolean>(false);
 
   // Permissions
-  canRegister = signal<boolean>(false);
+  canRegister = computed(() => this.activity()?.permissions?.can_register === true);
   isRegistered = signal<boolean>(false);
-  currentUserId = computed(() => this.authService.getCurrentUser()?.id);
+
 
   // Check if user can manage activities
   canManageActivities = computed(() => {
-    return this.authService.hasPermission('activities', 'manage');
+    return this.activity()?.permissions?.can_manage_registrations === true;
   });
 
   // Check if user can edit activities
   canEditActivities = computed(() => {
-    return this.authService.hasPermission('activities', 'update');
+    return this.activity()?.permissions?.can_edit === true;
   });
 
   // Check if user can delete activities
   canDeleteActivities = computed(() => {
-    return this.authService.hasPermission('activities', 'delete');
+    return this.activity()?.permissions?.can_delete === true;
   });
 
   // Show admin actions (if user has any management permission for activities)
@@ -84,7 +83,7 @@ export class ActivityDetailComponent implements OnInit {
   canCreateChatGroup = computed(() => {
     const activity = this.activity();
     if (!activity) return false;
-    return activity.created_by_id === this.currentUserId() || this.canManageActivities();
+    return activity.permissions?.can_create_chat_group === true;
   });
 
   creatingChatGroup = signal<boolean>(false);
@@ -114,8 +113,7 @@ export class ActivityDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog,
-    private authService: AuthService
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -123,10 +121,6 @@ export class ActivityDetailComponent implements OnInit {
     if (id) {
       this.activityId = parseInt(id, 10);
       this.loadActivity(this.activityId);
-      // Load registrations if user has manage permission
-      if (this.canManageActivities()) {
-        this.loadRegistrations();
-      }
     } else {
       this.router.navigate(['/activities']);
     }
@@ -138,6 +132,7 @@ export class ActivityDetailComponent implements OnInit {
       next: (activity) => {
         this.activity.set(activity);
         this.checkIfUserIsRegistered();
+        if (this.canManageActivities()) this.loadRegistrations();
         this.loading.set(false);
       },
       error: (error) => {
@@ -153,7 +148,7 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   loadRegistrations(): void {
-    if (!this.activityId) return;
+    if (!this.activityId || !this.canManageActivities()) return;
 
     this.loadingRegistrations.set(true);
     this.activitiesService.getRegistrations(this.activityId).subscribe({
@@ -197,7 +192,7 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   registerToActivity(): void {
-    if (!this.activityId) return;
+    if (!this.activityId || !this.canRegister()) return;
 
     if (this.activity()?.allow_guests && this.guestCount.invalid) return;
     const guests = this.activity()?.allow_guests ? this.guestCount.value : 0;
@@ -226,7 +221,7 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   acceptRegistration(registration: RegistrationWithUser): void {
-    if (!this.activityId) return;
+    if (!this.activityId || !this.canManageActivities()) return;
 
     this.activitiesService.acceptRegistration(this.activityId, registration.user_id).subscribe({
       next: () => {
@@ -248,7 +243,7 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   rejectRegistration(registration: RegistrationWithUser): void {
-    if (!this.activityId) return;
+    if (!this.activityId || !this.canManageActivities()) return;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '600px',
@@ -286,7 +281,7 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   createChatGroup(): void {
-    if (!this.activityId || this.creatingChatGroup()) return;
+    if (!this.activityId || this.creatingChatGroup() || !this.canCreateChatGroup()) return;
 
     this.creatingChatGroup.set(true);
     this.activitiesService.createChatGroup(this.activityId).subscribe({
@@ -310,13 +305,13 @@ export class ActivityDetailComponent implements OnInit {
   }
 
   editActivity(): void {
-    if (this.activityId) {
+    if (this.activityId && this.canEditActivities()) {
       this.router.navigate(['/activities', this.activityId, 'edit']);
     }
   }
 
   deleteActivity(): void {
-    if (!this.activityId) return;
+    if (!this.activityId || !this.canDeleteActivities()) return;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '600px',

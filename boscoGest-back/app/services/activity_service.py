@@ -4,9 +4,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models.activity_model import Activity
 from app.models.activity_registration_model import ActivityRegistration
-from app.models.membership_model import Membership
+from app.models.entity_model import Entity
+from sqlalchemy import select
 from app.models.user_model import User
-from app.schemas.activity import ActivityCreate, ActivityUpdate, check_end_after_start
+from app.schemas.activity import ActivityCreate, ActivityUpdate, ActivityResponse, ActivityPermissions, check_end_after_start
 from app.repositories.activity_repository import ActivityRepository
 from app.services.authorization_service import AuthorizationService
 from app.services.audit_service import AuditService
@@ -50,41 +51,83 @@ class ActivityService:
 
     # ── Entity permissions ──────────────────────────────────────────
 
-    def get_entities_with_create_permission(self, current_user: User) -> list:
+    def _active_memberships(self, user: User):
+        return [
+            m for m in user.memberships
+            if m.is_active and m.entity is not None and m.entity.is_active
+            and m.role is not None and m.role.is_active
+        ]
+
+    def _admin_entity_ids(self, user: User, action: str) -> set[int]:
+        """Activity administration is scoped to active entity appointments.
+
+        An automatic socio membership at a parent does not carry a local
+        admin's privileges upwards. Unscoped user/group permissions cannot
+        turn local activity administration into platform-wide authority.
         """
-        Return entities where the current user has permission to create activities.
-        Checks active memberships and their role permissions.
-        """
-        memberships = (
-            self.db.query(Membership)
-            .filter(
-                Membership.user_id == current_user.id,
-                Membership.is_active == True,
-            )
-            .all()
+        direct, inheritable = set(), set()
+        for m in self._active_memberships(user):
+            if (m.entity.level == 1 and m.entity.parent_id is None
+                    and m.role.name == "superadmin"
+                    and self.auth_service.has_effective_permission(
+                        user, m.entity_id, "activities", action
+                    )):
+                direct.add(m.entity_id)
+                inheritable.add(m.entity_id)
+                continue
+            for p in m.role.permissions:
+                if p.is_active and p.resource == "activities" and p.action in (action, "manage_all"):
+                    direct.add(m.entity_id)
+                    if p.inheritable:
+                        inheritable.add(m.entity_id)
+        candidates = direct | set(self.auth_service.entity_repo.get_descendant_ids_of(list(inheritable)))
+        if not candidates:
+            return set()
+        return set(self.db.scalars(
+            select(Entity.id).where(Entity.id.in_(candidates), Entity.is_active.is_(True))
+        ).all())
+
+    def _can_admin(self, user: User, entity_id: int, action: str) -> bool:
+        return entity_id in self._admin_entity_ids(user, action)
+
+    def _check_admin(self, user: User, entity_id: int, action: str) -> None:
+        if not self._can_admin(user, entity_id, action):
+            raise HTTPException(status_code=403, detail="No tienes permisos sobre esta actividad")
+
+    def _member_entity_ids(self, user: User) -> set[int]:
+        return {m.entity_id for m in self._active_memberships(user)}
+
+    def _visible_entity_ids(self, user: User) -> set[int]:
+        ids = self._member_entity_ids(user)
+        for action in ("create", "update", "delete", "manage"):
+            ids.update(self._admin_entity_ids(user, action))
+        return ids
+
+    def _permissions(self, user: User, activity: Activity) -> ActivityPermissions:
+        manage = self._can_admin(user, activity.entity_id, "manage")
+        return ActivityPermissions(
+            can_edit=self._can_admin(user, activity.entity_id, "update"),
+            can_delete=self._can_admin(user, activity.entity_id, "delete"),
+            can_manage_registrations=manage,
+            can_create_chat_group=manage or (
+                activity.created_by_id == user.id
+                and self._can_admin(user, activity.entity_id, "create")
+            ),
+            can_register=activity.entity_id in self._member_entity_ids(user),
         )
 
-        entities_with_permission = []
-        for membership in memberships:
-            for permission in membership.role.permissions:
-                if (
-                    permission.resource == "activities"
-                    and permission.action == "create"
-                ):
-                    if membership.entity.is_active:
-                        entities_with_permission.append(membership.entity)
-                    break
-
-        return entities_with_permission
+    def get_entities_with_create_permission(self, current_user: User) -> list:
+        ids = self._admin_entity_ids(current_user, "create")
+        return list(self.db.scalars(
+            select(Entity).where(Entity.id.in_(ids)).order_by(Entity.name)
+        ).all())
 
     # ── Activity CRUD ───────────────────────────────────────────────
 
     def create_activity(
         self, activity_in: ActivityCreate, current_user: User
     ) -> Activity:
-        self.auth_service.check_entity_permission(
-            current_user, activity_in.entity_id, "activities", "create"
-        )
+        self._check_admin(current_user, activity_in.entity_id, "create")
 
         db_activity = Activity(
             **activity_in.model_dump(), created_by_id=current_user.id
@@ -105,8 +148,8 @@ class ActivityService:
         return self._resolve_images(db_activity)
 
     def list_activities(self, current_user: User) -> List[Activity]:
-        """List active activities from entities where the user has a membership."""
-        entity_ids = self.activity_repo.get_accessible_entity_ids(current_user.id)
+        """List activities from active memberships and administrable descendants."""
+        entity_ids = list(self._visible_entity_ids(current_user))
         if not entity_ids:
             return []
 
@@ -115,13 +158,13 @@ class ActivityService:
         )
         return self._resolve_images(activities)
 
-    def get_activity(self, activity_id: int) -> Activity:
+    def get_activity(self, activity_id: int, current_user: User) -> ActivityResponse:
         activity = self.activity_repo.get_by_id_with_entity(activity_id)
-        if not activity:
-            raise HTTPException(
-                status_code=404, detail="Actividad no encontrada"
-            )
-        return self._resolve_images(activity)
+        if not activity or not activity.is_active or activity.entity_id not in self._visible_entity_ids(current_user):
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+        return ActivityResponse.model_validate(self._resolve_images(activity)).model_copy(
+            update={"permissions": self._permissions(current_user, activity)}
+        )
 
     def update_activity(
         self,
@@ -130,14 +173,12 @@ class ActivityService:
         current_user: User,
     ) -> Activity:
         activity = self.activity_repo.lock_activity(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "update"
-        )
+        self._check_admin(current_user, activity.entity_id, "update")
 
         changes = activity_in.model_dump(exclude_unset=True)
         # Either end may change alone, so the check is against the result: a
@@ -169,14 +210,12 @@ class ActivityService:
 
     def delete_activity(self, activity_id: int, current_user: User) -> dict:
         activity = self.activity_repo.get_by_id(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "delete"
-        )
+        self._check_admin(current_user, activity.entity_id, "delete")
 
         activity.is_active = False
         self.db.commit()
@@ -188,13 +227,13 @@ class ActivityService:
         self, activity_id: int, current_user: User, guest_count: int = 0
     ) -> ActivityRegistration:
         activity = self.activity_repo.lock_activity(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
         # Verify user belongs to the activity's entity
-        membership_entity_ids = [m.entity_id for m in current_user.memberships]
+        membership_entity_ids = self._member_entity_ids(current_user)
         if activity.entity_id not in membership_entity_ids:
             raise HTTPException(
                 status_code=403,
@@ -236,6 +275,9 @@ class ActivityService:
     def get_my_registration(
         self, activity_id: int, current_user: User
     ) -> Optional[ActivityRegistration]:
+        activity = self.activity_repo.get_by_id(activity_id)
+        if not activity or not activity.is_active or activity.entity_id not in self._visible_entity_ids(current_user):
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
         return self.activity_repo.get_active_registration(
             activity_id, current_user.id
         )
@@ -244,14 +286,12 @@ class ActivityService:
         self, activity_id: int, current_user: User
     ) -> List[ActivityRegistration]:
         activity = self.activity_repo.get_by_id(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "manage"
-        )
+        self._check_admin(current_user, activity.entity_id, "manage")
 
         # Filter only active registrations
         return [r for r in activity.registrations if r.is_active]
@@ -263,14 +303,10 @@ class ActivityService:
         from app.services.chat_service import ChatService
 
         activity = self.activity_repo.get_by_id(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
-        is_creator = activity.created_by_id == current_user.id
-        can_manage = self.auth_service.has_effective_permission(
-            current_user, activity.entity_id, "activities", "manage"
-        )
-        if not (is_creator or can_manage):
+        if not self._permissions(current_user, activity).can_create_chat_group:
             raise HTTPException(
                 status_code=403,
                 detail="Solo el responsable de la actividad puede crear el grupo",
@@ -315,14 +351,12 @@ class ActivityService:
         self, activity_id: int, user_id: int, current_user: User
     ) -> ActivityRegistration:
         activity = self.activity_repo.lock_activity(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "manage"
-        )
+        self._check_admin(current_user, activity.entity_id, "manage")
 
         registration = self.activity_repo.get_registration(activity_id, user_id)
         if not registration:
@@ -360,14 +394,12 @@ class ActivityService:
         self, activity_id: int, user_id: int, current_user: User
     ) -> ActivityRegistration:
         activity = self.activity_repo.get_by_id(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "manage"
-        )
+        self._check_admin(current_user, activity.entity_id, "manage")
 
         registration = self.activity_repo.get_registration(activity_id, user_id)
         if not registration:
@@ -402,14 +434,12 @@ class ActivityService:
         current_user: User,
     ) -> dict:
         activity = self.activity_repo.get_by_id(activity_id)
-        if not activity:
+        if not activity or not activity.is_active:
             raise HTTPException(
                 status_code=404, detail="Actividad no encontrada"
             )
 
-        self.auth_service.check_entity_permission(
-            current_user, activity.entity_id, "activities", "update"
-        )
+        self._check_admin(current_user, activity.entity_id, "update")
 
         if not content_type or not content_type.startswith("image/"):
             raise HTTPException(

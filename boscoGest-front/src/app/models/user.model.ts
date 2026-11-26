@@ -236,6 +236,14 @@ export interface RoleDetails {
 }
 
 // Activity Models
+export interface ActivityPermissions {
+  can_edit: boolean;
+  can_delete: boolean;
+  can_manage_registrations: boolean;
+  can_create_chat_group: boolean;
+  can_register: boolean;
+}
+
 export interface ActivityResponse {
   id: number;
   title: string;
@@ -252,6 +260,7 @@ export interface ActivityResponse {
   created_at: string;
   created_by_id: number;
   entity?: EntityResponse | null;
+  permissions?: ActivityPermissions | null;
 }
 
 export interface ActivityCreate {

@@ -40,8 +40,9 @@ def list_activities(
 def get_activity(
     activity_id: int,
     service: ActivityService = Depends(get_activity_service),
+    current_user: User = Depends(get_current_active_user),
 ):
-    return service.get_activity(activity_id)
+    return service.get_activity(activity_id, current_user)
 
 
 @activity_router.put("/{activity_id}", response_model=ActivityResponse)

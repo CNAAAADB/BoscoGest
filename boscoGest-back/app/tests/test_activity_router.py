@@ -133,7 +133,7 @@ def test_list_activities(client, auth_headers, db_session, test_entity, test_use
     assert activity_in_other_entity.id not in activity_ids
 
 
-def test_get_activity(client, db_session, test_entity, test_user):
+def test_get_activity(client, auth_headers, db_session, test_entity, test_user):
     from app.models.activity_model import Activity
 
     activity = Activity(
@@ -149,7 +149,8 @@ def test_get_activity(client, db_session, test_entity, test_user):
     db_session.commit()
     db_session.refresh(activity)
 
-    response = client.get(f"/activities/{activity.id}")
+    assert client.get(f"/activities/{activity.id}").status_code == 401
+    response = client.get(f"/activities/{activity.id}", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -157,8 +158,8 @@ def test_get_activity(client, db_session, test_entity, test_user):
     assert data["title"] == activity.title
 
 
-def test_get_activity_not_found(client):
-    response = client.get("/activities/9999")
+def test_get_activity_not_found(client, auth_headers):
+    response = client.get("/activities/9999", headers=auth_headers)
 
     assert response.status_code == 404
 
@@ -491,3 +492,114 @@ def test_register_with_guests(client, auth_headers, test_entity, allowed, guests
     if waitlist:
         accept = client.post(f"{url}/registrations/{registration['user_id']}/accept", headers=auth_headers)
         assert accept.status_code == 400
+
+
+def test_activity_admin_permissions_are_scoped_to_the_organizing_entity(
+    client, auth_headers, db_session, test_entity, test_user, test_role
+):
+    from app.models.activity_model import Activity
+    from app.models.entity_model import Entity
+    from app.models.membership_model import Membership
+    from app.models.permission_model import Permission
+    from app.models.role_model import Role
+    from app.models.user_model import User
+    from app.utils.auth import create_access_token, get_password_hash
+
+    db = db_session
+    socio = db.query(Role).filter_by(name="socio").one()
+
+    def entity(name, level, parent):
+        row = Entity(name=name, level=level, parent_id=parent.id)
+        db.add(row)
+        db.flush()
+        return row
+
+    conf = entity("Confederación", 2, test_entity)
+    fed = entity("Federación", 3, conf)
+    atocha = entity("Atocha", 4, fed)
+    other = entity("Otra asociación", 4, fed)
+    other_fed = entity("Otra federación", 3, conf)
+    outside = entity("Fuera de la federación", 4, other_fed)
+
+    def actor(n, admin_at, parents):
+        user = User(
+            email=f"activity-scope-{n}@example.com",
+            password_hash=get_password_hash("password"),
+            name=f"Admin {n}", surname="Prueba",
+            phone=f"60000000{n}", dni=f"1000000{n}X",
+            birthdate=datetime(1990, 1, 1).date(), is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        member = Membership(user_id=user.id, entity_id=admin_at.id,
+                            role_id=test_role.id, is_active=True)
+        db.add(member)
+        for parent in parents:
+            db.add(Membership(user_id=user.id, entity_id=parent.id,
+                              role_id=socio.id, is_active=True))
+        db.flush()
+        token = create_access_token({"sub": str(user.id), "membership_id": member.id})
+        return user, member, {"Authorization": f"Bearer {token}"}
+
+    local_user, local_membership, local_headers = actor(1, atocha, [fed, conf, test_entity])
+    _, _, federal_headers = actor(2, fed, [conf, test_entity])
+    _, _, confederal_headers = actor(3, conf, [test_entity])
+    # Unscoped direct grants must not turn a local appointment into a global one.
+    local_user.direct_permissions.append(db.query(Permission).filter_by(
+        resource="activities", action="update"
+    ).one())
+
+    def activity(owner, name):
+        row = Activity(title=name, description="Test", entity_id=owner.id,
+                       date=datetime.utcnow() + timedelta(days=1), capacity=20,
+                       price=0, created_by_id=test_user.id)
+        db.add(row)
+        db.flush()
+        return row
+
+    national = activity(conf, "Actividad confederal")
+    local = activity(atocha, "Actividad Atocha")
+    sibling = activity(other, "Actividad otra asociación")
+    unrelated = activity(outside, "Actividad otra federación")
+    db.commit()
+    national_url = f"/activities/{national.id}"
+    local_url = f"/activities/{local.id}"
+
+    assert client.get(national_url).status_code == 401
+    detail = client.get(national_url, headers=local_headers)
+    assert detail.status_code == 200
+    assert detail.json()["permissions"] == {
+        "can_edit": False, "can_delete": False, "can_manage_registrations": False,
+        "can_create_chat_group": False, "can_register": True,
+    }
+    assert client.put(national_url, json={"title": "No autorizado"}, headers=local_headers).status_code == 403
+    assert client.delete(national_url, headers=local_headers).status_code == 403
+    assert client.get(f"{national_url}/registrations", headers=local_headers).status_code == 403
+    assert client.post(f"{national_url}/chat-group", headers=local_headers).status_code == 403
+    assert client.post(f"{national_url}/upload-image", headers=local_headers,
+                       files={"file": ("test.png", BytesIO(b"test"), "image/png")}).status_code == 403
+    assert client.post(f"{national_url}/register", headers=local_headers).status_code == 200
+    for action in ("accept", "reject"):
+        assert client.post(f"{national_url}/registrations/{local_user.id}/{action}",
+                           headers=local_headers).status_code == 403
+
+    assert client.get(f"/activities/{sibling.id}", headers=local_headers).status_code == 404
+    assert client.put(f"/activities/{sibling.id}", json={"title": "No"}, headers=local_headers).status_code == 403
+    assert client.get(local_url, headers=local_headers).json()["permissions"]["can_edit"] is True
+    assert client.put(local_url, json={"title": "Editada en Atocha"}, headers=local_headers).status_code == 200
+
+    assert client.put(local_url, json={"title": "Editada desde federación"}, headers=federal_headers).status_code == 200
+    assert client.get(f"/activities/{unrelated.id}", headers=federal_headers).status_code == 404
+    assert client.put(national_url, json={"title": "No"}, headers=federal_headers).status_code == 403
+    assert client.put(national_url, json={"title": "Editada desde Confederación"}, headers=confederal_headers).status_code == 200
+    assert client.put(local_url, json={"title": "Editada desde raíz"}, headers=auth_headers).status_code == 200
+
+    create_entities = client.get("/activities/entities-with-permissions", headers=local_headers).json()
+    assert {row["id"] for row in create_entities} == {atocha.id}
+
+    local_membership.is_active = False
+    db.commit()
+    assert client.get(local_url, headers=local_headers).status_code == 404
+    assert client.post(f"{local_url}/register", headers=local_headers).status_code == 403
+    assert client.put(local_url, json={"title": "No"}, headers=local_headers).status_code == 403
+    assert local.id not in {row["id"] for row in client.get("/activities", headers=local_headers).json()}
