@@ -136,6 +136,7 @@ export interface UserDetails {
 
 export interface EntityResponse {
   id: number;
+  is_active?: boolean;
   name: string;
   level: number;
   parent_id: number | null;
@@ -164,6 +165,7 @@ export interface EntityDetails {
 
 export interface RoleResponse {
   id: number;
+  is_active?: boolean;
   name: string;
   description: string | null;
   permissions?: PermissionResponse[];

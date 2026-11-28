@@ -13,7 +13,7 @@ from app.services.authorization_service import AuthorizationService
 from app.services.audit_service import AuditService
 from app.services.notification_service import NotificationService, EventType
 from app.schemas.permission import PermissionResponse
-from app.utils.auth import get_sync_db
+from app.utils.auth import get_sync_db, is_root_superadmin
 
 
 class MembershipService:
@@ -55,6 +55,8 @@ class MembershipService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Entity with id {membership_in.entity_id} not found",
                 )
+
+            self.auth_service.check_superadmin_assignment(current_user, entity, role)
 
             existing = self.membership_repo.get_by_user_and_entity(
                 membership_in.user_id,
@@ -189,6 +191,7 @@ class MembershipService:
                     "id": m.role.id,
                     "name": m.role.name,
                     "description": m.role.description,
+                    "is_active": m.role.is_active,
                     "permissions": [
                         PermissionResponse.model_validate(p).model_dump()
                         for p in m.role.permissions
@@ -203,7 +206,7 @@ class MembershipService:
         if not membership:
             raise HTTPException(status_code=404, detail="Membership not found")
 
-        if membership.user_id != current_user.id:
+        if membership.user_id != current_user.id and not is_root_superadmin(current_user):
             raise HTTPException(
                 status_code=403,
                 detail="You do not have access to this membership",
@@ -225,6 +228,7 @@ class MembershipService:
                 "id": membership.role.id,
                 "name": membership.role.name,
                 "description": membership.role.description,
+                "is_active": membership.role.is_active,
                 "permissions": [
                     PermissionResponse.model_validate(p).model_dump()
                     for p in membership.role.permissions
@@ -249,6 +253,12 @@ class MembershipService:
         )
 
         update_data = membership_update.model_dump(exclude_unset=True)
+        if db_membership.role.name == "superadmin" and not is_root_superadmin(current_user):
+            raise HTTPException(status_code=403, detail="No puedes modificar una membresía Superadmin")
+        if update_data.get("role_id") is not None:
+            role = self.db.get(Role, update_data["role_id"])
+            if role is not None:
+                self.auth_service.check_superadmin_assignment(current_user, db_membership.entity, role)
         try:
             if update_data:
                 self.membership_repo.update(membership_id, update_data)
@@ -287,6 +297,8 @@ class MembershipService:
             current_user, membership.entity_id, "memberships", "delete"
         )
 
+        if membership.role.name == "superadmin" and not is_root_superadmin(current_user):
+            raise HTTPException(status_code=403, detail="No puedes eliminar una membresía Superadmin")
         membership.is_active = False
         self.db.commit()
 

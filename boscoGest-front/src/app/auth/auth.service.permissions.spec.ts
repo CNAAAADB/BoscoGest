@@ -38,6 +38,31 @@ describe('AuthService.hasPermissionAtEntity', () => {
     service = TestBed.inject(AuthService);
   });
 
+  it('root superadmin has all permissions without additional memberships or catalogue entries', () => {
+    const root = {
+      ...membresia(1, [], true, 1),
+      entity: { id: 1, level: 1, parent_id: null },
+      role: { name: 'superadmin', permissions: [] },
+    };
+    conMembresias([root]);
+    expect(service.isRootSuperadmin()).toBeTrue();
+    expect(service.hasPermission('future', 'manage')).toBeTrue();
+    expect(service.hasAnyPermissionForResource('future')).toBeTrue();
+    expect(service.canPerform('memberships', 'review')).toBeTrue();
+    expect(service.hasPermissionAtEntity(SEVILLA, 'memberships', 'update')).toBeTrue();
+    expect(service.hasEntityPermission(SEVILLA, 'delete')).toBeTrue();
+    expect(service.hasRootPermission('views', 'update')).toBeTrue();
+
+    conMembresias([{ ...root, is_active: false }]);
+    expect(service.isRootSuperadmin()).toBeFalse();
+    expect(service.canPerform('memberships', 'review')).toBeFalse();
+    conMembresias([{ ...root, role: { ...root.role, is_active: false } }]);
+    expect(service.isRootSuperadmin()).toBeFalse();
+    conMembresias([{ ...root, entity: { id: 3, level: 3, parent_id: 1 } }]);
+    expect(service.isRootSuperadmin()).toBeFalse();
+    expect(service.hasRootPermission('views', 'update')).toBeFalse();
+  });
+
   it('concede el permiso en la asociación donde se tiene', () => {
     conMembresias([membresia(CADIZ, [['memberships', 'update']])]);
 

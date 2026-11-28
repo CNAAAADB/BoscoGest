@@ -7,7 +7,7 @@ from app.models.membership_model import Membership
 from app.models.role_model import Role
 from app.models.entity_model import Entity
 from app.repositories.entity_repository import EntityRepository
-from app.utils.auth import get_sync_db
+from app.utils.auth import get_sync_db, is_root_superadmin
 
 
 class AuthorizationService:
@@ -41,6 +41,10 @@ class AuthorizationService:
         permission: superadmin keeps everything because its membership is at
         the root, of which every entity is a descendant.
         """
+        # Root superadmin is independent of the permission catalogue and inheritance.
+        if is_root_superadmin(user) and self.db.get(Entity, target_entity_id) is not None:
+            return True
+
         # 1. Direct user permissions
         for perm in user.direct_permissions:
             if perm.resource == resource and perm.action == action:
@@ -91,6 +95,9 @@ class AuthorizationService:
         is applied to users already within reach. It says nothing about where:
         anything that changes or reveals data across associations must use
         has_effective_permission, has_root_permission or can_reach_user."""
+        if is_root_superadmin(user):
+            return True
+
         def matches(perm) -> bool:
             return perm.resource == resource and perm.action in (action, "manage_all")
 
@@ -108,7 +115,7 @@ class AuthorizationService:
 
     def root_entity_id(self) -> Optional[int]:
         return self.db.execute(
-            select(Entity.id).where(Entity.level == 1)
+            select(Entity.id).where(Entity.level == 1, Entity.parent_id.is_(None))
         ).scalars().first()
 
     def has_root_permission(self, user: User, resource: str, action: str) -> bool:
@@ -134,6 +141,8 @@ class AuthorizationService:
         """
         if viewer.id == target.id:
             return True
+        if action in ("update", "delete") and is_root_superadmin(target) and not is_root_superadmin(viewer):
+            return False
         if self.has_root_permission(viewer, "users", action):
             return True
         return any(
@@ -152,6 +161,14 @@ class AuthorizationService:
         """Raises HTTPException(403) if user lacks the effective permission."""
         if not self.has_effective_permission(user, target_entity_id, resource, action):
             raise HTTPException(status_code=403, detail="Permission denied")
+
+    def check_superadmin_assignment(self, actor: User, entity: Entity, role: Role) -> None:
+        """The reserved role can only be granted at the root, by a root superadmin."""
+        if role.name == "superadmin" and (
+            not is_root_superadmin(actor) or entity.level != 1
+            or entity.parent_id is not None or not entity.is_active or not role.is_active
+        ):
+            raise HTTPException(status_code=403, detail="Solo Superadmin en Superentity puede asignar este rol")
 
     def get_accessible_entity_ids(self, user: User) -> List[int]:
         return self.entity_repo.get_accessible_entity_ids(user)

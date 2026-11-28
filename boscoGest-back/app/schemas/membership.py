@@ -36,6 +36,7 @@ class RoleWithPermissions(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    is_active: bool = True
     permissions: List["PermissionResponse"] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
@@ -50,6 +51,7 @@ class RoleWithPermissions(BaseModel):
                 'id': data.id,
                 'name': data.name,
                 'description': data.description,
+                'is_active': data.is_active,
                 'permissions': list(data.permissions)  # Convert to list to ensure it's loaded
             }
         return data

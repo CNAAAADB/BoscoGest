@@ -20,7 +20,7 @@ from app.models.membership_model import Membership
 from app.models.user_model import User
 from app.repositories.entity_repository import EntityRepository
 from app.services.authorization_service import AuthorizationService
-from app.utils.auth import get_current_active_user, get_sync_db
+from app.utils.auth import get_current_active_user, get_sync_db, is_root_superadmin
 
 board_position_router = APIRouter(prefix="/board-positions", tags=["Board positions"])
 
@@ -70,6 +70,8 @@ def _administrator_scope(actor: User, target_entity: Entity, auth: Authorization
     """
     if not target_entity.is_active or target_entity.level < 2:
         return False
+    if is_root_superadmin(actor):
+        return True
     for membership in actor.memberships:
         if not membership.is_active or membership.entity is None:
             continue

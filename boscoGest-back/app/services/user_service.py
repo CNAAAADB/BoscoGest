@@ -179,6 +179,11 @@ class UserService:
                 current_user, membership_entity_id, "users", "create"
             )
 
+            self.auth_service.check_superadmin_assignment(
+                current_user, self.db.get(Entity, membership_entity_id),
+                self.db.get(Role, membership_role_id)
+            )
+
             # Generated, not supplied: nobody is told it and nobody types it.
             # They arrive through the link in their welcome email.
             hashed_password = get_password_hash(generate_unusable_password())
@@ -840,14 +845,9 @@ class UserService:
             ).scalars().all()
         )
 
-        # An admin (not superadmin) cannot assign the superadmin role.
-        direct_membership = self.membership_repo.get_by_user_and_entity(
-            current_user.id, entity_id, active_only=True
-        )
-        if direct_membership:
-            user_role = self.db.get(Role, direct_membership.role_id)
-            if user_role and user_role.name == "admin":
-                roles = [r for r in roles if r.name != "superadmin"]
+        from app.utils.auth import is_root_superadmin
+        if entity.level != 1 or not is_root_superadmin(current_user):
+            roles = [r for r in roles if r.name != "superadmin"]
 
         return [
             {"id": r.id, "name": r.name, "description": r.description}
