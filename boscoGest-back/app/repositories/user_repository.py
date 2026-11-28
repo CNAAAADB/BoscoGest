@@ -1,6 +1,6 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, update, func, or_
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import select, update, func, or_, and_
 from app.models.user_model import User
 from app.models.membership_model import Membership
 from app.models.role_model import Role
@@ -78,7 +78,7 @@ class UserRepository:
             stmt = stmt.where(User.is_active == True)
         return self.db.execute(stmt).scalars().first()
 
-    def _entity_scope_filters(self, entity_ids: List[int], search: Optional[str], entity_id: Optional[int] = None):
+    def _entity_scope_filters(self, entity_ids: List[int], search: Optional[str], entity_id: Optional[int] = None, contact_ids=None, sensitive_ids=None, viewer_id=None):
         """Shared WHERE clauses for the scoped listing and its count."""
         filters = [
             Membership.entity_id.in_(entity_ids),
@@ -98,13 +98,21 @@ class UserRepository:
             def matches(column):
                 return self._fold(column).ilike(self._fold(pattern))
 
+            def field_allowed(ids):
+                if ids is None:
+                    return True
+                return or_(User.id == viewer_id, User.memberships.any(and_(
+                    Membership.is_active.is_(True), Membership.entity_id.in_(ids),
+                    Membership.role.has(Role.is_active.is_(True)),
+                )))
+
             filters.append(
                 or_(
                     matches(User.name),
                     matches(User.surname),
-                    matches(User.email),
-                    matches(User.dni),
-                    matches(User.phone),
+                    and_(matches(User.email), field_allowed(contact_ids)),
+                    and_(matches(User.dni), field_allowed(sensitive_ids)),
+                    and_(matches(User.phone), field_allowed(contact_ids)),
                     # Lets "Ana García" match even though the two halves live
                     # in separate columns.
                     matches(User.name + " " + User.surname),
@@ -131,6 +139,7 @@ class UserRepository:
         limit: int = 100,
         search: Optional[str] = None,
         entity_id: Optional[int] = None,
+        contact_ids=None, sensitive_ids=None, viewer_id=None,
     ) -> List[User]:
         """Return a page of active users within the accessible entities.
 
@@ -142,8 +151,10 @@ class UserRepository:
         """
         stmt = (
             select(User)
+            .options(selectinload(User.memberships).joinedload(Membership.entity),
+                     selectinload(User.memberships).joinedload(Membership.role))
             .join(User.memberships)
-            .where(*self._entity_scope_filters(entity_ids, search, entity_id))
+            .where(*self._entity_scope_filters(entity_ids, search, entity_id, contact_ids, sensitive_ids, viewer_id))
             .order_by(User.surname, User.name, User.id)
             .offset(skip)
             .limit(limit)
@@ -154,6 +165,7 @@ class UserRepository:
     def count_by_entity_ids(
         self, entity_ids: List[int], search: Optional[str] = None,
         entity_id: Optional[int] = None,
+        contact_ids=None, sensitive_ids=None, viewer_id=None,
     ) -> int:
         """Total matching the same filters, so callers can paginate.
 
@@ -164,7 +176,7 @@ class UserRepository:
             select(func.count(func.distinct(User.id)))
             .select_from(User)
             .join(User.memberships)
-            .where(*self._entity_scope_filters(entity_ids, search, entity_id))
+            .where(*self._entity_scope_filters(entity_ids, search, entity_id, contact_ids, sensitive_ids, viewer_id))
         )
         return self.db.execute(stmt).scalar_one()
 

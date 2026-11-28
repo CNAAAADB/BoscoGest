@@ -84,36 +84,36 @@
               <button mat-icon-button (click)="viewNews(news)" matTooltip="Ver detalle" class="action-button view-button" aria-label="Ver detalle">
                 <mat-icon aria-hidden="true">visibility</mat-icon>
               </button>
-              @if (canEditNews() && (news.status === 'draft' || news.status === 'review')) {
+              @if (news.permissions?.edit && (news.status === 'draft' || news.status === 'review')) {
                 <button mat-icon-button (click)="editNews(news)" matTooltip="Editar" class="action-button edit-button" aria-label="Editar">
                   <mat-icon aria-hidden="true">edit</mat-icon>
                 </button>
               }
               <!-- Workflow actions -->
-              @if (news.status === 'draft') {
+              @if (news.status === 'draft' && news.permissions?.create) {
                 <button mat-icon-button (click)="transitionStatus(news, 'review')" matTooltip="Enviar a revisión" class="action-button review-button" aria-label="Enviar a revisión">
                   <mat-icon aria-hidden="true">send</mat-icon>
                 </button>
-                @if (canPublishNews()) {
-                  <button mat-icon-button (click)="transitionStatus(news, 'published')" matTooltip="Publicar" class="action-button publish-button" aria-label="Publicar">
+                @if (news.permissions?.publish) {
+                  <button mat-icon-button (click)="transitionStatus(news, 'published')" [disabled]="!news.permissions?.publish" matTooltip="Publicar" class="action-button publish-button" aria-label="Publicar">
                     <mat-icon aria-hidden="true">publish</mat-icon>
                   </button>
                 }
               }
-              @if (news.status === 'review' && (canReviewNews() || canPublishNews())) {
-                <button mat-icon-button (click)="transitionStatus(news, 'published')" matTooltip="Aprobar y publicar" class="action-button publish-button" aria-label="Aprobar y publicar">
+              @if (news.status === 'review' && (news.permissions?.review || news.permissions?.publish)) {
+                <button mat-icon-button (click)="transitionStatus(news, 'published')" [disabled]="!news.permissions?.publish" matTooltip="Aprobar y publicar" class="action-button publish-button" aria-label="Aprobar y publicar">
                   <mat-icon aria-hidden="true">check_circle</mat-icon>
                 </button>
-                <button mat-icon-button (click)="transitionStatus(news, 'draft')" matTooltip="Devolver a borrador" class="action-button draft-button" aria-label="Devolver a borrador">
+                <button mat-icon-button (click)="transitionStatus(news, 'draft')" [disabled]="!news.permissions?.review" matTooltip="Devolver a borrador" class="action-button draft-button" aria-label="Devolver a borrador">
                   <mat-icon aria-hidden="true">undo</mat-icon>
                 </button>
               }
-              @if (news.status === 'published' && canPublishNews()) {
+              @if (news.status === 'published' && news.permissions?.publish) {
                 <button mat-icon-button (click)="transitionStatus(news, 'archived')" matTooltip="Archivar" class="action-button archive-button" aria-label="Archivar">
                   <mat-icon aria-hidden="true">archive</mat-icon>
                 </button>
               }
-              @if (canDeleteNews()) {
+              @if (news.permissions?.delete) {
                 <button mat-icon-button (click)="deleteNews(news)" matTooltip="Eliminar" class="action-button delete-button" aria-label="Eliminar">
                   <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>

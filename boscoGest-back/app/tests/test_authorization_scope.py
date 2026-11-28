@@ -216,3 +216,125 @@ def test_a_local_admin_can_edit_a_role_of_their_own_association(client, db_sessi
                    headers=mundo["h_admin_a"])
 
     assert r.status_code == 200, r.json()
+
+
+# Regression coverage for data tiers and scoped content/finance access.
+
+def test_financial_records_are_for_authorized_treasurers_only(client, mundo):
+    entity_id = mundo["a"].id
+    created = client.post("/fees", headers=mundo["h_admin_a"], json={
+        "name": "Cuota de prueba", "periodicity": "annual", "entity_ids": [entity_id],
+        "amount": 50, "valid_from": str(date.today()),
+    })
+    assert created.status_code == 201, created.text
+    fee_id = created.json()[0]["id"]
+    for path in (
+        f"/fees/assignments?entity_id={entity_id}",
+        f"/fees/members-preview?fee_id={fee_id}",
+        f"/fees/{fee_id}/subscriptions",
+    ):
+        assert client.get(path, headers=mundo["h_socio_a"]).status_code == 403, path
+        assert client.get(path, headers=mundo["h_admin_a"]).status_code == 200, path
+    assert client.get("/fees/assignments/mine", headers=mundo["h_socio_a"]).status_code == 200
+
+
+def test_sensitive_fields_and_search_are_limited_to_the_authorized_entity(client, db_session, mundo):
+    admin = db_session.query(Role).filter_by(name="admin").one()
+    socio = db_session.query(Role).filter_by(name="socio").one()
+    p = Permission(name="users:read_sensitive", resource="users", action="read_sensitive", inheritable=False)
+    db_session.add(p)
+    db_session.flush()
+    admin.permissions.append(p)
+    _member(db_session, mundo["admin_a"], mundo["root"], socio)
+    _member(db_session, mundo["socio_b"], mundo["root"], socio)
+    db_session.commit()
+    headers = mundo["h_admin_a"]
+    own = client.get(f"/users/{mundo['socio_a'].id}", headers=headers)
+    assert own.status_code == 200 and own.json()["dni"] == mundo["socio_a"].dni
+    other = client.get(f"/users/{mundo['socio_b'].id}", headers=headers)
+    assert other.status_code == 200
+    assert other.json()["dni"] is None and other.json()["birthdate"] is None
+    for membership in other.json()["memberships"]:
+        assert membership["user"] is None or membership["user"]["dni"] is None
+    assert client.get(f"/users/search/dni/{mundo['socio_b'].dni}", headers=headers).status_code == 404
+    result = client.get("/users", params={"search": mundo["socio_b"].dni}, headers=headers)
+    assert result.status_code == 200 and result.json()["total"] == 0
+    assert client.get(f"/users/{mundo['socio_a'].id}", headers=mundo["h_socio_a"]).json()["dni"] == mundo["socio_a"].dni
+
+
+def test_communications_drafts_and_comments_are_scoped(client, db_session, mundo):
+    from app.models.communication_model import Communication
+    from app.models.comment_model import Comment
+
+    socio = db_session.query(Role).filter_by(name="socio").one()
+    for user in (mundo["admin_a"], mundo["socio_a"]):
+        _member(db_session, user, mundo["root"], socio)
+    own_comment = db_session.query(Permission).filter_by(resource="comment", action="delete").one()
+    socio.permissions.append(own_comment)
+    root_draft = Communication(title="Borrador nacional", content="Privado", entity_id=mundo["root"].id,
+                               created_by_id=mundo["superadmin"].id, status="draft")
+    local_draft = Communication(title="Borrador local", content="Privado", entity_id=mundo["a"].id,
+                                created_by_id=mundo["admin_a"].id, status="draft")
+    published = Communication(title="Comunicado nacional", content="Visible", entity_id=mundo["root"].id,
+                              created_by_id=mundo["superadmin"].id, status="published")
+    db_session.add_all([root_draft, local_draft, published])
+    db_session.flush()
+    comment = Comment(content="Comentario ajeno", communication_id=published.id, user_id=mundo["superadmin"].id)
+    db_session.add(comment)
+    db_session.commit()
+    headers = mundo["h_admin_a"]
+    result = client.get("/communications?status=draft", headers=headers)
+    assert result.status_code == 200
+    assert {row["id"] for row in result.json()} == {local_draft.id}
+    assert client.get("/communications/count?status=draft", headers=headers).json()["total"] == 1
+    assert client.get(f"/communications/{root_draft.id}", headers=headers).status_code == 404
+    assert client.get("/communications?status=draft", headers=mundo["h_socio_a"]).json() == []
+    detail = client.get(f"/communications/{published.id}", headers=headers)
+    assert detail.status_code == 200 and not detail.json()["permissions"]["delete"]
+    assert client.put(f"/comments/comments/{comment.id}", json={"content": "No"}, headers=headers).status_code == 403
+    assert client.delete(f"/comments/comments/{comment.id}", headers=headers).status_code == 403
+    assert client.delete(f"/comments/comments/{comment.id}", headers=mundo["h_super"]).status_code == 200
+
+
+def test_content_actions_do_not_inherit_upwards(client, db_session, mundo):
+    from app.models.resource_model import Resource, ResourceType
+    from app.models.magazine_model import Magazine
+
+    socio = db_session.query(Role).filter_by(name="socio").one()
+    admin = db_session.query(Role).filter_by(name="admin").one()
+    _member(db_session, mundo["admin_a"], mundo["root"], socio)
+    for action in ("read", "update", "delete"):
+        perm = Permission(name=f"magazines:{action}", resource="magazines", action=action, inheritable=True)
+        db_session.add(perm)
+        db_session.flush()
+        admin.permissions.append(perm)
+        if action == "read":
+            socio.permissions.append(perm)
+    resource = Resource(title="Recurso nacional", resource_type=ResourceType.LINK, url="https://example.com",
+                        entity_id=mundo["root"].id, created_by=mundo["superadmin"].id)
+    magazine = Magazine(title="Revista nacional", file_path="test.pdf", entity_id=mundo["root"].id)
+    db_session.add_all([resource, magazine])
+    db_session.commit()
+    headers = mundo["h_admin_a"]
+    for prefix, row in (("resources", resource), ("magazines", magazine)):
+        path = f"/{prefix}/{row.id}"
+        detail = client.get(path, headers=headers)
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["permissions"] == {"update": False, "delete": False}
+        assert client.put(path, json={"title": "No"}, headers=headers).status_code == 403
+        assert client.delete(path, headers=headers).status_code == 403
+
+
+def test_shared_scope_rejects_inactive_memberships_and_unscoped_grants(db_session, mundo):
+    from app.services.scoped_permissions import ScopedPermissions
+
+    user = mundo["admin_a"]
+    permission = db_session.query(Permission).filter_by(resource="resources", action="update").one()
+    user.direct_permissions.append(permission)
+    db_session.commit()
+    assert not ScopedPermissions(db_session).allows(user, mundo["b"].id, "resources", "update")
+    assert ScopedPermissions(db_session).allows(user, mundo["a"].id, "resources", "update")
+    for membership in user.memberships:
+        membership.is_active = False
+    db_session.commit()
+    assert not ScopedPermissions(db_session).allows(user, mundo["a"].id, "resources", "update")

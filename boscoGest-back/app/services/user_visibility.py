@@ -14,6 +14,8 @@ A user always sees their own record in full.
 from typing import TYPE_CHECKING, Optional, Set
 
 from app.schemas.user import UserResponse
+from app.services.scoped_permissions import ScopedPermissions
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from app.models.user_model import User
@@ -47,19 +49,32 @@ class UserVisibility:
     def __init__(self, can_read_contact: bool, can_read_sensitive: bool):
         self.can_read_contact = can_read_contact
         self.can_read_sensitive = can_read_sensitive
+        self.contact_ids = None
+        self.sensitive_ids = None
+        self.root_superadmin = False
 
     @classmethod
     def for_viewer(
         cls, auth_service: "AuthorizationService", viewer: "User"
     ) -> "UserVisibility":
-        return cls(
-            can_read_contact=auth_service.has_global_permission(
-                viewer, "users", "read"
-            ),
-            can_read_sensitive=auth_service.has_global_permission(
-                viewer, "users", "read_sensitive"
-            ),
-        )
+        scope = ScopedPermissions(auth_service.db)
+        visibility = cls(False, False)
+        visibility.contact_ids = scope.ids(viewer, "users", "read")
+        visibility.sensitive_ids = scope.ids(viewer, "users", "read_sensitive", wildcard=False)
+        visibility.root_superadmin = scope.is_root_superadmin(viewer)
+        return visibility
+
+    def tiers_for(self, user: "User", viewer_id: Optional[int] = None):
+        if user.id == viewer_id or self.root_superadmin:
+            return True, True
+        if self.contact_ids is None:
+            return self.can_read_contact, self.can_read_sensitive
+        # Ancestor memberships automatically created as socio must not expose
+        # a local treasurer's sensitive access to unrelated local associations.
+        memberships = ScopedPermissions.active_memberships(user)
+        ids = {m.entity_id for m in memberships}
+        # The sensitive grant must be explicit on an entity shared with the subject.
+        return bool(ids & self.contact_ids), bool(ids & self.sensitive_ids)
 
     def visible_fields(self, is_self: bool) -> Set[str]:
         if is_self:
@@ -76,7 +91,8 @@ class UserVisibility:
     ) -> UserResponse:
         """Build a UserResponse with anything the viewer may not see set to None."""
         response = UserResponse.model_validate(user)
-        allowed = self.visible_fields(is_self=viewer_id is not None and user.id == viewer_id)
+        contact, sensitive = self.tiers_for(user, viewer_id)
+        allowed = UserVisibility(contact, sensitive).visible_fields(is_self=False)
 
         for field in CONTACT_FIELDS | SENSITIVE_FIELDS:
             if field not in allowed:
@@ -106,9 +122,16 @@ def redact_user_details(
 
     details = UserDetails.model_validate(user)
     visibility = UserVisibility.for_viewer(auth_service, viewer)
-    allowed = visibility.visible_fields(is_self=user.id == viewer.id)
+    contact, sensitive = visibility.tiers_for(user, viewer.id)
+    allowed = UserVisibility(contact, sensitive).visible_fields(is_self=False)
 
     for field in CONTACT_FIELDS | SENSITIVE_FIELDS:
         if field not in allowed:
             setattr(details, field, None)
+    # Nested membership user objects must not disclose redacted fields.
+    for membership in details.memberships:
+        if membership.user is not None:
+            for field in CONTACT_FIELDS | SENSITIVE_FIELDS:
+                if field not in allowed:
+                    setattr(membership.user, field, None)
     return details

@@ -49,6 +49,7 @@ class ResourceUpdate(BaseModel):
 
 
 class ResourceResponse(BaseModel):
+    permissions: Optional[dict[str, bool]] = None
     id: int
     title: str
     description: Optional[str] = None

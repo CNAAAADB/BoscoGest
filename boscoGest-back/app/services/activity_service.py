@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.models.user_model import User
 from app.schemas.activity import ActivityCreate, ActivityUpdate, ActivityResponse, ActivityPermissions, check_end_after_start
 from app.repositories.activity_repository import ActivityRepository
-from app.services.authorization_service import AuthorizationService
+from app.services.scoped_permissions import ScopedPermissions
 from app.services.audit_service import AuditService
 from app.services.notification_service import NotificationService, EventType
 from app.services.storage import get_storage_service
@@ -22,7 +22,7 @@ class ActivityService:
     def __init__(self, db: Session):
         self.db = db
         self.activity_repo = ActivityRepository(db)
-        self.auth_service = AuthorizationService(db)
+        self.scope = ScopedPermissions(db)
         self.audit_service = AuditService(db)
         self.notification_service = NotificationService(db)
 
@@ -52,40 +52,10 @@ class ActivityService:
     # ── Entity permissions ──────────────────────────────────────────
 
     def _active_memberships(self, user: User):
-        return [
-            m for m in user.memberships
-            if m.is_active and m.entity is not None and m.entity.is_active
-            and m.role is not None and m.role.is_active
-        ]
+        return self.scope.active_memberships(user)
 
     def _admin_entity_ids(self, user: User, action: str) -> set[int]:
-        """Activity administration is scoped to active entity appointments.
-
-        An automatic socio membership at a parent does not carry a local
-        admin's privileges upwards. Unscoped user/group permissions cannot
-        turn local activity administration into platform-wide authority.
-        """
-        direct, inheritable = set(), set()
-        for m in self._active_memberships(user):
-            if (m.entity.level == 1 and m.entity.parent_id is None
-                    and m.role.name == "superadmin"
-                    and self.auth_service.has_effective_permission(
-                        user, m.entity_id, "activities", action
-                    )):
-                direct.add(m.entity_id)
-                inheritable.add(m.entity_id)
-                continue
-            for p in m.role.permissions:
-                if p.is_active and p.resource == "activities" and p.action in (action, "manage_all"):
-                    direct.add(m.entity_id)
-                    if p.inheritable:
-                        inheritable.add(m.entity_id)
-        candidates = direct | set(self.auth_service.entity_repo.get_descendant_ids_of(list(inheritable)))
-        if not candidates:
-            return set()
-        return set(self.db.scalars(
-            select(Entity.id).where(Entity.id.in_(candidates), Entity.is_active.is_(True))
-        ).all())
+        return self.scope.ids(user, "activities", action)
 
     def _can_admin(self, user: User, entity_id: int, action: str) -> bool:
         return entity_id in self._admin_entity_ids(user, action)

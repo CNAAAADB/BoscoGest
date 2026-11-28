@@ -23,6 +23,7 @@ class MagazineUpdate(BaseModel):
 
 
 class MagazineResponse(MagazineBase):
+    permissions: Optional[dict[str, bool]] = None
     id: int
     file_path: str
     created_at: datetime

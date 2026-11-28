@@ -375,6 +375,9 @@ class UserService:
             return PaginatedUsers(items=[], total=0, skip=skip, limit=limit)
 
         visibility = UserVisibility.for_viewer(self.auth_service, current_user)
+        search_scope = dict(contact_ids=None if visibility.root_superadmin else visibility.contact_ids,
+                            sensitive_ids=None if visibility.root_superadmin else visibility.sensitive_ids,
+                            viewer_id=current_user.id)
         if review_only:
             # Filtering *after* paging hides later matches and gives a wrong
             # total. Scan the scoped result set in bounded batches and paginate
@@ -388,11 +391,10 @@ class UserService:
             batch_size = 200
             while True:
                 batch = self.user_repo.get_by_entity_ids(
-                    accessible_entity_ids, skip=offset, limit=batch_size, search=search, entity_id=entity_id
+                    accessible_entity_ids, skip=offset, limit=batch_size, search=search, entity_id=entity_id, **search_scope
                 )
                 for candidate in batch:
-                    can_contact = visibility.can_read_contact or candidate.id == current_user.id
-                    can_sensitive = visibility.can_read_sensitive or candidate.id == current_user.id
+                    can_contact, can_sensitive = visibility.tiers_for(candidate, current_user.id)
                     if requires_review(candidate, contact=can_contact, sensitive=can_sensitive):
                         if skip <= total < skip + limit:
                             users.append(candidate)
@@ -404,11 +406,11 @@ class UserService:
             count_end = list_end
         else:
             users = self.user_repo.get_by_entity_ids(
-                accessible_entity_ids, skip=skip, limit=limit, search=search, entity_id=entity_id
+                accessible_entity_ids, skip=skip, limit=limit, search=search, entity_id=entity_id, **search_scope
             )
             list_end = time.perf_counter()
             total = self.user_repo.count_by_entity_ids(
-                accessible_entity_ids, search=search, entity_id=entity_id
+                accessible_entity_ids, search=search, entity_id=entity_id, **search_scope
             )
             count_end = time.perf_counter()
 

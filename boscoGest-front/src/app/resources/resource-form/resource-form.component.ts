@@ -122,6 +122,11 @@ export class ResourceFormComponent implements OnInit {
   loadResource(id: number): void {
     this.resourcesService.getResource(id).subscribe({
       next: (resource) => {
+        if (!resource.permissions?.update) {
+          this.snackBar.open('No tienes permisos para editar este recurso', 'Cerrar', { duration: 3000 });
+          this.router.navigate(['/resources', id]);
+          return;
+        }
         this.existingResource.set(resource);
         this.resourceForm.patchValue({
           title: resource.title,
@@ -200,6 +205,7 @@ export class ResourceFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.isEditMode() && !this.existingResource()?.permissions?.update) return;
     if (!this.resourceForm.valid) {
       this.snackBar.open('Por favor, completa todos los campos requeridos', 'Cerrar', { duration: 3000 });
       return;

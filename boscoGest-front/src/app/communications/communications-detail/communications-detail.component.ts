@@ -50,32 +50,36 @@ export class NewsDetailComponent implements OnInit {
   apiUrl = environment.apiUrl;
 
   canEditNews = computed(() => {
-    return this.authService.hasPermission('communications', 'edit');
+    return this.news()?.permissions?.edit === true;
   });
 
   canDeleteNews = computed(() => {
-    return this.authService.hasPermission('communications', 'delete');
+    return this.news()?.permissions?.delete === true;
   });
 
   canPublishNews = computed(() => {
-    return this.authService.hasPermission('communications', 'publish');
+    return this.news()?.permissions?.publish === true;
   });
 
   canReviewNews = computed(() => {
-    return this.authService.hasPermission('communications', 'review');
+    return this.news()?.permissions?.review === true;
   });
 
   canCreateComment = computed(() => {
-    return this.authService.hasPermission('comment', 'create');
+    return this.news()?.status === 'published' && this.news()?.permissions?.comment_create === true;
   });
 
   canEditComment = computed(() => {
     return this.authService.hasPermission('comment', 'edit');
   });
 
-  canDeleteComment = computed(() => {
-    return this.authService.hasPermission('comment', 'delete');
-  });
+  canDeleteComment(comment: CommentResponse): boolean {
+    const news = this.news();
+    return news?.status === 'published' && (
+      news.permissions?.comment_moderate === true ||
+      (news.permissions?.comment_delete === true && comment.user_id === this.currentUserId())
+    );
+  }
 
   currentUserId = computed(() => {
     return this.authService.getCurrentUser()?.id;

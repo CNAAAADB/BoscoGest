@@ -85,14 +85,14 @@
               <p class="magazine-description">{{ magazine.description }}</p>
             }
           </mat-card-content>
-          @if (canEditMagazine() || canDeleteMagazine()) {
+          @if (magazine.permissions?.update || magazine.permissions?.delete) {
             <div class="card-actions">
-              @if (canEditMagazine()) {
+              @if (magazine.permissions?.update) {
                 <button mat-icon-button color="primary" (click)="editMagazine($event, magazine.id)" title="Editar" aria-label="Editar revista">
                   <mat-icon aria-hidden="true">edit</mat-icon>
                 </button>
               }
-              @if (canDeleteMagazine()) {
+              @if (magazine.permissions?.delete) {
                 <button mat-icon-button color="warn" (click)="deleteMagazine($event, magazine)" title="Eliminar" aria-label="Eliminar revista">
                   <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>
